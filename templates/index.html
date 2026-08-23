@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block titulo %}Barbearia Top — Agendar Horário{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+    <header class="topo">
+        <h1>Barbearia Top</h1>
+        <p>Agende seu horário</p>
+    </header>
+
+    <div id="progresso" class="etapa-titulo"></div>
+
+    <div id="mensagem-erro-global" class="mensagem-erro" style="display:none;"></div>
+
+    <!-- Etapa 1: Serviço -->
+    <section class="etapa" id="etapa-1">
+        <div class="card">
+            <div class="etapa-titulo">Escolha o serviço</div>
+            <div class="opcoes-grid">
+                {% for servico in servicos %}
+                <button type="button" class="opcao-btn" data-etapa="servico"
+                        data-id="{{ servico.id }}" data-nome="{{ servico.nome }}"
+                        data-preco="{{ servico.preco }}">
+                    <span>{{ servico.nome }}</span>
+                    <span class="preco">R$ {{ "%.2f"|format(servico.preco)|replace(".", ",") }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="button" class="btn-primario" id="btn-avancar-1" disabled>Avançar</button>
+    </section>
+
+    <!-- Etapa 2: Profissional -->
+    <section class="etapa" id="etapa-2" style="display:none;">
+        <div class="card">
+            <div class="etapa-titulo">Escolha o profissional</div>
+            <div class="opcoes-grid">
+                {% for profissional in profissionais %}
+                <button type="button" class="opcao-btn" data-etapa="profissional"
+                        data-id="{{ profissional.id }}" data-nome="{{ profissional.nome }}">
+                    <span>{{ profissional.nome }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="button" class="btn-primario" id="btn-avancar-2" disabled>Avançar</button>
+        <button type="button" class="btn-secundario" data-voltar="1">Voltar</button>
+    </section>
+
+    <!-- Etapa 3: Data e horário -->
+    <section class="etapa" id="etapa-3" style="display:none;">
+        <div class="card">
+            <div class="etapa-titulo">Escolha a data</div>
+            <div class="dias-grid" id="dias-grid"></div>
+        </div>
+        <div class="card">
+            <div class="etapa-titulo">Escolha o horário</div>
+            <div class="horarios-grid" id="horarios-grid">
+                <p class="vazio">Selecione uma data para ver os horários.</p>
+            </div>
+        </div>
+        <button type="button" class="btn-primario" id="btn-avancar-3" disabled>Avançar</button>
+        <button type="button" class="btn-secundario" data-voltar="2">Voltar</button>
+    </section>
+
+    <!-- Etapa 4: Dados do cliente -->
+    <section class="etapa" id="etapa-4" style="display:none;">
+        <div class="card">
+            <div class="etapa-titulo">Seus dados</div>
+            <label for="input-nome">Nome</label>
+            <input type="text" id="input-nome" placeholder="Seu nome completo">
+            <label for="input-telefone">Telefone</label>
+            <input type="tel" id="input-telefone" placeholder="(00) 00000-0000">
+        </div>
+        <button type="button" class="btn-primario" id="btn-avancar-4" disabled>Avançar</button>
+        <button type="button" class="btn-secundario" data-voltar="3">Voltar</button>
+    </section>
+
+    <!-- Etapa 5: Confirmação -->
+    <section class="etapa" id="etapa-5" style="display:none;">
+        <div class="card">
+            <div class="etapa-titulo">Confirme seu agendamento</div>
+            <div class="resumo-item"><span>Serviço</span><span id="resumo-servico"></span></div>
+            <div class="resumo-item"><span>Preço</span><span id="resumo-preco"></span></div>
+            <div class="resumo-item"><span>Profissional</span><span id="resumo-profissional"></span></div>
+            <div class="resumo-item"><span>Data</span><span id="resumo-data"></span></div>
+            <div class="resumo-item"><span>Horário</span><span id="resumo-hora"></span></div>
+            <div class="resumo-item"><span>Cliente</span><span id="resumo-cliente"></span></div>
+        </div>
+        <button type="button" class="btn-primario" id="btn-confirmar">Confirmar Agendamento</button>
+        <button type="button" class="btn-secundario" data-voltar="4">Voltar</button>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.DIAS_ANTECEDENCIA = {{ dias_antecedencia }};
+</script>
+<script src="{{ url_for('static', filename='js/agendamento.js') }}"></script>
+{% endblock %}
