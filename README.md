@@ -1,66 +1,39 @@
-App de Agendamento
+# AllLogic Scheduler
 
-Aplicação web de agendamento online da AllLogic, inicialmente direcionada a pequenos negócios e empresas de bairro.
+Primeiro aplicativo oficial da plataforma AllLogic.
 
-Status
+## Descrição
 
-🚧 Em evolução — desenvolvimento da V1 Comercial.
+Sistema de agendamento online desenvolvido em Flask para demonstração e implantação em clientes.
 
-O projeto parte de uma aplicação funcional existente e está sendo evoluído de forma incremental.
+## Tecnologias
 
-Objetivo
+- Python 3.12
+- Flask
+- Gunicorn
+- Docker
+- Traefik
+- SQLite (versão inicial)
 
-Oferecer ao pequeno negócio uma solução simples para:
+## Estrutura
 
-disponibilizar serviços;
-cadastrar profissionais;
-configurar horários de atendimento;
-receber agendamentos online;
-administrar a agenda;
-manter o histórico de clientes e atendimentos.
-Visão de Evolução
-
-A primeira etapa é consolidar uma solução comercial de agendamento.
-
-A arquitetura deverá permitir evolução futura para recursos de relacionamento com clientes e CRM, sem antecipar funcionalidades que ainda não foram priorizadas.
-
-Stack Atual
-Python
-Flask
-SQLite
-HTML
-CSS
-JavaScript
-Gunicorn
-Nginx
-Estrutura
-app-agendamento/
+```text
+.
 ├── app.py
 ├── config.py
 ├── database.py
 ├── models.py
 ├── requirements.txt
+├── Dockerfile
+├── .env.example
 ├── static/
-├── templates/
-├── barbearia-top.service
-├── nginx_barbearia_top.conf
-├── FOUNDATION.md
-├── README.md
-└── .gitignore
-Desenvolvimento
+└── templates/
+```
 
-O desenvolvimento deve ocorrer em ambiente local/homologação.
+## Execução
 
-A produção existente não deve ser alterada diretamente durante o desenvolvimento.
+A aplicação é executada através de Docker e publicada pelo Traefik.
 
-Documentação
-FOUNDATION.md — princípios e fundamentos do projeto.
-README.md — visão geral e orientação inicial.
-AGENTS.md — regras operacionais para desenvolvimento com agentes e IA.
-Projeto
+## Status
 
-AllLogic — Engenharia de Soluções Digitais
-
-O App de Agendamento é um projeto independente dentro da AllLogic.
-
-Não confundir com o projeto OfertaIA.
+🚧 Em desenvolvimento – Projeto Fênix / AllLogic
