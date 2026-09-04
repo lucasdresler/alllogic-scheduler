@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block titulo %}Agendamento Confirmado — Barbearia Top{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+    <header class="topo">
+        <h1>Barbearia Top</h1>
+    </header>
+
+    <div class="card">
+        <div class="confirmacao-icone">&#10003;</div>
+        <div class="etapa-titulo" style="text-align:center;">Agendamento Confirmado!</div>
+
+        <div class="resumo-item">
+            <span>Serviço</span>
+            <span>{{ agendamento.servico_nome }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Preço</span>
+            <span>R$ {{ "%.2f"|format(agendamento.servico_preco)|replace(".", ",") }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Profissional</span>
+            <span>{{ agendamento.profissional_nome }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Data</span>
+            <span>{{ agendamento.data[8:10] }}/{{ agendamento.data[5:7] }}/{{ agendamento.data[0:4] }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Horário</span>
+            <span>{{ agendamento.hora }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Cliente</span>
+            <span>{{ agendamento.cliente_nome }}</span>
+        </div>
+    </div>
+
+    <a href="{{ url_for('index') }}" class="btn-secundario">Voltar ao início</a>
+</div>
+{% endblock %}

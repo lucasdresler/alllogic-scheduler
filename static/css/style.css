@@ -1,0 +1,330 @@
+:root {
+    --bg-principal: #0d0d0d;
+    --bg-card: #1a1a1a;
+    --bg-card-hover: #242424;
+    --dourado: #d4af37;
+    --dourado-escuro: #a8871f;
+    --texto-principal: #f5f5f5;
+    --texto-secundario: #b3b3b3;
+    --borda: #333333;
+    --sucesso: #4caf50;
+    --erro: #e05252;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-principal);
+    color: var(--texto-principal);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+}
+
+.container-admin {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+}
+
+header.topo {
+    text-align: center;
+    padding: 24px 0 16px;
+}
+
+header.topo h1 {
+    font-size: 1.6rem;
+    margin: 0;
+    color: var(--dourado);
+    letter-spacing: 1px;
+}
+
+header.topo p {
+    color: var(--texto-secundario);
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+}
+
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.etapa-titulo {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--dourado);
+    margin-bottom: 12px;
+}
+
+.opcoes-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.opcao-btn {
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    padding: 14px;
+    color: var(--texto-principal);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.opcao-btn:active,
+.opcao-btn.selecionado {
+    border-color: var(--dourado);
+    background-color: var(--bg-card-hover);
+}
+
+.opcao-btn .preco {
+    color: var(--dourado);
+    font-weight: 600;
+}
+
+.horarios-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.horario-btn {
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 10px 4px;
+    color: var(--texto-principal);
+    text-align: center;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.horario-btn:active,
+.horario-btn.selecionado {
+    border-color: var(--dourado);
+    background-color: var(--bg-card-hover);
+    color: var(--dourado);
+}
+
+.dias-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.dia-btn {
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 10px 4px;
+    color: var(--texto-principal);
+    text-align: center;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.dia-btn:active,
+.dia-btn.selecionado {
+    border-color: var(--dourado);
+    background-color: var(--bg-card-hover);
+    color: var(--dourado);
+}
+
+input[type="text"],
+input[type="tel"],
+input[type="password"] {
+    width: 100%;
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--texto-principal);
+    font-family: inherit;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--dourado);
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--texto-secundario);
+    margin-bottom: 6px;
+}
+
+.btn-primario {
+    width: 100%;
+    background-color: var(--dourado);
+    color: #0d0d0d;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.btn-primario:disabled {
+    background-color: var(--dourado-escuro);
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secundario {
+    width: 100%;
+    background-color: transparent;
+    color: var(--dourado);
+    border: 1px solid var(--dourado);
+    border-radius: 10px;
+    padding: 12px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin-top: 8px;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.resumo-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--borda);
+    font-size: 0.95rem;
+}
+
+.resumo-item:last-child {
+    border-bottom: none;
+}
+
+.resumo-item span:first-child {
+    color: var(--texto-secundario);
+}
+
+.confirmacao-icone {
+    text-align: center;
+    font-size: 3rem;
+    color: var(--sucesso);
+    margin-bottom: 8px;
+}
+
+.mensagem-erro {
+    background-color: rgba(224, 82, 82, 0.15);
+    border: 1px solid var(--erro);
+    color: var(--erro);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.tab-link {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--borda);
+    color: var(--texto-principal);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.tab-link.ativo {
+    background-color: var(--dourado);
+    color: #0d0d0d;
+    border-color: var(--dourado);
+}
+
+table.tabela-agendamentos {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+table.tabela-agendamentos th {
+    text-align: left;
+    color: var(--dourado);
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--borda);
+}
+
+table.tabela-agendamentos td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--borda);
+}
+
+.dia-agrupador {
+    color: var(--dourado);
+    font-weight: 600;
+    margin: 20px 0 8px;
+    font-size: 1rem;
+}
+
+.vazio {
+    color: var(--texto-secundario);
+    text-align: center;
+    padding: 20px 0;
+    font-size: 0.9rem;
+}
+
+.topo-admin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.topo-admin h1 {
+    color: var(--dourado);
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.link-logout {
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+@media (min-width: 700px) {
+    table.tabela-agendamentos {
+        font-size: 0.95rem;
+    }
+}

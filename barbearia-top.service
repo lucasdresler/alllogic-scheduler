@@ -1,0 +1,16 @@
+[Unit]
+Description=Barbearia Top - Sistema de Agendamento (Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/barbearia_top
+Environment="SECRET_KEY=SUBSTITUA_POR_UMA_CHAVE_ALEATORIA_LONGA"
+ExecStart=/opt/barbearia_top/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block titulo %}Painel Administrativo — Barbearia Top{% endblock %}
+
+{% block conteudo %}
+<div class="container-admin">
+    <div class="topo-admin">
+        <h1>Painel Administrativo</h1>
+        <a href="{{ url_for('admin_logout') }}" class="link-logout">Sair</a>
+    </div>
+
+    <div class="tabs">
+        <a href="{{ url_for('admin_dashboard', aba='hoje') }}" class="tab-link{% if aba == 'hoje' %} ativo{% endif %}">Hoje</a>
+        <a href="{{ url_for('admin_dashboard', aba='semana') }}" class="tab-link{% if aba == 'semana' %} ativo{% endif %}">Semana</a>
+    </div>
+
+    <div class="card">
+        <div class="resumo-item">
+            <span>Total de agendamentos</span>
+            <span>{{ total_agendamentos }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Receita prevista</span>
+            <span>R$ {{ "%.2f"|format(receita_prevista)|replace(".", ",") }}</span>
+        </div>
+    </div>
+
+    {% if aba == 'hoje' %}
+        {% if agendamentos %}
+        <div class="card">
+            <div style="overflow-x:auto">
+                <table class="tabela-agendamentos">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Serviço</th>
+                            <th>Profissional</th>
+                            <th>Preço</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ag in agendamentos %}
+                        <tr>
+                            <td>{{ ag.hora }}</td>
+                            <td>{{ ag.cliente_nome }}</td>
+                            <td>{{ ag.cliente_telefone }}</td>
+                            <td>{{ ag.servico_nome }}</td>
+                            <td>{{ ag.profissional_nome }}</td>
+                            <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <p class="vazio">Nenhum agendamento hoje.</p>
+        {% endif %}
+    {% else %}
+        {% if agrupados %}
+            {% for data_str, agendamentos_do_dia in agrupados.items() %}
+            <div class="dia-agrupador">{{ data_str[8:10] }}/{{ data_str[5:7] }}/{{ data_str[0:4] }}</div>
+            <div class="card">
+                <div style="overflow-x:auto">
+                    <table class="tabela-agendamentos">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Cliente</th>
+                                <th>Telefone</th>
+                                <th>Serviço</th>
+                                <th>Profissional</th>
+                                <th>Preço</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ag in agendamentos_do_dia %}
+                            <tr>
+                                <td>{{ ag.hora }}</td>
+                                <td>{{ ag.cliente_nome }}</td>
+                                <td>{{ ag.cliente_telefone }}</td>
+                                <td>{{ ag.servico_nome }}</td>
+                                <td>{{ ag.profissional_nome }}</td>
+                                <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="vazio">Nenhum agendamento esta semana.</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
