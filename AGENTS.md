@@ -300,9 +300,20 @@ Não criar estruturas, camadas, serviços ou tecnologias apenas por antecipaçã
 
 ## 17. Banco de dados
 
+O padrão de banco de dados para aplicações executadas na infraestrutura VPS da AllLogic é PostgreSQL, conforme decisão registrada no ADR-001 do SGA.
+
+A arquitetura de infraestrutura utiliza um único serviço/cluster PostgreSQL por VPS.
+
+Cada aplicação ou instalação deve utilizar:
+
+* banco de dados PostgreSQL próprio;
+* usuário PostgreSQL próprio;
+* credenciais próprias;
+* acesso ao banco pela rede interna, sem exposição direta à Internet.
+
 Alterações no modelo de dados devem ser planejadas antes da implementação.
 
-Dados existentes devem ser preservados.
+Dados existentes devem ser preservados quando houver obrigação ou necessidade de preservação.
 
 Qualquer migração de dados deve possuir estratégia de:
 
@@ -312,6 +323,8 @@ Qualquer migração de dados deve possuir estratégia de:
 * verificação pós-migração.
 
 Alterações no banco devem considerar o comportamento da aplicação existente antes da mudança.
+
+No contexto atual do protótipo do AllLogic Scheduler, não há obrigação de preservar a base de clientes ou os dados existentes do SQLite. A V1 Comercial poderá iniciar com um banco PostgreSQL novo e limpo.
 
 Não realizar migrações destrutivas sem autorização explícita.
 
