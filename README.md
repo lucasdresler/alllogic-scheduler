@@ -32,7 +32,11 @@ Sistema de agendamento online desenvolvido em Flask para demonstração e implan
 
 ## Execução
 
-A aplicação é executada através de Docker e publicada pelo Traefik.
+O projeto possui `Dockerfile` para execução da aplicação em container.
+
+A aplicação também possui configuração de execução com Gunicorn por meio de serviço systemd e proxy reverso Nginx.
+
+A definição da arquitetura de publicação em produção deverá seguir a infraestrutura homologada para o ambiente onde o Scheduler for implantado.
 
 ## Status
 

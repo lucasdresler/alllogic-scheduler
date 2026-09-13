@@ -40,11 +40,13 @@ O projeto parte de um aplicativo existente e funcional, desenvolvido originalmen
 
 - Python;
 - Flask;
-- PostgreSQL;
+- SQLite;
 - HTML;
 - CSS;
 - JavaScript;
 - Gunicorn.
+
+O SQLite representa o estado original do protótipo. Para a evolução do produto na infraestrutura VPS da AllLogic, o banco de dados alvo é PostgreSQL, conforme padrão definido no SGA.
 
 A evolução será incremental sobre essa base.
 
