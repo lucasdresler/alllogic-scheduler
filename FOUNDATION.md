@@ -1,12 +1,12 @@
-# FOUNDATION — App de Agendamento
+# FOUNDATION — AllLogic Scheduler
 
 ## 1. Identidade
 
-**Projeto:** App de Agendamento
+**Projeto:** AllLogic Scheduler
 **Organização:** AllLogic
 **Categoria:** Sistema de agendamento online
 
-O App de Agendamento é um projeto independente da AllLogic.
+O AllLogic Scheduler é um projeto independente da AllLogic.
 
 Este projeto não deve ser confundido com o projeto OfertaIA.
 
@@ -40,7 +40,7 @@ O projeto parte de um aplicativo existente e funcional, desenvolvido originalmen
 
 - Python;
 - Flask;
-- SQLite;
+- PostgreSQL;
 - HTML;
 - CSS;
 - JavaScript;
@@ -104,7 +104,7 @@ A priorização e o detalhamento de cada funcionalidade serão definidos durante
 
 ## 8. Relação com Outros Projetos
 
-O App de Agendamento é um projeto independente dentro da AllLogic.
+O AllLogic Scheduler é um projeto independente dentro da AllLogic.
 
 Projetos como OfertaIA e o Site Institucional da AllLogic possuem seus próprios repositórios, documentação e ciclo de desenvolvimento.
 
