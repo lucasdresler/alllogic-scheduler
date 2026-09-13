@@ -13,7 +13,7 @@ Sistema de agendamento online desenvolvido em Flask para demonstração e implan
 - Gunicorn
 - Docker
 - Traefik
-- SQLite (versão inicial)
+- PostgreSQL
 
 ## Estrutura
 
