@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: alllogic-scheduler-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - scheduler_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    networks:
+      - scheduler-dev
+
+volumes:
+  scheduler_postgres_data:
+
+networks:
+  scheduler-dev:
+    name: alllogic-scheduler-dev

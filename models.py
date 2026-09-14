@@ -17,14 +17,14 @@ def listar_servicos():
 
 def obter_servico(servico_id):
     with db_session() as conn:
-        row = conn.execute("SELECT * FROM servico WHERE id = ?", (servico_id,)).fetchone()
+        row = conn.execute("SELECT * FROM servico WHERE id = %s", (servico_id,)).fetchone()
         return dict(row) if row else None
 
 
 def listar_profissionais(apenas_ativos=True):
     with db_session() as conn:
         if apenas_ativos:
-            rows = conn.execute("SELECT * FROM profissional WHERE ativo = 1 ORDER BY nome").fetchall()
+            rows = conn.execute("SELECT * FROM profissional WHERE ativo = TRUE ORDER BY nome").fetchall()
         else:
             rows = conn.execute("SELECT * FROM profissional ORDER BY nome").fetchall()
         return [dict(r) for r in rows]
@@ -32,7 +32,7 @@ def listar_profissionais(apenas_ativos=True):
 
 def obter_profissional(profissional_id):
     with db_session() as conn:
-        row = conn.execute("SELECT * FROM profissional WHERE id = ?", (profissional_id,)).fetchone()
+        row = conn.execute("SELECT * FROM profissional WHERE id = %s", (profissional_id,)).fetchone()
         return dict(row) if row else None
 
 
@@ -78,7 +78,7 @@ def horarios_disponiveis(profissional_id, data_str, servico_id):
             SELECT a.hora, s.duracao_minutos
             FROM agendamento a
             JOIN servico s ON s.id = a.servico_id
-            WHERE a.profissional_id = ? AND a.data = ?
+            WHERE a.profissional_id = %s AND a.data = %s
             """,
             (profissional_id, data_str),
         ).fetchall()
@@ -123,11 +123,12 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_id, profissional_i
         cursor = conn.execute(
             """
             INSERT INTO agendamento (cliente_nome, cliente_telefone, servico_id, profissional_id, data, hora)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (cliente_nome, cliente_telefone, servico_id, profissional_id, data_str, hora_str),
         )
-        agendamento_id = cursor.lastrowid
+        agendamento_id = cursor.fetchone()["id"]
 
     return agendamento_id, None
 
@@ -141,7 +142,7 @@ def obter_agendamento_completo(agendamento_id):
             FROM agendamento a
             JOIN servico s ON s.id = a.servico_id
             JOIN profissional p ON p.id = a.profissional_id
-            WHERE a.id = ?
+            WHERE a.id = %s
             """,
             (agendamento_id,),
         ).fetchone()
@@ -157,7 +158,7 @@ def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str):
             FROM agendamento a
             JOIN servico s ON s.id = a.servico_id
             JOIN profissional p ON p.id = a.profissional_id
-            WHERE a.data BETWEEN ? AND ?
+            WHERE a.data BETWEEN %s AND %s
             ORDER BY a.data ASC, a.hora ASC
             """,
             (data_inicio_str, data_fim_str),
@@ -169,7 +170,7 @@ def verificar_admin(usuario, senha):
     from werkzeug.security import check_password_hash
 
     with db_session() as conn:
-        row = conn.execute("SELECT * FROM admin WHERE usuario = ?", (usuario,)).fetchone()
+        row = conn.execute("SELECT * FROM admin WHERE usuario = %s", (usuario,)).fetchone()
         if not row:
             return False
         return check_password_hash(row["senha_hash"], senha)
