@@ -86,3 +86,17 @@ A produção não deve ser alterada diretamente durante o desenvolvimento.
 - `FOUNDATION.md`
 - `AGENTS.md`
 - `docs/ARQUITETURA-BANCO.md`
+
+## Antecedência máxima para agendamento
+
+A antecedência máxima permitida para novos agendamentos deve ser uma configuração administrável pelo estabelecimento.
+
+Na V1:
+
+- o valor inicial será de 14 dias;
+- o administrador poderá alterar esse valor no painel administrativo;
+- o limite será aplicado à data escolhida pelo cliente no agendamento público;
+- datas posteriores ao limite configurado não poderão ser agendadas;
+- o valor deve ser armazenado no PostgreSQL, e não definido exclusivamente no código.
+
+Essa configuração permite que cada estabelecimento defina o horizonte de agendamento adequado à sua operação, sem necessidade de intervenção técnica.
