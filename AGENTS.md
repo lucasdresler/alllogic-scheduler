@@ -24,6 +24,17 @@ O repositório oficial no GitHub é:
 
 A expressão **App de Agendamento** pode ser utilizada como descrição funcional do produto, mas o nome técnico e oficial do projeto é **AllLogic Scheduler**.
 
+
+### Decisão sobre nomenclatura da pasta local
+
+A pasta local permanece, por enquanto:
+
+`~/AllLogic/Projetos/app-agendamento/`
+
+A padronização futura para uma pasta local `scheduler` foi considerada, mas fica deliberadamente adiada para uma etapa posterior de organização e padronização.
+
+A renomeação não faz parte da construção da V1 atual e não deve ser realizada durante esta etapa de evolução do produto.
+
 ---
 
 ## 2. Contexto e origem do projeto

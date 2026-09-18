@@ -7,7 +7,7 @@
 
     var estado = {
         etapa: 1,
-        servico: null,
+        servicos: [],
         profissional: null,
         data: null,
         hora: null,
@@ -66,25 +66,38 @@
     // ---------------------------------------------------------------------
     function configurarEtapa1() {
         var botoes = document.querySelectorAll('.opcao-btn[data-etapa="servico"]');
+
         botoes.forEach(function (btn) {
             btn.addEventListener("click", function () {
-                botoes.forEach(function (b) { b.classList.remove("selecionado"); });
-                btn.classList.add("selecionado");
-                estado.servico = {
-                    id: parseInt(btn.getAttribute("data-id"), 10),
-                    nome: btn.getAttribute("data-nome"),
-                    preco: parseFloat(btn.getAttribute("data-preco"))
-                };
-                document.getElementById("btn-avancar-1").disabled = false;
+                var id = parseInt(btn.getAttribute("data-id"), 10);
+                var indice = estado.servicos.findIndex(function (servico) {
+                    return servico.id === id;
+                });
+
+                if (indice >= 0) {
+                    estado.servicos.splice(indice, 1);
+                    btn.classList.remove("selecionado");
+                } else {
+                    btn.classList.add("selecionado");
+                    estado.servicos.push({
+                        id: id,
+                        nome: btn.getAttribute("data-nome"),
+                        preco: parseFloat(btn.getAttribute("data-preco"))
+                    });
+                }
+
+                document.getElementById("btn-avancar-1").disabled =
+                    estado.servicos.length === 0;
             });
         });
 
         document.getElementById("btn-avancar-1").addEventListener("click", function () {
-            if (estado.servico) {
+            if (estado.servicos.length > 0) {
                 irParaEtapa(2);
             }
         });
     }
+
 
     // ---------------------------------------------------------------------
     // Etapa 2: Profissional
@@ -159,8 +172,15 @@
         var container = document.getElementById("horarios-grid");
         container.innerHTML = '<p class="vazio">Carregando horários...</p>';
 
-        var url = "/api/availability?profissional_id=" + estado.profissional.id +
-            "&servico_id=" + estado.servico.id + "&data=" + estado.data;
+        var params = new URLSearchParams();
+        params.set("profissional_id", estado.profissional.id);
+        params.set("data", estado.data);
+
+        estado.servicos.forEach(function (servico) {
+            params.append("servico_id", servico.id);
+        });
+
+        var url = "/api/availability?" + params.toString();
 
         fetch(url)
             .then(function (resp) { return resp.json(); })
@@ -255,8 +275,16 @@
     // Etapa 5: Confirmação
     // ---------------------------------------------------------------------
     function preencherResumo() {
-        document.getElementById("resumo-servico").textContent = estado.servico.nome;
-        document.getElementById("resumo-preco").textContent = formatarPrecoBR(estado.servico.preco);
+        var nomesServicos = estado.servicos.map(function (servico) {
+            return servico.nome;
+        }).join(", ");
+
+        var precoTotal = estado.servicos.reduce(function (total, servico) {
+            return total + servico.preco;
+        }, 0);
+
+        document.getElementById("resumo-servico").textContent = nomesServicos;
+        document.getElementById("resumo-preco").textContent = formatarPrecoBR(precoTotal);
         document.getElementById("resumo-profissional").textContent = estado.profissional.nome;
         document.getElementById("resumo-data").textContent = formatarDataBR(estado.data);
         document.getElementById("resumo-hora").textContent = estado.hora;
@@ -271,7 +299,9 @@
         var payload = {
             cliente_nome: estado.nome,
             cliente_telefone: estado.telefone,
-            servico_id: estado.servico.id,
+            servico_ids: estado.servicos.map(function (servico) {
+                return servico.id;
+            }),
             profissional_id: estado.profissional.id,
             data: estado.data,
             hora: estado.hora

@@ -50,6 +50,12 @@ A V1 deverá permitir:
 - reagendamento;
 - preservação do histórico.
 
+Um agendamento poderá conter um ou mais serviços.
+
+A duração total do agendamento será a soma das durações dos serviços selecionados.
+
+O valor total do agendamento será a soma dos preços dos serviços selecionados.
+
 Um agendamento cancelado não deve ser apagado do banco de dados.
 
 ### 6. Histórico
@@ -78,7 +84,7 @@ A evolução futura poderá utilizar uma entidade própria de cliente, mantendo 
 
 ### 9. Agendamento público
 A área pública deverá permitir que o cliente:
-1. escolha o serviço;
+1. selecione um ou mais serviços;
 2. escolha o profissional, quando aplicável;
 3. escolha a data;
 4. visualize horários disponíveis;
@@ -89,11 +95,14 @@ A interface deverá ser simples e mobile-first.
 
 ### 10. Disponibilidade
 O sistema deverá:
-- considerar a duração do serviço;
+- considerar a duração total dos serviços selecionados;
+- exigir um único bloco contínuo correspondente à duração total do agendamento;
 - respeitar os horários de funcionamento;
 - impedir conflitos de horários;
 - considerar somente agendamentos ativos na ocupação dos horários;
 - permitir novo agendamento em horário liberado após cancelamento.
+
+O intervalo entre os horários disponíveis representa a granularidade dos slots e não define a duração do agendamento.
 
 ### 11. Antecedência máxima para agendamento
 O período máximo permitido para novos agendamentos será configurável pelo administrador.

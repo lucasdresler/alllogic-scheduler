@@ -12,6 +12,7 @@
     <div class="tabs">
         <a href="{{ url_for('admin_dashboard', aba='hoje') }}" class="tab-link{% if aba == 'hoje' %} ativo{% endif %}">Hoje</a>
         <a href="{{ url_for('admin_dashboard', aba='semana') }}" class="tab-link{% if aba == 'semana' %} ativo{% endif %}">Semana</a>
+        <a href="{{ url_for('admin_dashboard', aba='mes') }}" class="tab-link{% if aba == 'mes' %} ativo{% endif %}">Mês</a>
     </div>
 
     <div class="card">
@@ -20,8 +21,8 @@
             <span>{{ total_agendamentos }}</span>
         </div>
         <div class="resumo-item">
-            <span>Receita prevista</span>
-            <span>R$ {{ "%.2f"|format(receita_prevista)|replace(".", ",") }}</span>
+            <span>{{ "Receita do período" if aba in ("semana", "mes") else "Receita prevista" }}</span>
+            <span>R$ {{ "%.2f"|format(receita_periodo if aba in ("semana", "mes") else receita_prevista)|replace(".", ",") }}</span>
         </div>
     </div>
 
@@ -35,8 +36,9 @@
                             <th>Hora</th>
                             <th>Cliente</th>
                             <th>Telefone</th>
-                            <th>Serviço</th>
+                            <th>Serviços</th>
                             <th>Profissional</th>
+                            <th>Status</th>
                             <th>Preço</th>
                         </tr>
                     </thead>
@@ -48,6 +50,7 @@
                             <td>{{ ag.cliente_telefone }}</td>
                             <td>{{ ag.servico_nome }}</td>
                             <td>{{ ag.profissional_nome }}</td>
+                            <td>{{ "Cancelado" if ag.status == "cancelado" else "Realizado" if ag.status == "realizado" else "Agendado" }}</td>
                             <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
                         </tr>
                         {% endfor %}
@@ -70,8 +73,9 @@
                                 <th>Hora</th>
                                 <th>Cliente</th>
                                 <th>Telefone</th>
-                                <th>Serviço</th>
+                                <th>Serviços</th>
                                 <th>Profissional</th>
+                                <th>Status</th>
                                 <th>Preço</th>
                             </tr>
                         </thead>
@@ -83,6 +87,7 @@
                                 <td>{{ ag.cliente_telefone }}</td>
                                 <td>{{ ag.servico_nome }}</td>
                                 <td>{{ ag.profissional_nome }}</td>
+                                <td>{{ "Cancelado" if ag.status == "cancelado" else "Realizado" if ag.status == "realizado" else "Agendado" }}</td>
                                 <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
                             </tr>
                             {% endfor %}

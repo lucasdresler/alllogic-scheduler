@@ -58,37 +58,65 @@ def data_permitida(data_str):
     return True
 
 
-def horarios_disponiveis(profissional_id, data_str, servico_id):
-    """Retorna lista de horários (HH:MM) livres para o profissional na data, considerando a duração do serviço."""
+def horarios_disponiveis(profissional_id, data_str, servico_ids):
+    """Retorna horários livres considerando a duração total dos serviços selecionados."""
     if not data_permitida(data_str):
         return []
 
-    servico = obter_servico(servico_id)
-    if not servico:
+    if isinstance(servico_ids, int):
+        servico_ids = [servico_ids]
+
+    servico_ids = list(servico_ids)
+    if not servico_ids:
         return []
 
-    duracao = servico["duracao_minutos"]
-    slots_necessarios = max(1, -(-duracao // INTERVALO_SLOT_MINUTOS))  # ceil division
-
-    todos_slots = _gerar_slots_do_dia()
-
     with db_session() as conn:
+        servicos = conn.execute(
+            """
+            SELECT id, duracao_minutos
+            FROM servico
+            WHERE id = ANY(%s)
+            """,
+            (servico_ids,),
+        ).fetchall()
+
+        if len(servicos) != len(set(servico_ids)):
+            return []
+
+        duracao_total = sum(servico["duracao_minutos"] for servico in servicos)
+
         ocupados_rows = conn.execute(
             """
-            SELECT a.hora, s.duracao_minutos
+            SELECT a.hora,
+                   COALESCE(SUM(s.duracao_minutos), 0) AS duracao_minutos
             FROM agendamento a
-            JOIN servico s ON s.id = a.servico_id
-            WHERE a.profissional_id = %s AND a.data = %s
+            JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            JOIN servico s ON s.id = ags.servico_id
+            WHERE a.profissional_id = %s
+              AND a.data = %s
+              AND a.status = 'agendado'
+            GROUP BY a.id, a.hora
             """,
             (profissional_id, data_str),
         ).fetchall()
+
+    todos_slots = _gerar_slots_do_dia()
+    slots_necessarios = max(
+        1,
+        -(-duracao_total // INTERVALO_SLOT_MINUTOS),
+    )
 
     ocupados = set()
     for row in ocupados_rows:
         inicio_idx = todos_slots.index(row["hora"]) if row["hora"] in todos_slots else None
         if inicio_idx is None:
             continue
-        qtd = max(1, -(-row["duracao_minutos"] // INTERVALO_SLOT_MINUTOS))
+
+        qtd = max(
+            1,
+            -(-row["duracao_minutos"] // INTERVALO_SLOT_MINUTOS),
+        )
+
         for i in range(inicio_idx, inicio_idx + qtd):
             if i < len(todos_slots):
                 ocupados.add(todos_slots[i])
@@ -97,14 +125,20 @@ def horarios_disponiveis(profissional_id, data_str, servico_id):
     data_e_hoje = datetime.strptime(data_str, "%Y-%m-%d").date() == agora.date()
 
     disponiveis = []
+
     for i, slot in enumerate(todos_slots):
-        se_de_hoje_no_passado = data_e_hoje and datetime.strptime(slot, "%H:%M").time() <= agora.time()
+        se_de_hoje_no_passado = (
+            data_e_hoje
+            and datetime.strptime(slot, "%H:%M").time() <= agora.time()
+        )
         if se_de_hoje_no_passado:
             continue
 
         faixa = todos_slots[i:i + slots_necessarios]
+
         if len(faixa) < slots_necessarios:
-            continue  # não cabe o serviço até o fechamento
+            continue
+
         if any(s in ocupados for s in faixa):
             continue
 
@@ -113,22 +147,71 @@ def horarios_disponiveis(profissional_id, data_str, servico_id):
     return disponiveis
 
 
-def criar_agendamento(cliente_nome, cliente_telefone, servico_id, profissional_id, data_str, hora_str):
-    """Cria o agendamento revalidando disponibilidade (evita corrida/duplicidade)."""
-    disponiveis = horarios_disponiveis(profissional_id, data_str, servico_id)
+def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_id, data_str, hora_str):
+    """Cria o agendamento e seus serviços, revalidando a disponibilidade."""
+    if isinstance(servico_ids, int):
+        servico_ids = [servico_ids]
+
+    servico_ids = list(servico_ids)
+    if not servico_ids:
+        return None, "Selecione pelo menos um serviço."
+
+    disponiveis = horarios_disponiveis(
+        profissional_id,
+        data_str,
+        servico_ids,
+    )
     if hora_str not in disponiveis:
         return None, "Horário não disponível. Escolha outro horário."
 
     with db_session() as conn:
+        servicos = conn.execute(
+            """
+            SELECT id
+            FROM servico
+            WHERE id = ANY(%s)
+            """,
+            (servico_ids,),
+        ).fetchall()
+
+        if len(servicos) != len(set(servico_ids)):
+            return None, "Serviço inválido."
+
+        primeiro_servico_id = servico_ids[0]
+
         cursor = conn.execute(
             """
-            INSERT INTO agendamento (cliente_nome, cliente_telefone, servico_id, profissional_id, data, hora)
+            INSERT INTO agendamento (
+                cliente_nome,
+                cliente_telefone,
+                servico_id,
+                profissional_id,
+                data,
+                hora
+            )
             VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (cliente_nome, cliente_telefone, servico_id, profissional_id, data_str, hora_str),
+            (
+                cliente_nome,
+                cliente_telefone,
+                primeiro_servico_id,
+                profissional_id,
+                data_str,
+                hora_str,
+            ),
         )
         agendamento_id = cursor.fetchone()["id"]
+
+        with conn.cursor() as cursor:
+            cursor.executemany(
+                """
+                INSERT INTO agendamento_servico (agendamento_id, servico_id)
+                VALUES (%s, %s)
+                ON CONFLICT (agendamento_id, servico_id) DO NOTHING
+                """,
+                [(agendamento_id, servico_id) for servico_id in servico_ids],
+            )
 
     return agendamento_id, None
 
@@ -137,33 +220,109 @@ def obter_agendamento_completo(agendamento_id):
     with db_session() as conn:
         row = conn.execute(
             """
-            SELECT a.*, s.nome AS servico_nome, s.preco AS servico_preco,
-                   p.nome AS profissional_nome
+            SELECT a.*,
+                   p.nome AS profissional_nome,
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'id', s.id,
+                               'nome', s.nome,
+                               'preco', s.preco,
+                               'duracao_minutos', s.duracao_minutos
+                           )
+                           ORDER BY s.id
+                       ) FILTER (WHERE s.id IS NOT NULL),
+                       '[]'::json
+                   ) AS servicos
             FROM agendamento a
-            JOIN servico s ON s.id = a.servico_id
             JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            LEFT JOIN servico s ON s.id = ags.servico_id
             WHERE a.id = %s
+            GROUP BY a.id, p.nome
             """,
             (agendamento_id,),
         ).fetchone()
-        return dict(row) if row else None
+
+        if not row:
+            return None
+
+        resultado = dict(row)
+        resultado["servico_nome"] = ", ".join(
+            servico["nome"] for servico in resultado["servicos"]
+        )
+        resultado["servico_preco"] = sum(
+            servico["preco"] for servico in resultado["servicos"]
+        )
+        resultado["servico_duracao_minutos"] = sum(
+            servico["duracao_minutos"] for servico in resultado["servicos"]
+        )
+
+        return resultado
 
 
 def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str):
     with db_session() as conn:
         rows = conn.execute(
             """
-            SELECT a.*, s.nome AS servico_nome, s.preco AS servico_preco,
-                   p.nome AS profissional_nome
+            SELECT a.*,
+                   p.nome AS profissional_nome,
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'id', s.id,
+                               'nome', s.nome,
+                               'preco', s.preco,
+                               'duracao_minutos', s.duracao_minutos
+                           )
+                           ORDER BY s.id
+                       ) FILTER (WHERE s.id IS NOT NULL),
+                       '[]'::json
+                   ) AS servicos
             FROM agendamento a
-            JOIN servico s ON s.id = a.servico_id
             JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            LEFT JOIN servico s ON s.id = ags.servico_id
             WHERE a.data BETWEEN %s AND %s
+            GROUP BY a.id, p.nome
             ORDER BY a.data ASC, a.hora ASC
             """,
             (data_inicio_str, data_fim_str),
         ).fetchall()
-        return [dict(r) for r in rows]
+
+        resultados = []
+
+        for row in rows:
+            resultado = dict(row)
+            resultado["servico_nome"] = ", ".join(
+                servico["nome"] for servico in resultado["servicos"]
+            )
+            resultado["servico_preco"] = sum(
+                servico["preco"] for servico in resultado["servicos"]
+            )
+            resultado["servico_duracao_minutos"] = sum(
+                servico["duracao_minutos"] for servico in resultado["servicos"]
+            )
+            resultados.append(resultado)
+
+        return resultados
+
+
+def cancelar_agendamento(agendamento_id):
+    """Cancela um agendamento preservando seu registro histórico."""
+    with db_session() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE agendamento
+            SET status = 'cancelado'
+            WHERE id = %s AND status = 'agendado'
+            RETURNING id
+            """,
+            (agendamento_id,),
+        )
+        row = cursor.fetchone()
+        return row is not None
+
 
 
 def verificar_admin(usuario, senha):

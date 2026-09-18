@@ -17,6 +17,26 @@ Na V1:
 
 ## Regras de negócio
 
+## Composição do agendamento
+
+Na V1 Comercial, um agendamento pode conter um ou mais serviços.
+
+As regras são:
+
+- cada serviço selecionado pertence ao mesmo agendamento;
+- a duração total do agendamento é a soma das durações dos serviços selecionados;
+- o valor total do agendamento é a soma dos preços dos serviços selecionados;
+- a disponibilidade deve reservar um único bloco contínuo correspondente à duração total;
+- o intervalo utilizado para apresentar os horários disponíveis representa apenas a granularidade dos slots e não define a duração do agendamento;
+- os serviços que compõem o agendamento devem permanecer identificáveis no histórico.
+
+Exemplo:
+
+Um cliente seleciona um serviço de 30 minutos e outro de 30 minutos. O agendamento ocupa um bloco contínuo de 60 minutos.
+
+Um cliente seleciona serviços cuja duração total seja de 75 minutos. O sistema deve exigir um bloco contínuo de 75 minutos disponível.
+
+
 ### Agendamento ativo
 
 Um agendamento `agendado` ocupa o horário do profissional, impede sua reutilização, compõe a agenda, compõe a receita prevista pelo valor do serviço e permanece no histórico.
