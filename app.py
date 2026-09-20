@@ -3,7 +3,6 @@ from functools import wraps
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
-import models
 from config import SECRET_KEY
 from database import init_db, db_session, obter_todas_configuracoes, admin_precisa_alterar_senha, admin_alterar_senha as db_admin_alterar_senha
 
@@ -11,6 +10,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
 
 init_db()
+import models
 
 
 def _carregar_config_template():
