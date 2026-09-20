@@ -4,13 +4,26 @@ from functools import wraps
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 import models
-from config import DIAS_ANTECEDENCIA_AGENDAMENTO, SECRET_KEY
-from database import init_db
+from config import SECRET_KEY
+from database import init_db, db_session, obter_todas_configuracoes, admin_precisa_alterar_senha, admin_alterar_senha as db_admin_alterar_senha
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
 
 init_db()
+
+
+def _carregar_config_template():
+    """Carrega configurações do banco para uso nos templates."""
+    with db_session() as conn:
+        config = obter_todas_configuracoes(conn)
+    return {
+        "nome_estabelecimento": config.get("nome_estabelecimento", "AllLogic Scheduler"),
+        "telefone_estabelecimento": config.get("telefone_estabelecimento", ""),
+        "endereco_estabelecimento": config.get("endereco_estabelecimento", ""),
+        "nome_publico": config.get("nome_publico", "AllLogic Scheduler"),
+        "dias_antecedencia": int(config.get("dias_antecedencia_agendamento", 14)),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -34,11 +47,13 @@ def login_requerido(f):
 def index():
     servicos = models.listar_servicos()
     profissionais = models.listar_profissionais()
+    config = _carregar_config_template()
     return render_template(
         "index.html",
         servicos=servicos,
         profissionais=profissionais,
-        dias_antecedencia=DIAS_ANTECEDENCIA_AGENDAMENTO,
+        dias_antecedencia=config["dias_antecedencia"],
+        nome_publico=config["nome_publico"],
     )
 
 
@@ -166,21 +181,55 @@ def api_appointments():
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     erro = None
+    config = _carregar_config_template()
     if request.method == "POST":
         usuario = request.form.get("usuario", "").strip()
         senha = request.form.get("senha", "")
         if models.verificar_admin(usuario, senha):
             session["admin_logado"] = True
             session["admin_usuario"] = usuario
+            with db_session() as conn:
+                if admin_precisa_alterar_senha(conn, usuario):
+                    return redirect(url_for("admin_alterar_senha"))
             return redirect(url_for("admin_dashboard"))
         erro = "Usuário ou senha inválidos."
-    return render_template("admin_login.html", erro=erro)
+    return render_template("admin_login.html", erro=erro, **config)
 
 
 @app.route("/admin/logout")
 def admin_logout():
     session.clear()
     return redirect(url_for("admin_login"))
+
+
+@app.route("/admin/alterar-senha", methods=["GET", "POST"])
+@login_requerido
+def admin_alterar_senha():
+    usuario = session.get("admin_usuario")
+    erro = None
+    sucesso = None
+    config = _carregar_config_template()
+    with db_session() as conn:
+        primeiro_acesso = admin_precisa_alterar_senha(conn, usuario)
+    if request.method == "POST":
+        senha_atual = request.form.get("senha_atual", "")
+        nova_senha = request.form.get("nova_senha", "")
+        confirmar_senha = request.form.get("confirmar_senha", "")
+        if not senha_atual or not nova_senha or not confirmar_senha:
+            erro = "Todos os campos são obrigatórios."
+        elif nova_senha != confirmar_senha:
+            erro = "As novas senhas não conferem."
+        elif len(nova_senha) < 8:
+            erro = "A nova senha deve ter pelo menos 8 caracteres."
+        else:
+            with db_session() as conn:
+                ok, msg = db_admin_alterar_senha(conn, usuario, senha_atual, nova_senha)
+            if ok:
+                sucesso = "Senha alterada com sucesso. A senha inicial não é mais válida."
+                primeiro_acesso = False
+            else:
+                erro = msg or "Não foi possível alterar a senha."
+    return render_template("admin_alterar_senha.html", erro=erro, sucesso=sucesso, primeiro_acesso=primeiro_acesso, **config)
 
 
 @app.route("/admin/agendamento/<int:agendamento_id>/cancelar", methods=["POST"])
@@ -239,6 +288,7 @@ def admin_dashboard():
         receita_prevista=receita_prevista,
         receita_periodo=receita_periodo,
         hoje=hoje.isoformat(),
+        **_carregar_config_template(),
     )
 
 

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block titulo %}Alterar Senha — Painel Admin{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+    <header class="topo">
+        <h1>Alterar Senha</h1>
+        <p>{{ nome_estabelecimento }}</p>
+    </header>
+
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+
+    {% if sucesso %}
+    <div class="mensagem-sucesso">{{ sucesso }}</div>
+    {% endif %}
+
+    <div class="card">
+        <form method="POST" action="{{ url_for('admin_alterar_senha') }}">
+            <label for="senha_atual">Senha Atual</label>
+            <input type="password" id="senha_atual" name="senha_atual" placeholder="Sua senha atual" autocomplete="current-password" required>
+
+            <label for="nova_senha">Nova Senha</label>
+            <input type="password" id="nova_senha" name="nova_senha" placeholder="Nova senha (mín. 8 caracteres)" autocomplete="new-password" required minlength="8">
+
+            <label for="confirmar_senha">Confirmar Nova Senha</label>
+            <input type="password" id="confirmar_senha" name="confirmar_senha" placeholder="Confirme a nova senha" autocomplete="new-password" required minlength="8">
+
+            <button type="submit" class="btn-primario">Alterar Senha</button>
+        </form>
+    </div>
+
+    {% if not primeiro_acesso %}
+    <p class="link-voltar"><a href="{{ url_for('admin_dashboard') }}">Voltar ao Painel</a></p>
+    {% endif %}
+</div>
+{% endblock %}

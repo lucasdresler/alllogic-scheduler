@@ -1,12 +1,98 @@
 from datetime import datetime, timedelta
+from functools import lru_cache
 
-from config import (
-    HORARIO_ABERTURA,
-    HORARIO_FECHAMENTO,
-    INTERVALO_SLOT_MINUTOS,
-    DIAS_FUNCIONAMENTO,
-)
-from database import db_session
+from database import db_session, obter_todas_configuracoes
+
+
+def _carregar_configuracoes():
+    with db_session() as conn:
+        return obter_todas_configuracoes(conn)
+
+
+@lru_cache(maxsize=1)
+def _get_config():
+    return _carregar_configuracoes()
+
+
+def _limpar_cache_config():
+    _get_config.cache_clear()
+
+
+def _obter_config(chave, padrao=None):
+    config = _get_config()
+    valor = config.get(chave)
+    if valor is None:
+        return padrao
+    return valor
+
+
+def _obter_config_int(chave, padrao=None):
+    valor = _obter_config(chave)
+    if valor is None:
+        return padrao
+    try:
+        return int(valor)
+    except (ValueError, TypeError):
+        return padrao
+
+
+def _obter_config_lista_int(chave, padrao=None):
+    valor = _obter_config(chave)
+    if not valor:
+        return padrao
+    try:
+        return [int(x.strip()) for x in valor.split(",") if x.strip()]
+    except (ValueError, TypeError):
+        return padrao
+
+
+# Propriedades dinâmicas que leem do cache a cada acesso
+def horario_abertura():
+    return _obter_config("horario_abertura", "09:00")
+
+
+def horario_fechamento():
+    return _obter_config("horario_fechamento", "19:00")
+
+
+def intervalo_slot_minutos():
+    return _obter_config_int("intervalo_slot_minutos", 30)
+
+
+def dias_funcionamento():
+    return _obter_config_lista_int("dias_funcionamento", [0, 1, 2, 3, 4, 5])
+
+
+def dias_antecedencia_agendamento():
+    return _obter_config_int("dias_antecedencia_agendamento", 14)
+
+
+def nome_estabelecimento():
+    return _obter_config("nome_estabelecimento", "AllLogic Scheduler")
+
+
+def telefone_estabelecimento():
+    return _obter_config("telefone_estabelecimento", "")
+
+
+def endereco_estabelecimento():
+    return _obter_config("endereco_estabelecimento", "")
+
+
+def nome_publico():
+    return _obter_config("nome_publico", "AllLogic Scheduler")
+
+
+# Aliases para compatibilidade com código existente que importa as constantes
+HORARIO_ABERTURA = horario_abertura()
+HORARIO_FECHAMENTO = horario_fechamento()
+INTERVALO_SLOT_MINUTOS = intervalo_slot_minutos()
+DIAS_FUNCIONAMENTO = dias_funcionamento()
+DIAS_ANTECEDENCIA_AGENDAMENTO = dias_antecedencia_agendamento()
+NOME_ESTABELECIMENTO = nome_estabelecimento()
+TELEFONE_ESTABELECIMENTO = telefone_estabelecimento()
+ENDERECO_ESTABELECIMENTO = endereco_estabelecimento()
+NOME_PUBLICO = nome_publico()
 
 
 def listar_servicos():
@@ -38,22 +124,26 @@ def obter_profissional(profissional_id):
 
 def _gerar_slots_do_dia():
     slots = []
-    inicio = datetime.strptime(HORARIO_ABERTURA, "%H:%M")
-    fim = datetime.strptime(HORARIO_FECHAMENTO, "%H:%M")
+    inicio = datetime.strptime(horario_abertura(), "%H:%M")
+    fim = datetime.strptime(horario_fechamento(), "%H:%M")
     atual = inicio
     while atual < fim:
         slots.append(atual.strftime("%H:%M"))
-        atual += timedelta(minutes=INTERVALO_SLOT_MINUTOS)
+        atual += timedelta(minutes=intervalo_slot_minutos())
     return slots
 
 
 def data_permitida(data_str):
-    """Valida se a data está dentro do funcionamento (dia da semana permitido e não é passado)."""
+    """Valida se a data está dentro do funcionamento (dia da semana permitido, não é passado e respeita antecedência máxima)."""
     data = datetime.strptime(data_str, "%Y-%m-%d").date()
     hoje = datetime.now().date()
     if data < hoje:
         return False
-    if data.weekday() not in DIAS_FUNCIONAMENTO:
+    if data.weekday() not in dias_funcionamento():
+        return False
+    # Valida antecedência máxima configurada no banco
+    max_dias = dias_antecedencia_agendamento()
+    if max_dias and (data - hoje).days > max_dias:
         return False
     return True
 
@@ -103,7 +193,7 @@ def horarios_disponiveis(profissional_id, data_str, servico_ids):
     todos_slots = _gerar_slots_do_dia()
     slots_necessarios = max(
         1,
-        -(-duracao_total // INTERVALO_SLOT_MINUTOS),
+        -(-duracao_total // intervalo_slot_minutos()),
     )
 
     ocupados = set()
@@ -114,7 +204,7 @@ def horarios_disponiveis(profissional_id, data_str, servico_ids):
 
         qtd = max(
             1,
-            -(-row["duracao_minutos"] // INTERVALO_SLOT_MINUTOS),
+            -(-row["duracao_minutos"] // intervalo_slot_minutos()),
         )
 
         for i in range(inicio_idx, inicio_idx + qtd):
