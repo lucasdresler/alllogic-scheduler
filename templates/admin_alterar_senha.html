@@ -19,6 +19,7 @@
 
     <div class="card">
         <form method="POST" action="{{ url_for('admin_alterar_senha') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="senha_atual">Senha Atual</label>
             <input type="password" id="senha_atual" name="senha_atual" placeholder="Sua senha atual" autocomplete="current-password" required>
 

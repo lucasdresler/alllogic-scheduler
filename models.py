@@ -95,9 +95,12 @@ ENDERECO_ESTABELECIMENTO = endereco_estabelecimento()
 NOME_PUBLICO = nome_publico()
 
 
-def listar_servicos():
+def listar_servicos(apenas_ativos=True):
     with db_session() as conn:
-        rows = conn.execute("SELECT * FROM servico ORDER BY id").fetchall()
+        if apenas_ativos:
+            rows = conn.execute("SELECT * FROM servico WHERE ativo = TRUE ORDER BY id").fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM servico ORDER BY id").fetchall()
         return [dict(r) for r in rows]
 
 
@@ -161,6 +164,17 @@ def horarios_disponiveis(profissional_id, data_str, servico_ids):
         return []
 
     with db_session() as conn:
+        # Verifica se o profissional realiza TODOS os serviços selecionados
+        servicos_prof = conn.execute(
+            """
+            SELECT servico_id FROM profissional_servico WHERE profissional_id = %s
+            """,
+            (profissional_id,),
+        ).fetchall()
+        servicos_prof_ids = {row["servico_id"] for row in servicos_prof}
+        if not servicos_prof_ids.issuperset(set(servico_ids)):
+            return []
+
         servicos = conn.execute(
             """
             SELECT id, duracao_minutos
@@ -238,7 +252,7 @@ def horarios_disponiveis(profissional_id, data_str, servico_ids):
 
 
 def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_id, data_str, hora_str):
-    """Cria o agendamento e seus serviços, revalidando a disponibilidade."""
+    """Cria o agendamento e seus serviços, revalidando a disponibilidade com lock de concorrência."""
     if isinstance(servico_ids, int):
         servico_ids = [servico_ids]
 
@@ -255,9 +269,29 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
         return None, "Horário não disponível. Escolha outro horário."
 
     with db_session() as conn:
+        # Advisory lock para evitar race condition no mesmo profissional+data
+        lock_key = (profissional_id * 1000000) + int(data_str.replace("-", ""))
+        conn.execute("SELECT pg_advisory_xact_lock(%s)", (lock_key,))
+
+        # Revalida disponibilidade dentro da transação com lock
+        ocupados_rows = conn.execute(
+            """
+            SELECT a.hora,
+                   COALESCE(SUM(s.duracao_minutos), 0) AS duracao_minutos
+            FROM agendamento a
+            JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            JOIN servico s ON s.id = ags.servico_id
+            WHERE a.profissional_id = %s
+              AND a.data = %s
+              AND a.status = 'agendado'
+            GROUP BY a.id, a.hora
+            """,
+            (profissional_id, data_str),
+        ).fetchall()
+
         servicos = conn.execute(
             """
-            SELECT id
+            SELECT id, duracao_minutos
             FROM servico
             WHERE id = ANY(%s)
             """,
@@ -266,6 +300,28 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
 
         if len(servicos) != len(set(servico_ids)):
             return None, "Serviço inválido."
+
+        duracao_total = sum(servico["duracao_minutos"] for servico in servicos)
+        todos_slots = _gerar_slots_do_dia()
+        slots_necessarios = max(1, -(-duracao_total // intervalo_slot_minutos()))
+
+        ocupados = set()
+        for row in ocupados_rows:
+            inicio_idx = todos_slots.index(row["hora"]) if row["hora"] in todos_slots else None
+            if inicio_idx is None:
+                continue
+            qtd = max(1, -(-row["duracao_minutos"] // intervalo_slot_minutos()))
+            for i in range(inicio_idx, inicio_idx + qtd):
+                if i < len(todos_slots):
+                    ocupados.add(todos_slots[i])
+
+        hora_idx = todos_slots.index(hora_str) if hora_str in todos_slots else -1
+        if hora_idx == -1:
+            return None, "Horário inválido."
+
+        faixa = todos_slots[hora_idx:hora_idx + slots_necessarios]
+        if len(faixa) < slots_necessarios or any(s in ocupados for s in faixa):
+            return None, "Horário não disponível. Escolha outro horário."
 
         primeiro_servico_id = servico_ids[0]
 

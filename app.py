@@ -2,12 +2,26 @@ from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from config import SECRET_KEY
 from database import init_db, db_session, obter_todas_configuracoes, admin_precisa_alterar_senha, admin_alterar_senha as db_admin_alterar_senha
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
+
+# CSRF Protection
+csrf = CSRFProtect(app)
+
+# Rate Limiting
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+)
 
 init_db()
 import models
@@ -71,12 +85,12 @@ def agendamento_sucesso(agendamento_id):
 
 @app.route("/api/services")
 def api_services():
-    return jsonify(models.listar_servicos())
+    return jsonify(models.listar_servicos(apenas_ativos=True))
 
 
 @app.route("/api/professionals")
 def api_professionals():
-    return jsonify(models.listar_profissionais())
+    return jsonify(models.listar_profissionais(apenas_ativos=True))
 
 
 @app.route("/api/availability")
@@ -179,6 +193,7 @@ def api_appointments():
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def admin_login():
     erro = None
     config = _carregar_config_template()
@@ -290,6 +305,13 @@ def admin_dashboard():
         hoje=hoje.isoformat(),
         **_carregar_config_template(),
     )
+
+
+# Exempt API endpoints from CSRF (they use JSON, not forms)
+csrf.exempt(api_services)
+csrf.exempt(api_professionals)
+csrf.exempt(api_availability)
+csrf.exempt(api_appointments)
 
 
 if __name__ == "__main__":

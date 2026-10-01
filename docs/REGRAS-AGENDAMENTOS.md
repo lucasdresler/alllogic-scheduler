@@ -13,6 +13,8 @@ Este documento define as regras de status, ocupação de horários, receita prev
 Na V1:
 
 - `agendado`: agendamento ativo e válido;
+- `realizado`: atendimento ocorreu, definido por admin, histórico, NÃO bloqueia horário, entra em receita do período;
+- `nao_compareceu`: cliente não veio, definido por admin, histórico, NÃO bloqueia horário, NÃO entra em receita;
 - `cancelado`: agendamento cancelado, mantido no histórico.
 
 ## Regras de negócio
@@ -41,6 +43,18 @@ Um cliente seleciona serviços cuja duração total seja de 75 minutos. O sistem
 
 Um agendamento `agendado` ocupa o horário do profissional, impede sua reutilização, compõe a agenda, compõe a receita prevista pelo valor do serviço e permanece no histórico.
 
+### Agendamento realizado
+
+Um agendamento `realizado` não ocupa mais o horário, permite que o horário volte a ser disponibilizado, compõe a receita do período e permanece no histórico.
+
+O status `realizado` é atribuído exclusivamente pelo administrador, somente após a data/hora do agendamento ter passado.
+
+### Agendamento não compareceu
+
+Um agendamento `nao_compareceu` não ocupa mais o horário, permite que o horário volte a ser disponibilizado, NÃO compõe a receita do período e permanece no histórico.
+
+O status `nao_compareceu` é atribuído exclusivamente pelo administrador, após a data/hora do agendamento ter passado.
+
 ### Agendamento cancelado
 
 Um agendamento `cancelado` não ocupa mais o horário, permite que o horário volte a ser disponibilizado, não compõe a receita prevista e permanece registrado no banco e disponível no histórico.
@@ -55,11 +69,17 @@ Quando um agendamento for cancelado, seu valor deve ser retirado da previsão de
 
 Exemplo: 3 agendamentos ativos de R$ 40,00 geram R$ 120,00 de previsão. Se 1 for cancelado, a previsão passa a R$ 80,00.
 
+## Receita do período
+
+A receita do período deve considerar os agendamentos com status `agendado` e `realizado`.
+
+Não inclui agendamentos `cancelado` nem `nao_compareceu`.
+
 ## Disponibilidade
 
 A disponibilidade deve considerar somente agendamentos com status `agendado`.
 
-Agendamentos cancelados não devem bloquear horários.
+Agendamentos cancelados, realizados e não compareceram não devem bloquear horários.
 
 Essa regra deve valer tanto para a consulta de disponibilidade quanto para a revalidação realizada na criação de um novo agendamento.
 
@@ -67,11 +87,33 @@ Essa regra deve valer tanto para a consulta de disponibilidade quanto para a rev
 
 O cancelamento deve preservar o registro, incluindo cliente, serviço, profissional, data, horário, status e demais dados do agendamento.
 
-## Reagendamento
-
 O reagendamento deve preservar o histórico do atendimento e não destruir o registro original.
 
-Os detalhes do fluxo de reagendamento serão definidos durante sua implementação, sem ampliar o escopo aprovado da V1.
+## Transições de status permitidas
+
+| De → Para           | Permitida? | Quem  | Regra                                                                 |
+|---------------------|------------|-------|-----------------------------------------------------------------------|
+| agendado → realizado       | ✅         | Admin | Somente após a data/hora do agendamento ter passado                   |
+| agendado → nao_compareceu  | ✅         | Admin | Após data/hora passada                                                |
+| agendado → cancelado       | ✅         | Cliente (token) / Admin | A qualquer momento                                    |
+| realizado → agendado       | ✅         | Admin | Correção (reabrir)                                                    |
+| realizado → cancelado      | ❌         | —     | Não permitido (já ocorreu)                                            |
+| nao_compareceu → agendado  | ✅         | Admin | Correção (reabrir)                                                    |
+| nao_compareceu → cancelado | ❌         | —     | Não faz sentido                                                       |
+| cancelado → agendado       | ✅         | Admin | Reativar (reativar reserva)                                           |
+| cancelado → realizado      | ❌         | —     | Não permitido                                                         |
+
+## Registro de origem
+
+Coluna `status_origem` em `agendamento` (`cliente`, `admin`, `sistema`).
+
+## Histórico de status
+
+Tabela `agendamento_status_historico` (agendamento_id, status_anterior, status_novo, origem, usuario_id, criado_em) — a ser implementada na V1.
+
+## Regra crítica
+
+Sistema **NÃO** transforma automaticamente agendamento passado em `realizado` (remover `atualizar_agendamentos_realizados` do `init_db`).
 
 ## Validação
 
