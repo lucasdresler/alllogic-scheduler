@@ -10,6 +10,14 @@
         <a href="{{ url_for('admin_logout') }}" class="link-logout">Sair</a>
     </div>
 
+    <div class="card">
+        <div class="acoes-topo">
+            <a href="{{ url_for('admin_servicos') }}" class="btn-secundario">Serviços</a>
+            <a href="{{ url_for('admin_profissionais') }}" class="btn-secundario">Profissionais</a>
+            <a href="{{ url_for('admin_configuracoes') }}" class="btn-secundario">Configurações</a>
+        </div>
+    </div>
+
     <div class="tabs">
         <a href="{{ url_for('admin_dashboard', aba='hoje') }}" class="tab-link{% if aba == 'hoje' %} ativo{% endif %}">Hoje</a>
         <a href="{{ url_for('admin_dashboard', aba='semana') }}" class="tab-link{% if aba == 'semana' %} ativo{% endif %}">Semana</a>

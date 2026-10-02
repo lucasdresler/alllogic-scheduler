@@ -36,12 +36,7 @@
         <div class="card">
             <div class="etapa-titulo">Escolha o profissional</div>
             <div class="opcoes-grid">
-                {% for profissional in profissionais %}
-                <button type="button" class="opcao-btn" data-etapa="profissional"
-                        data-id="{{ profissional.id }}" data-nome="{{ profissional.nome }}">
-                    <span>{{ profissional.nome }}</span>
-                </button>
-                {% endfor %}
+                <p class="vazio">Selecione os serviços para ver os profissionais disponíveis.</p>
             </div>
         </div>
         <button type="button" class="btn-primario" id="btn-avancar-2" disabled>Avançar</button>
@@ -97,6 +92,7 @@
 {% block scripts %}
 <script>
     window.DIAS_ANTECEDENCIA = {{ dias_antecedencia }};
+    window.DIAS_FUNCIONAMENTO = {{ dias_funcionamento|tojson }};
 </script>
 <script src="{{ url_for('static', filename='js/agendamento.js') }}"></script>
 {% endblock %}

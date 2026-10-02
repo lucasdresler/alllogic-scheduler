@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }} — Administração{% endblock %}
+
+{% block conteudo %}
+<div class="container-admin">
+    <div class="topo-admin">
+        <h1>{{ titulo }}</h1>
+        <span>{{ nome_estabelecimento }}</span>
+        <a href="{{ url_for('admin_profissionais') }}" class="link-logout">Voltar</a>
+    </div>
+
+    <div class="card">
+        {% if erro %}
+        <div class="mensagem-erro">{{ erro }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label for="nome">Nome do profissional</label>
+            <input type="text" id="nome" name="nome" value="{{ profissional.nome if profissional else '' }}" required>
+
+            <label class="checkbox-row">
+                <input type="checkbox" name="ativo" {% if profissional and profissional.ativo %}checked{% endif %}>
+                Profissional ativo
+            </label>
+
+            <fieldset>
+                <legend>Serviços realizados</legend>
+                {% if servicos %}
+                    <div class="lista-checks">
+                        {% for servico in servicos %}
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="servicos" value="{{ servico.id }}" {% if profissional and servico.id in profissional.servico_ids %}checked{% endif %}>
+                            {{ servico.nome }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="vazio">Cadastre pelo menos um serviço antes de criar um profissional ativo.</p>
+                {% endif %}
+            </fieldset>
+
+            <div class="botoes-acoes">
+                <button type="submit" class="btn-primario">Salvar</button>
+                <a href="{{ url_for('admin_profissionais') }}" class="btn-secundario">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

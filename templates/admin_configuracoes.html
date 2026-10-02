@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block titulo %}Configurações — Administração{% endblock %}
+
+{% block conteudo %}
+<div class="container-admin">
+    <div class="topo-admin">
+        <h1>Configurações do estabelecimento</h1>
+        <span>{{ nome_estabelecimento }}</span>
+        <a href="{{ url_for('admin_dashboard') }}" class="link-logout">Painel</a>
+    </div>
+
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+
+    {% if sucesso %}
+    <div class="mensagem-sucesso">{{ sucesso }}</div>
+    {% endif %}
+
+    <div class="card">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label for="nome_estabelecimento">Nome do estabelecimento</label>
+            <input type="text" id="nome_estabelecimento" name="nome_estabelecimento" value="{{ configuracoes.get('nome_estabelecimento', nome_estabelecimento) }}">
+
+            <label for="nome_publico">Nome público</label>
+            <input type="text" id="nome_publico" name="nome_publico" value="{{ configuracoes.get('nome_publico', nome_publico) }}">
+
+            <label for="telefone_estabelecimento">Telefone</label>
+            <input type="text" id="telefone_estabelecimento" name="telefone_estabelecimento" value="{{ configuracoes.get('telefone_estabelecimento', telefone_estabelecimento) }}">
+
+            <label for="endereco_estabelecimento">Endereço</label>
+            <input type="text" id="endereco_estabelecimento" name="endereco_estabelecimento" value="{{ configuracoes.get('endereco_estabelecimento', endereco_estabelecimento) }}">
+
+            <label for="dias_antecedencia_agendamento">Dias de antecedência</label>
+            <input type="number" id="dias_antecedencia_agendamento" name="dias_antecedencia_agendamento" min="0" value="{{ configuracoes.get('dias_antecedencia_agendamento', dias_antecedencia) }}">
+
+            <label for="horario_abertura">Horário de abertura</label>
+            <input type="time" id="horario_abertura" name="horario_abertura" value="{{ configuracoes.get('horario_abertura', '09:00') }}">
+
+            <label for="horario_fechamento">Horário de fechamento</label>
+            <input type="time" id="horario_fechamento" name="horario_fechamento" value="{{ configuracoes.get('horario_fechamento', '19:00') }}">
+
+            <label for="intervalo_slot_minutos">Intervalo entre horários (minutos)</label>
+            <input type="number" id="intervalo_slot_minutos" name="intervalo_slot_minutos" min="15" step="15" value="{{ configuracoes.get('intervalo_slot_minutos', '30') }}">
+
+            <label for="dias_funcionamento">Dias de funcionamento (0=Dom, 1=Seg, ...)</label>
+            <input type="text" id="dias_funcionamento" name="dias_funcionamento" value="{{ configuracoes.get('dias_funcionamento', '1,2,3,4,5,6') }}">
+
+            <div class="botoes-acoes">
+                <button type="submit" class="btn-primario">Salvar configurações</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

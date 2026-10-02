@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block titulo %}Profissionais — Administração{% endblock %}
+
+{% block conteudo %}
+<div class="container-admin">
+    <div class="topo-admin">
+        <h1>Gerenciar profissionais</h1>
+        <span>{{ nome_estabelecimento }}</span>
+        <a href="{{ url_for('admin_dashboard') }}" class="link-logout">Painel</a>
+    </div>
+
+    <div class="card">
+        <div class="acoes-topo">
+            <a href="{{ url_for('admin_profissional_novo') }}" class="btn-primario">Novo profissional</a>
+        </div>
+
+        {% if profissionais %}
+        <div style="overflow-x:auto">
+            <table class="tabela-agendamentos">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Serviços</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profissional in profissionais %}
+                    <tr>
+                        <td>{{ profissional.nome }}</td>
+                        <td>{{ profissional.servicos|map(attribute='nome')|join(', ') if profissional.servicos else 'Nenhum serviço associado' }}</td>
+                        <td>{{ 'Ativo' if profissional.ativo else 'Inativo' }}</td>
+                        <td>
+                            <div class="acao-inline">
+                                <a href="{{ url_for('admin_profissional_editar', profissional_id=profissional.id) }}" class="btn-secundario">Editar</a>
+                                <form method="POST" action="{{ url_for('admin_profissional_toggle', profissional_id=profissional.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-link">{{ 'Desativar' if profissional.ativo else 'Ativar' }}</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="vazio">Nenhum profissional cadastrado.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }} — Administração{% endblock %}
+
+{% block conteudo %}
+<div class="container-admin">
+    <div class="topo-admin">
+        <h1>{{ titulo }}</h1>
+        <span>{{ nome_estabelecimento }}</span>
+        <a href="{{ url_for('admin_servicos') }}" class="link-logout">Voltar</a>
+    </div>
+
+    <div class="card">
+        {% if erro %}
+        <div class="mensagem-erro">{{ erro }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label for="nome">Nome do serviço</label>
+            <input type="text" id="nome" name="nome" value="{{ servico.nome if servico else '' }}" required>
+
+            <label for="descricao">Descrição</label>
+            <textarea id="descricao" name="descricao" rows="3">{{ servico.descricao if servico else '' }}</textarea>
+
+            <label for="preco">Preço</label>
+            <input type="number" id="preco" name="preco" step="0.01" min="0.01" value="{{ servico.preco if servico else '' }}" required>
+
+            <label for="duracao_minutos">Duração (minutos)</label>
+            <input type="number" id="duracao_minutos" name="duracao_minutos" min="15" step="15" value="{{ servico.duracao_minutos if servico else '' }}" required>
+
+            <label class="checkbox-row">
+                <input type="checkbox" name="ativo" {% if servico and servico.ativo %}checked{% endif %}>
+                Serviço ativo
+            </label>
+
+            <div class="botoes-acoes">
+                <button type="submit" class="btn-primario">Salvar</button>
+                <a href="{{ url_for('admin_servicos') }}" class="btn-secundario">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

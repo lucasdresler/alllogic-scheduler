@@ -1,7 +1,8 @@
 (function () {
     "use strict";
 
-    var DIAS_ANTECEDENCIA = window.DIAS_ANTECEDENCIA || 14;
+    var DIAS_ANTECEDENCIA = Number.isInteger(window.DIAS_ANTECEDENCIA) ? window.DIAS_ANTECEDENCIA : 14;
+    var DIAS_FUNCIONAMENTO = Array.isArray(window.DIAS_FUNCIONAMENTO) ? window.DIAS_FUNCIONAMENTO : [1, 2, 3, 4, 5, 6];
     var NOMES_DIA_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
     var NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -58,6 +59,9 @@
         estado.etapa = numero;
         esconderErroGlobal();
         atualizarProgresso();
+        if (numero === 2) {
+            carregarProfissionais();
+        }
         window.scrollTo(0, 0);
     }
 
@@ -102,20 +106,60 @@
     // ---------------------------------------------------------------------
     // Etapa 2: Profissional
     // ---------------------------------------------------------------------
-    function configurarEtapa2() {
-        var botoes = document.querySelectorAll('.opcao-btn[data-etapa="profissional"]');
-        botoes.forEach(function (btn) {
-            btn.addEventListener("click", function () {
-                botoes.forEach(function (b) { b.classList.remove("selecionado"); });
-                btn.classList.add("selecionado");
-                estado.profissional = {
-                    id: parseInt(btn.getAttribute("data-id"), 10),
-                    nome: btn.getAttribute("data-nome")
-                };
-                document.getElementById("btn-avancar-2").disabled = false;
-            });
+    function carregarProfissionais() {
+        var grid = document.querySelector("#etapa-2 .opcoes-grid");
+        var btnAvancar = document.getElementById("btn-avancar-2");
+        estado.profissional = null;
+        btnAvancar.disabled = true;
+        grid.innerHTML = '<p class="vazio">Carregando profissionais...</p>';
+
+        var params = new URLSearchParams();
+        estado.servicos.forEach(function (servico) {
+            params.append("servico_id", servico.id);
         });
 
+        fetch("/api/professionals?" + params.toString())
+            .then(function (resp) {
+                if (!resp.ok) {
+                    throw new Error("Não foi possível carregar os profissionais.");
+                }
+                return resp.json();
+            })
+            .then(function (profissionais) {
+                grid.innerHTML = "";
+                if (profissionais.length === 0) {
+                    grid.innerHTML = '<p class="vazio">Nenhum profissional atende a seleção.</p>';
+                    return;
+                }
+
+                profissionais.forEach(function (profissional) {
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "opcao-btn";
+                    btn.setAttribute("data-etapa", "profissional");
+                    btn.setAttribute("data-id", profissional.id);
+                    btn.setAttribute("data-nome", profissional.nome);
+                    btn.textContent = profissional.nome;
+                    btn.addEventListener("click", function () {
+                        grid.querySelectorAll(".opcao-btn").forEach(function (item) {
+                            item.classList.remove("selecionado");
+                        });
+                        btn.classList.add("selecionado");
+                        estado.profissional = {
+                            id: profissional.id,
+                            nome: profissional.nome
+                        };
+                        btnAvancar.disabled = false;
+                    });
+                    grid.appendChild(btn);
+                });
+            })
+            .catch(function () {
+                grid.innerHTML = '<p class="vazio">Erro ao carregar profissionais. Tente novamente.</p>';
+            });
+    }
+
+    function configurarEtapa2() {
         document.getElementById("btn-avancar-2").addEventListener("click", function () {
             if (estado.profissional) {
                 gerarGradeDeDias();
@@ -134,16 +178,12 @@
         var hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
 
-        var adicionados = 0;
-        var offset = 0;
-
-        while (adicionados < DIAS_ANTECEDENCIA && offset < DIAS_ANTECEDENCIA * 2) {
+        for (var offset = 0; offset <= DIAS_ANTECEDENCIA; offset++) {
             var data = new Date(hoje.getTime());
             data.setDate(hoje.getDate() + offset);
-            offset++;
 
-            if (data.getDay() === 0) {
-                continue; // domingo fechado
+            if (DIAS_FUNCIONAMENTO.indexOf(data.getDay()) === -1) {
+                continue;
             }
 
             var iso = formatarDataISO(data);
@@ -164,7 +204,6 @@
             });
 
             grid.appendChild(btn);
-            adicionados++;
         }
     }
 

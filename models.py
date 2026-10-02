@@ -10,7 +10,7 @@ def _carregar_configuracoes():
 
 
 @lru_cache(maxsize=1)
-def _get_config():
+def _get_config(versao):
     return _carregar_configuracoes()
 
 
@@ -18,8 +18,18 @@ def _limpar_cache_config():
     _get_config.cache_clear()
 
 
+def _obter_configuracoes_cacheadas():
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT valor FROM configuracao WHERE chave = %s",
+            ("__config_generation__",),
+        ).fetchone()
+    versao = row["valor"] if row else "0"
+    return _get_config(versao)
+
+
 def _obter_config(chave, padrao=None):
-    config = _get_config()
+    config = _obter_configuracoes_cacheadas()
     valor = config.get(chave)
     if valor is None:
         return padrao
@@ -44,6 +54,247 @@ def _obter_config_lista_int(chave, padrao=None):
         return [int(x.strip()) for x in valor.split(",") if x.strip()]
     except (ValueError, TypeError):
         return padrao
+
+
+def listar_servicos_admin():
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT * FROM servico ORDER BY ativo DESC, nome ASC"
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def criar_servico(nome, preco, duracao_minutos, ativo=True, descricao=""):
+    nome = (nome or "").strip()
+    descricao = (descricao or "").strip()
+    if not nome:
+        return None, "Nome do serviço é obrigatório."
+
+    try:
+        preco_valor = float(preco)
+    except (TypeError, ValueError):
+        return None, "Preço inválido."
+
+    if preco_valor <= 0:
+        return None, "Preço deve ser maior que zero."
+
+    try:
+        duracao = int(duracao_minutos)
+    except (TypeError, ValueError):
+        return None, "Duração inválida."
+
+    if duracao <= 0:
+        return None, "Duração deve ser maior que zero."
+
+    with db_session() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO servico (nome, descricao, preco, duracao_minutos, ativo)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (nome, descricao, preco_valor, duracao, bool(ativo)),
+        )
+        servico_id = cursor.fetchone()["id"]
+        return servico_id, None
+
+
+def atualizar_servico(servico_id, nome, preco, duracao_minutos, ativo, descricao=""):
+    nome = (nome or "").strip()
+    descricao = (descricao or "").strip()
+    if not nome:
+        return False, "Nome do serviço é obrigatório."
+
+    try:
+        preco_valor = float(preco)
+    except (TypeError, ValueError):
+        return False, "Preço inválido."
+
+    if preco_valor <= 0:
+        return False, "Preço deve ser maior que zero."
+
+    try:
+        duracao = int(duracao_minutos)
+    except (TypeError, ValueError):
+        return False, "Duração inválida."
+
+    if duracao <= 0:
+        return False, "Duração deve ser maior que zero."
+
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id FROM servico WHERE id = %s",
+            (servico_id,),
+        ).fetchone()
+        if not row:
+            return False, "Serviço não encontrado."
+
+        conn.execute(
+            """
+            UPDATE servico
+            SET nome = %s, descricao = %s, preco = %s, duracao_minutos = %s, ativo = %s
+            WHERE id = %s
+            """,
+            (nome, descricao, preco_valor, duracao, bool(ativo), servico_id),
+        )
+        return True, None
+
+
+def alterar_status_servico(servico_id, ativo):
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id FROM servico WHERE id = %s",
+            (servico_id,),
+        ).fetchone()
+        if not row:
+            return False, "Serviço não encontrado."
+
+        conn.execute(
+            "UPDATE servico SET ativo = %s WHERE id = %s",
+            (bool(ativo), servico_id),
+        )
+        return True, None
+
+
+def listar_profissionais_admin():
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT * FROM profissional ORDER BY ativo DESC, nome ASC"
+        ).fetchall()
+
+        profissionais = []
+        for row in rows:
+            servicos = conn.execute(
+                """
+                SELECT s.id, s.nome, s.ativo
+                FROM servico s
+                JOIN profissional_servico ps ON ps.servico_id = s.id
+                WHERE ps.profissional_id = %s
+                ORDER BY s.nome ASC
+                """,
+                (row["id"],),
+            ).fetchall()
+
+            item = dict(row)
+            item["servicos"] = [dict(servico) for servico in servicos]
+            item["servico_ids"] = [servico["id"] for servico in servicos]
+            profissionais.append(item)
+
+        return profissionais
+
+
+def criar_profissional(nome, ativo=True, servico_ids=None):
+    nome = (nome or "").strip()
+    if not nome:
+        return None, "Nome do profissional é obrigatório."
+
+    servico_ids = list(dict.fromkeys(servico_ids or []))
+    if bool(ativo) and not servico_ids:
+        return None, "Selecione pelo menos um serviço para o profissional ativo."
+
+    with db_session() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO profissional (nome, ativo)
+            VALUES (%s, %s)
+            RETURNING id
+            """,
+            (nome, bool(ativo)),
+        )
+        profissional_id = cursor.fetchone()["id"]
+
+    if servico_ids:
+        ok, erro = atualizar_profissional_servicos(profissional_id, servico_ids)
+        if not ok:
+            return None, erro
+
+    return profissional_id, None
+
+
+def atualizar_profissional(profissional_id, nome, ativo, servico_ids=None):
+    nome = (nome or "").strip()
+    if not nome:
+        return False, "Nome do profissional é obrigatório."
+
+    servico_ids = list(dict.fromkeys(servico_ids or []))
+    if bool(ativo) and not servico_ids:
+        return False, "Selecione pelo menos um serviço para o profissional ativo."
+
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id FROM profissional WHERE id = %s",
+            (profissional_id,),
+        ).fetchone()
+        if not row:
+            return False, "Profissional não encontrado."
+
+        conn.execute(
+            "UPDATE profissional SET nome = %s, ativo = %s WHERE id = %s",
+            (nome, bool(ativo), profissional_id),
+        )
+
+    if servico_ids:
+        ok, erro = atualizar_profissional_servicos(profissional_id, servico_ids)
+        if not ok:
+            return False, erro
+    else:
+        ok, erro = atualizar_profissional_servicos(profissional_id, [])
+        if not ok:
+            return False, erro
+
+    return True, None
+
+
+def alterar_status_profissional(profissional_id, ativo):
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id FROM profissional WHERE id = %s",
+            (profissional_id,),
+        ).fetchone()
+        if not row:
+            return False, "Profissional não encontrado."
+
+        conn.execute(
+            "UPDATE profissional SET ativo = %s WHERE id = %s",
+            (bool(ativo), profissional_id),
+        )
+        return True, None
+
+
+def atualizar_profissional_servicos(profissional_id, servico_ids):
+    servico_ids = list(dict.fromkeys(servico_ids or []))
+
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id FROM profissional WHERE id = %s",
+            (profissional_id,),
+        ).fetchone()
+        if not row:
+            return False, "Profissional não encontrado."
+
+        if servico_ids:
+            existentes = conn.execute(
+                "SELECT id FROM servico WHERE id = ANY(%s)",
+                (servico_ids,),
+            ).fetchall()
+            ids_existentes = {item["id"] for item in existentes}
+            faltantes = [servico_id for servico_id in servico_ids if servico_id not in ids_existentes]
+            if faltantes:
+                return False, "Há serviços inválidos na associação."
+
+        conn.execute(
+            "DELETE FROM profissional_servico WHERE profissional_id = %s",
+            (profissional_id,),
+        )
+
+        if servico_ids:
+            with conn.cursor() as cur:
+                cur.executemany(
+                    "INSERT INTO profissional_servico (profissional_id, servico_id) VALUES (%s, %s)",
+                    [(profissional_id, servico_id) for servico_id in servico_ids],
+                )
+
+    return True, None
 
 
 # Propriedades dinâmicas que leem do cache a cada acesso
@@ -119,6 +370,30 @@ def listar_profissionais(apenas_ativos=True):
         return [dict(r) for r in rows]
 
 
+def listar_profissionais_para_servicos(servico_ids):
+    servico_ids = list(dict.fromkeys(servico_ids or []))
+    if not servico_ids:
+        return listar_profissionais(apenas_ativos=True)
+
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT p.id, p.nome, p.ativo
+            FROM profissional AS p
+            JOIN profissional_servico AS ps ON ps.profissional_id = p.id
+            JOIN servico AS s ON s.id = ps.servico_id
+            WHERE p.ativo = TRUE
+              AND s.ativo = TRUE
+              AND s.id = ANY(%s)
+            GROUP BY p.id, p.nome, p.ativo
+            HAVING COUNT(DISTINCT s.id) = %s
+            ORDER BY p.nome ASC
+            """,
+            (servico_ids, len(servico_ids)),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
 def obter_profissional(profissional_id):
     with db_session() as conn:
         row = conn.execute("SELECT * FROM profissional WHERE id = %s", (profissional_id,)).fetchone()
@@ -126,202 +401,178 @@ def obter_profissional(profissional_id):
 
 
 def _gerar_slots_do_dia():
-    slots = []
-    inicio = datetime.strptime(horario_abertura(), "%H:%M")
-    fim = datetime.strptime(horario_fechamento(), "%H:%M")
-    atual = inicio
-    while atual < fim:
-        slots.append(atual.strftime("%H:%M"))
-        atual += timedelta(minutes=intervalo_slot_minutos())
-    return slots
+    try:
+        slots = []
+        inicio = datetime.strptime(horario_abertura(), "%H:%M")
+        fim = datetime.strptime(horario_fechamento(), "%H:%M")
+        intervalo = intervalo_slot_minutos()
+        if intervalo <= 0 or inicio >= fim:
+            return slots
+        atual = inicio
+        while atual < fim:
+            slots.append(atual.strftime("%H:%M"))
+            atual += timedelta(minutes=intervalo)
+        return slots
+    except (TypeError, ValueError):
+        return []
 
 
 def data_permitida(data_str):
     """Valida se a data está dentro do funcionamento (dia da semana permitido, não é passado e respeita antecedência máxima)."""
-    data = datetime.strptime(data_str, "%Y-%m-%d").date()
+    try:
+        data = datetime.strptime(data_str, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False
     hoje = datetime.now().date()
     if data < hoje:
         return False
-    if data.weekday() not in dias_funcionamento():
+    if (data.weekday() + 1) % 7 not in dias_funcionamento():
         return False
     # Valida antecedência máxima configurada no banco
     max_dias = dias_antecedencia_agendamento()
-    if max_dias and (data - hoje).days > max_dias:
+    if max_dias is not None and (data - hoje).days > max_dias:
         return False
     return True
 
 
-def horarios_disponiveis(profissional_id, data_str, servico_ids):
-    """Retorna horários livres considerando a duração total dos serviços selecionados."""
-    if not data_permitida(data_str):
+def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids):
+    profissional = conn.execute(
+        "SELECT ativo FROM profissional WHERE id = %s",
+        (profissional_id,),
+    ).fetchone()
+    if not profissional or not profissional["ativo"]:
         return []
 
+    servicos = conn.execute(
+        """
+        SELECT id, duracao_minutos
+        FROM servico
+        WHERE id = ANY(%s) AND ativo = TRUE
+        """,
+        (servico_ids,),
+    ).fetchall()
+    if len(servicos) != len(servico_ids):
+        return []
+
+    vinculos = conn.execute(
+        """
+        SELECT servico_id
+        FROM profissional_servico
+        WHERE profissional_id = %s AND servico_id = ANY(%s)
+        """,
+        (profissional_id, servico_ids),
+    ).fetchall()
+    if {row["servico_id"] for row in vinculos} != set(servico_ids):
+        return []
+
+    duracao_total = sum(servico["duracao_minutos"] for servico in servicos)
+    fechamento = datetime.strptime(horario_fechamento(), "%H:%M")
+    data = datetime.strptime(data_str, "%Y-%m-%d").date()
+    fechamento = datetime.combine(data, fechamento.time())
+    ocupados = conn.execute(
+        """
+        SELECT a.hora,
+               COALESCE(SUM(COALESCE(ags.duracao_minutos, s.duracao_minutos)), 0)
+                   AS duracao_minutos
+        FROM agendamento AS a
+        JOIN agendamento_servico AS ags ON ags.agendamento_id = a.id
+        JOIN servico AS s ON s.id = ags.servico_id
+        WHERE a.profissional_id = %s
+          AND a.data = %s
+          AND a.status = 'agendado'
+        GROUP BY a.id, a.hora
+        """,
+        (profissional_id, data_str),
+    ).fetchall()
+
+    agora = datetime.now()
+    disponiveis = []
+    for slot in _gerar_slots_do_dia():
+        inicio = datetime.combine(data, datetime.strptime(slot, "%H:%M").time())
+        fim = inicio + timedelta(minutes=duracao_total)
+        if fim > fechamento or (data == agora.date() and inicio <= agora):
+            continue
+
+        conflito = False
+        for agendamento in ocupados:
+            inicio_ocupado = datetime.combine(
+                data,
+                datetime.strptime(agendamento["hora"], "%H:%M").time(),
+            )
+            fim_ocupado = inicio_ocupado + timedelta(
+                minutes=agendamento["duracao_minutos"]
+            )
+            if inicio < fim_ocupado and inicio_ocupado < fim:
+                conflito = True
+                break
+
+        if not conflito:
+            disponiveis.append(slot)
+
+    return disponiveis
+
+
+def horarios_disponiveis(profissional_id, data_str, servico_ids):
+    """Retorna horários livres considerando os serviços e estados atuais."""
+    if not data_permitida(data_str):
+        return []
     if isinstance(servico_ids, int):
         servico_ids = [servico_ids]
-
-    servico_ids = list(servico_ids)
-    if not servico_ids:
+    servico_ids = list(dict.fromkeys(servico_ids or []))
+    if not servico_ids or any(type(item) is not int or item <= 0 for item in servico_ids):
         return []
 
     with db_session() as conn:
-        # Verifica se o profissional realiza TODOS os serviços selecionados
-        servicos_prof = conn.execute(
-            """
-            SELECT servico_id FROM profissional_servico WHERE profissional_id = %s
-            """,
-            (profissional_id,),
-        ).fetchall()
-        servicos_prof_ids = {row["servico_id"] for row in servicos_prof}
-        if not servicos_prof_ids.issuperset(set(servico_ids)):
-            return []
-
-        servicos = conn.execute(
-            """
-            SELECT id, duracao_minutos
-            FROM servico
-            WHERE id = ANY(%s)
-            """,
-            (servico_ids,),
-        ).fetchall()
-
-        if len(servicos) != len(set(servico_ids)):
-            return []
-
-        duracao_total = sum(servico["duracao_minutos"] for servico in servicos)
-
-        ocupados_rows = conn.execute(
-            """
-            SELECT a.hora,
-                   COALESCE(SUM(s.duracao_minutos), 0) AS duracao_minutos
-            FROM agendamento a
-            JOIN agendamento_servico ags ON ags.agendamento_id = a.id
-            JOIN servico s ON s.id = ags.servico_id
-            WHERE a.profissional_id = %s
-              AND a.data = %s
-              AND a.status = 'agendado'
-            GROUP BY a.id, a.hora
-            """,
-            (profissional_id, data_str),
-        ).fetchall()
-
-    todos_slots = _gerar_slots_do_dia()
-    slots_necessarios = max(
-        1,
-        -(-duracao_total // intervalo_slot_minutos()),
-    )
-
-    ocupados = set()
-    for row in ocupados_rows:
-        inicio_idx = todos_slots.index(row["hora"]) if row["hora"] in todos_slots else None
-        if inicio_idx is None:
-            continue
-
-        qtd = max(
-            1,
-            -(-row["duracao_minutos"] // intervalo_slot_minutos()),
+        return _horarios_disponiveis_conn(
+            conn,
+            profissional_id,
+            data_str,
+            servico_ids,
         )
-
-        for i in range(inicio_idx, inicio_idx + qtd):
-            if i < len(todos_slots):
-                ocupados.add(todos_slots[i])
-
-    agora = datetime.now()
-    data_e_hoje = datetime.strptime(data_str, "%Y-%m-%d").date() == agora.date()
-
-    disponiveis = []
-
-    for i, slot in enumerate(todos_slots):
-        se_de_hoje_no_passado = (
-            data_e_hoje
-            and datetime.strptime(slot, "%H:%M").time() <= agora.time()
-        )
-        if se_de_hoje_no_passado:
-            continue
-
-        faixa = todos_slots[i:i + slots_necessarios]
-
-        if len(faixa) < slots_necessarios:
-            continue
-
-        if any(s in ocupados for s in faixa):
-            continue
-
-        disponiveis.append(slot)
-
-    return disponiveis
 
 
 def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_id, data_str, hora_str):
     """Cria o agendamento e seus serviços, revalidando a disponibilidade com lock de concorrência."""
     if isinstance(servico_ids, int):
         servico_ids = [servico_ids]
-
-    servico_ids = list(servico_ids)
-    if not servico_ids:
+    servico_ids = list(dict.fromkeys(servico_ids or []))
+    if not servico_ids or any(type(item) is not int or item <= 0 for item in servico_ids):
         return None, "Selecione pelo menos um serviço."
-
-    disponiveis = horarios_disponiveis(
-        profissional_id,
-        data_str,
-        servico_ids,
-    )
-    if hora_str not in disponiveis:
-        return None, "Horário não disponível. Escolha outro horário."
+    if type(profissional_id) is not int or profissional_id <= 0:
+        return None, "Profissional inválido."
+    if not data_permitida(data_str):
+        return None, "Data indisponível para agendamento."
 
     with db_session() as conn:
-        # Advisory lock para evitar race condition no mesmo profissional+data
         lock_key = (profissional_id * 1000000) + int(data_str.replace("-", ""))
         conn.execute("SELECT pg_advisory_xact_lock(%s)", (lock_key,))
+        if not data_permitida(data_str):
+            return None, "Data indisponível para agendamento."
 
-        # Revalida disponibilidade dentro da transação com lock
-        ocupados_rows = conn.execute(
-            """
-            SELECT a.hora,
-                   COALESCE(SUM(s.duracao_minutos), 0) AS duracao_minutos
-            FROM agendamento a
-            JOIN agendamento_servico ags ON ags.agendamento_id = a.id
-            JOIN servico s ON s.id = ags.servico_id
-            WHERE a.profissional_id = %s
-              AND a.data = %s
-              AND a.status = 'agendado'
-            GROUP BY a.id, a.hora
-            """,
-            (profissional_id, data_str),
-        ).fetchall()
+        disponiveis = _horarios_disponiveis_conn(
+            conn,
+            profissional_id,
+            data_str,
+            servico_ids,
+        )
+        if hora_str not in disponiveis:
+            return None, "Horário não disponível. Escolha outro horário."
 
+        profissional = conn.execute(
+            "SELECT nome FROM profissional WHERE id = %s AND ativo = TRUE",
+            (profissional_id,),
+        ).fetchone()
         servicos = conn.execute(
             """
-            SELECT id, duracao_minutos
+            SELECT id, nome, preco, duracao_minutos
             FROM servico
-            WHERE id = ANY(%s)
+            WHERE id = ANY(%s) AND ativo = TRUE
+            ORDER BY id
             """,
             (servico_ids,),
         ).fetchall()
-
-        if len(servicos) != len(set(servico_ids)):
+        if not profissional or len(servicos) != len(servico_ids):
             return None, "Serviço inválido."
-
-        duracao_total = sum(servico["duracao_minutos"] for servico in servicos)
-        todos_slots = _gerar_slots_do_dia()
-        slots_necessarios = max(1, -(-duracao_total // intervalo_slot_minutos()))
-
-        ocupados = set()
-        for row in ocupados_rows:
-            inicio_idx = todos_slots.index(row["hora"]) if row["hora"] in todos_slots else None
-            if inicio_idx is None:
-                continue
-            qtd = max(1, -(-row["duracao_minutos"] // intervalo_slot_minutos()))
-            for i in range(inicio_idx, inicio_idx + qtd):
-                if i < len(todos_slots):
-                    ocupados.add(todos_slots[i])
-
-        hora_idx = todos_slots.index(hora_str) if hora_str in todos_slots else -1
-        if hora_idx == -1:
-            return None, "Horário inválido."
-
-        faixa = todos_slots[hora_idx:hora_idx + slots_necessarios]
-        if len(faixa) < slots_necessarios or any(s in ocupados for s in faixa):
-            return None, "Horário não disponível. Escolha outro horário."
 
         primeiro_servico_id = servico_ids[0]
 
@@ -333,9 +584,10 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
                 servico_id,
                 profissional_id,
                 data,
-                hora
+                hora,
+                profissional_nome_snapshot
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
@@ -345,6 +597,7 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
                 profissional_id,
                 data_str,
                 hora_str,
+                profissional["nome"],
             ),
         )
         agendamento_id = cursor.fetchone()["id"]
@@ -352,11 +605,26 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
         with conn.cursor() as cursor:
             cursor.executemany(
                 """
-                INSERT INTO agendamento_servico (agendamento_id, servico_id)
-                VALUES (%s, %s)
+                INSERT INTO agendamento_servico (
+                    agendamento_id,
+                    servico_id,
+                    nome_servico,
+                    preco_unitario,
+                    duracao_minutos
+                )
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (agendamento_id, servico_id) DO NOTHING
                 """,
-                [(agendamento_id, servico_id) for servico_id in servico_ids],
+                [
+                    (
+                        agendamento_id,
+                        servico["id"],
+                        servico["nome"],
+                        servico["preco"],
+                        servico["duracao_minutos"],
+                    )
+                    for servico in servicos
+                ],
             )
 
     return agendamento_id, None
@@ -367,14 +635,14 @@ def obter_agendamento_completo(agendamento_id):
         row = conn.execute(
             """
             SELECT a.*,
-                   p.nome AS profissional_nome,
+                   COALESCE(a.profissional_nome_snapshot, p.nome) AS profissional_nome,
                    COALESCE(
                        json_agg(
                            json_build_object(
                                'id', s.id,
-                               'nome', s.nome,
-                               'preco', s.preco,
-                               'duracao_minutos', s.duracao_minutos
+                               'nome', COALESCE(ags.nome_servico, s.nome),
+                               'preco', COALESCE(ags.preco_unitario, s.preco),
+                               'duracao_minutos', COALESCE(ags.duracao_minutos, s.duracao_minutos)
                            )
                            ORDER BY s.id
                        ) FILTER (WHERE s.id IS NOT NULL),
@@ -412,14 +680,14 @@ def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str):
         rows = conn.execute(
             """
             SELECT a.*,
-                   p.nome AS profissional_nome,
+                   COALESCE(a.profissional_nome_snapshot, p.nome) AS profissional_nome,
                    COALESCE(
                        json_agg(
                            json_build_object(
                                'id', s.id,
-                               'nome', s.nome,
-                               'preco', s.preco,
-                               'duracao_minutos', s.duracao_minutos
+                               'nome', COALESCE(ags.nome_servico, s.nome),
+                               'preco', COALESCE(ags.preco_unitario, s.preco),
+                               'duracao_minutos', COALESCE(ags.duracao_minutos, s.duracao_minutos)
                            )
                            ORDER BY s.id
                        ) FILTER (WHERE s.id IS NOT NULL),

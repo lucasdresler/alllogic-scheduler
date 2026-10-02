@@ -7,7 +7,14 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from config import SECRET_KEY
-from database import init_db, db_session, obter_todas_configuracoes, admin_precisa_alterar_senha, admin_alterar_senha as db_admin_alterar_senha
+from database import (
+    init_db,
+    db_session,
+    obter_todas_configuracoes,
+    atualizar_configuracoes,
+    admin_precisa_alterar_senha,
+    admin_alterar_senha as db_admin_alterar_senha,
+)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
@@ -36,7 +43,8 @@ def _carregar_config_template():
         "telefone_estabelecimento": config.get("telefone_estabelecimento", ""),
         "endereco_estabelecimento": config.get("endereco_estabelecimento", ""),
         "nome_publico": config.get("nome_publico", "AllLogic Scheduler"),
-        "dias_antecedencia": int(config.get("dias_antecedencia_agendamento", 14)),
+        "dias_antecedencia": models.dias_antecedencia_agendamento(),
+        "dias_funcionamento": models.dias_funcionamento(),
     }
 
 
@@ -53,6 +61,36 @@ def login_requerido(f):
     return decorada
 
 
+def _validar_configuracoes_operacionais(dados):
+    try:
+        antecedencia = int(dados["dias_antecedencia_agendamento"])
+        intervalo = int(dados["intervalo_slot_minutos"])
+        partes_dias = [parte.strip() for parte in dados["dias_funcionamento"].split(",")]
+        dias = [int(parte) for parte in partes_dias]
+        abertura = datetime.strptime(dados["horario_abertura"], "%H:%M")
+        fechamento = datetime.strptime(dados["horario_fechamento"], "%H:%M")
+    except (TypeError, ValueError):
+        return "Informe dias, intervalo e horários válidos."
+
+    if antecedencia < 0:
+        return "A antecedência não pode ser negativa."
+    if intervalo < 15 or intervalo % 15 != 0:
+        return "O intervalo deve ser múltiplo de 15 minutos e no mínimo 15."
+    if abertura.strftime("%H:%M") != dados["horario_abertura"]:
+        return "Horário de abertura inválido."
+    if fechamento.strftime("%H:%M") != dados["horario_fechamento"]:
+        return "Horário de fechamento inválido."
+    if abertura >= fechamento:
+        return "O fechamento deve ser posterior à abertura."
+    if not partes_dias or any(parte == "" for parte in partes_dias):
+        return "Selecione ao menos um dia de funcionamento."
+    if any(dia < 0 or dia > 6 for dia in dias) or len(set(dias)) != len(dias):
+        return "Os dias devem ser únicos e estar entre 0 e 6."
+
+    dados["dias_funcionamento"] = ",".join(str(dia) for dia in sorted(dias))
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Páginas públicas
 # ---------------------------------------------------------------------------
@@ -67,6 +105,7 @@ def index():
         servicos=servicos,
         profissionais=profissionais,
         dias_antecedencia=config["dias_antecedencia"],
+        dias_funcionamento=config["dias_funcionamento"],
         nome_publico=config["nome_publico"],
     )
 
@@ -90,7 +129,17 @@ def api_services():
 
 @app.route("/api/professionals")
 def api_professionals():
-    return jsonify(models.listar_profissionais(apenas_ativos=True))
+    servico_ids = request.args.getlist("servico_id", type=int)
+    if not servico_ids:
+        return jsonify(models.listar_profissionais(apenas_ativos=True))
+
+    servico_ids = list(dict.fromkeys(servico_ids))
+    if any(
+        not (servico := models.obter_servico(servico_id)) or not servico["ativo"]
+        for servico_id in servico_ids
+    ):
+        return jsonify({"erro": "Serviço inválido."}), 400
+    return jsonify(models.listar_profissionais_para_servicos(servico_ids))
 
 
 @app.route("/api/availability")
@@ -116,8 +165,15 @@ def api_availability():
 
     servico_ids = list(dict.fromkeys(servico_ids))
 
-    if any(not models.obter_servico(servico_id) for servico_id in servico_ids):
+    if any(
+        not (servico := models.obter_servico(servico_id)) or not servico["ativo"]
+        for servico_id in servico_ids
+    ):
         return jsonify({"erro": "Serviço inválido."}), 400
+
+    profissional = models.obter_profissional(profissional_id)
+    if not profissional or not profissional["ativo"]:
+        return jsonify({"erro": "Profissional inválido."}), 400
 
     horarios = models.horarios_disponiveis(
         profissional_id,
@@ -151,7 +207,7 @@ def api_appointments():
         erros.append("Nome é obrigatório.")
     if not cliente_telefone:
         erros.append("Telefone é obrigatório.")
-    if not servico_ids:
+    if not isinstance(servico_ids, list) or not servico_ids:
         erros.append("Serviço é obrigatório.")
     if not profissional_id:
         erros.append("Profissional é obrigatório.")
@@ -164,11 +220,17 @@ def api_appointments():
         servico_ids = list(dict.fromkeys(servico_ids))
 
         for servico_id in servico_ids:
-            if not isinstance(servico_id, int) or not models.obter_servico(servico_id):
+            servico = models.obter_servico(servico_id) if type(servico_id) is int else None
+            if not servico or not servico["ativo"]:
                 erros.append("Serviço inválido.")
                 break
 
-        if not models.obter_profissional(profissional_id):
+        profissional = (
+            models.obter_profissional(profissional_id)
+            if type(profissional_id) is int
+            else None
+        )
+        if not profissional or not profissional["ativo"]:
             erros.append("Profissional inválido.")
 
         if not erros and not models.data_permitida(data_str):
@@ -215,6 +277,211 @@ def admin_login():
 def admin_logout():
     session.clear()
     return redirect(url_for("admin_login"))
+
+
+@app.route("/admin/servicos")
+@login_requerido
+def admin_servicos():
+    servicos = models.listar_servicos_admin()
+    return render_template(
+        "admin_servicos.html",
+        servicos=servicos,
+        **_carregar_config_template(),
+    )
+
+
+@app.route("/admin/servicos/novo", methods=["GET", "POST"])
+@login_requerido
+def admin_servico_novo():
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        descricao = request.form.get("descricao", "").strip()
+        preco = request.form.get("preco", "")
+        duracao_minutos = request.form.get("duracao_minutos", "")
+        ativo = request.form.get("ativo") == "on"
+
+        servico_id, erro = models.criar_servico(
+            nome,
+            preco,
+            duracao_minutos,
+            ativo,
+            descricao,
+        )
+        if servico_id:
+            return redirect(url_for("admin_servicos"))
+
+    return render_template(
+        "admin_servico_form.html",
+        erro=erro,
+        servico=None,
+        titulo="Novo serviço",
+        **_carregar_config_template(),
+    )
+
+
+@app.route("/admin/servicos/<int:servico_id>/editar", methods=["GET", "POST"])
+@login_requerido
+def admin_servico_editar(servico_id):
+    servico = models.obter_servico(servico_id)
+    if not servico:
+        return redirect(url_for("admin_servicos"))
+
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        descricao = request.form.get("descricao", "").strip()
+        preco = request.form.get("preco", "")
+        duracao_minutos = request.form.get("duracao_minutos", "")
+        ativo = request.form.get("ativo") == "on"
+
+        ok, erro = models.atualizar_servico(
+            servico_id,
+            nome,
+            preco,
+            duracao_minutos,
+            ativo,
+            descricao,
+        )
+        if ok:
+            return redirect(url_for("admin_servicos"))
+
+    return render_template(
+        "admin_servico_form.html",
+        erro=erro,
+        servico=servico,
+        titulo="Editar serviço",
+        **_carregar_config_template(),
+    )
+
+
+@app.route("/admin/servicos/<int:servico_id>/toggle", methods=["POST"])
+@login_requerido
+def admin_servico_toggle(servico_id):
+    servico = models.obter_servico(servico_id)
+    if servico:
+        models.alterar_status_servico(servico_id, not servico["ativo"])
+    return redirect(url_for("admin_servicos"))
+
+
+@app.route("/admin/profissionais")
+@login_requerido
+def admin_profissionais():
+    profissionais = models.listar_profissionais_admin()
+    servicos = models.listar_servicos_admin()
+    return render_template(
+        "admin_profissionais.html",
+        profissionais=profissionais,
+        servicos=servicos,
+        **_carregar_config_template(),
+    )
+
+
+@app.route("/admin/profissionais/novo", methods=["GET", "POST"])
+@login_requerido
+def admin_profissional_novo():
+    erro = None
+    servicos = models.listar_servicos_admin()
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        ativo = request.form.get("ativo") == "on"
+        servico_ids = request.form.getlist("servicos", type=int)
+
+        profissional_id, erro = models.criar_profissional(nome, ativo, servico_ids)
+        if profissional_id:
+            return redirect(url_for("admin_profissionais"))
+
+    return render_template(
+        "admin_profissional_form.html",
+        erro=erro,
+        profissional=None,
+        servicos=servicos,
+        titulo="Novo profissional",
+        **_carregar_config_template(),
+    )
+
+
+@app.route("/admin/profissionais/<int:profissional_id>/editar", methods=["GET", "POST"])
+@login_requerido
+def admin_profissional_editar(profissional_id):
+    profissional = models.obter_profissional(profissional_id)
+    if not profissional:
+        return redirect(url_for("admin_profissionais"))
+
+    servicos = models.listar_servicos_admin()
+    lista_profissionais = models.listar_profissionais_admin()
+    profissional_com_servicos = next(
+        (item for item in lista_profissionais if item["id"] == profissional_id),
+        None,
+    )
+    servico_ids_atuais = profissional_com_servicos["servico_ids"] if profissional_com_servicos else []
+
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        ativo = request.form.get("ativo") == "on"
+        servico_ids = request.form.getlist("servicos", type=int)
+
+        ok, erro = models.atualizar_profissional(profissional_id, nome, ativo, servico_ids)
+        if ok:
+            return redirect(url_for("admin_profissionais"))
+
+    return render_template(
+        "admin_profissional_form.html",
+        erro=erro,
+        profissional={**profissional, "servico_ids": servico_ids_atuais},
+        servicos=servicos,
+        titulo="Editar profissional",
+        **_carregar_config_template(),
+    )
+
+
+@app.route("/admin/profissionais/<int:profissional_id>/toggle", methods=["POST"])
+@login_requerido
+def admin_profissional_toggle(profissional_id):
+    profissional = models.obter_profissional(profissional_id)
+    if profissional:
+        models.alterar_status_profissional(profissional_id, not profissional["ativo"])
+    return redirect(url_for("admin_profissionais"))
+
+
+@app.route("/admin/configuracoes", methods=["GET", "POST"])
+@login_requerido
+def admin_configuracoes():
+    erro = None
+    sucesso = None
+
+    with db_session() as conn:
+        valores = obter_todas_configuracoes(conn)
+
+    if request.method == "POST":
+        dados = {
+            "nome_estabelecimento": request.form.get("nome_estabelecimento", "").strip(),
+            "telefone_estabelecimento": request.form.get("telefone_estabelecimento", "").strip(),
+            "endereco_estabelecimento": request.form.get("endereco_estabelecimento", "").strip(),
+            "nome_publico": request.form.get("nome_publico", "").strip(),
+            "dias_antecedencia_agendamento": request.form.get("dias_antecedencia_agendamento", "14").strip(),
+            "horario_abertura": request.form.get("horario_abertura", "09:00").strip(),
+            "horario_fechamento": request.form.get("horario_fechamento", "19:00").strip(),
+            "intervalo_slot_minutos": request.form.get("intervalo_slot_minutos", "30").strip(),
+            "dias_funcionamento": request.form.get("dias_funcionamento", "1,2,3,4,5,6").strip(),
+        }
+
+        erro = _validar_configuracoes_operacionais(dados)
+        if not erro:
+            with db_session() as conn:
+                atualizar_configuracoes(conn, dados)
+            models._limpar_cache_config()
+            sucesso = "Configurações atualizadas com sucesso."
+            valores = dados
+
+    return render_template(
+        "admin_configuracoes.html",
+        erro=erro,
+        sucesso=sucesso,
+        configuracoes=valores,
+        **_carregar_config_template(),
+    )
 
 
 @app.route("/admin/alterar-senha", methods=["GET", "POST"])
