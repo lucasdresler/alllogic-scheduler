@@ -212,7 +212,7 @@ def seed_configuracao_padrao(conn):
     if count == 0:
         from datetime import time
         configuracoes = [
-            ("nome_estabelecimento", "AllLogic Scheduler"),
+            ("nome_estabelecimento", "Minha Empresa"),
             ("telefone_estabelecimento", ""),
             ("endereco_estabelecimento", ""),
             ("nome_publico", "AllLogic Scheduler"),
