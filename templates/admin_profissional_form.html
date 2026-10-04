@@ -23,7 +23,11 @@
 
             <label class="checkbox-row">
                 <input type="checkbox" name="ativo" {% if profissional and profissional.ativo %}checked{% endif %}>
-                Profissional ativo
+                {% if profissional %}
+                    Profissional ativo (desmarque para desativar)
+                {% else %}
+                    Profissional ativo
+                {% endif %}
             </label>
 
             <fieldset>

@@ -115,7 +115,11 @@ def agendamento_sucesso(agendamento_id):
     agendamento = models.obter_agendamento_completo(agendamento_id)
     if not agendamento:
         return redirect(url_for("index"))
-    return render_template("sucesso.html", agendamento=agendamento)
+    return render_template(
+        "sucesso.html",
+        agendamento=agendamento,
+        **_carregar_config_template(),
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -11,8 +11,8 @@
     </div>
 
     <div class="card">
-        <div class="acoes-topo">
-            <a href="{{ url_for('admin_profissional_novo') }}" class="btn-primario">Novo profissional</a>
+        <div class="acoes-topo acoes-tabela">
+            <a href="{{ url_for('admin_profissional_novo') }}" class="btn-primario btn-compacto">Novo profissional</a>
         </div>
 
         {% if profissionais %}
@@ -33,13 +33,7 @@
                         <td>{{ profissional.servicos|map(attribute='nome')|join(', ') if profissional.servicos else 'Nenhum serviço associado' }}</td>
                         <td>{{ 'Ativo' if profissional.ativo else 'Inativo' }}</td>
                         <td>
-                            <div class="acao-inline">
-                                <a href="{{ url_for('admin_profissional_editar', profissional_id=profissional.id) }}" class="btn-secundario">Editar</a>
-                                <form method="POST" action="{{ url_for('admin_profissional_toggle', profissional_id=profissional.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-link">{{ 'Desativar' if profissional.ativo else 'Ativar' }}</button>
-                                </form>
-                            </div>
+                            <a href="{{ url_for('admin_profissional_editar', profissional_id=profissional.id) }}" class="btn-secundario">Editar</a>
                         </td>
                     </tr>
                     {% endfor %}

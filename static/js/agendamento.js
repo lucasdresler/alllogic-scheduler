@@ -109,6 +109,7 @@
     function carregarProfissionais() {
         var grid = document.querySelector("#etapa-2 .opcoes-grid");
         var btnAvancar = document.getElementById("btn-avancar-2");
+        var profissionalAnterior = estado.profissional;
         estado.profissional = null;
         btnAvancar.disabled = true;
         grid.innerHTML = '<p class="vazio">Carregando profissionais...</p>';
@@ -140,6 +141,11 @@
                     btn.setAttribute("data-id", profissional.id);
                     btn.setAttribute("data-nome", profissional.nome);
                     btn.textContent = profissional.nome;
+                    if (profissionalAnterior && profissional.id === profissionalAnterior.id) {
+                        btn.classList.add("selecionado");
+                        estado.profissional = profissionalAnterior;
+                        btnAvancar.disabled = false;
+                    }
                     btn.addEventListener("click", function () {
                         grid.querySelectorAll(".opcao-btn").forEach(function (item) {
                             item.classList.remove("selecionado");
@@ -165,6 +171,9 @@
                 gerarGradeDeDias();
                 irParaEtapa(3);
             }
+        });
+        document.querySelector('[data-voltar="1"]').addEventListener("click", function () {
+            irParaEtapa(1);
         });
     }
 

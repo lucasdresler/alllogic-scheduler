@@ -192,6 +192,21 @@ label {
     margin-top: 8px;
 }
 
+.btn-compacto {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    padding: 9px 14px;
+    font-size: 0.9rem;
+    margin-top: 0;
+    text-align: center;
+    text-decoration: none;
+}
+
+.acoes-tabela {
+    margin-bottom: 12px;
+}
+
 .btn-primario:disabled {
     background-color: var(--dourado-escuro);
     opacity: 0.5;

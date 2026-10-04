@@ -32,6 +32,7 @@ os.environ.setdefault("ADMIN_SENHA_INICIAL", "scheduler-test-password")
 import psycopg
 from psycopg import sql
 
+import app as app_module
 import database
 from app import app
 import models
@@ -69,6 +70,86 @@ def _config_payload(dias="1,3,5", antecedencia="14"):
         "intervalo_slot_minutos": "30",
         "dias_funcionamento": dias,
     }
+
+
+def test_professional_status_is_editable_only_from_edit_screen(client):
+    suffix = uuid.uuid4().hex
+    service_id, error = models.criar_servico(
+        f"Serviço UX {suffix}", "40.00", 30, True, "Teste de status"
+    )
+    assert error is None
+    professional_id, error = models.criar_profissional(
+        f"Profissional UX {suffix}", True, [service_id]
+    )
+    assert error is None
+
+    with client.session_transaction() as session:
+        session["admin_logado"] = True
+
+    listing = client.get("/admin/profissionais").get_data(as_text=True)
+    assert "Status" in listing
+    assert "Ativo" in listing
+    assert "Editar" in listing
+    assert f'/admin/profissionais/{professional_id}/toggle' not in listing
+    assert f'href="/admin/profissionais/{professional_id}/editar"' in listing
+
+    edit_path = f"/admin/profissionais/{professional_id}/editar"
+    edit_page = client.get(edit_path).get_data(as_text=True)
+    assert 'name="ativo" checked' in edit_page
+    assert "desmarque para desativar" in edit_page
+
+    token = _csrf_token(client, edit_path)
+    deactivated = client.post(
+        edit_path,
+        data={
+            "csrf_token": token,
+            "nome": f"Profissional UX {suffix}",
+            "servicos": str(service_id),
+        },
+    )
+    assert deactivated.status_code == 302
+    assert models.obter_profissional(professional_id)["ativo"] is False
+
+    token = _csrf_token(client, edit_path)
+    activated = client.post(
+        edit_path,
+        data={
+            "csrf_token": token,
+            "nome": f"Profissional UX {suffix}",
+            "ativo": "on",
+            "servicos": str(service_id),
+        },
+    )
+    assert activated.status_code == 302
+    assert models.obter_profissional(professional_id)["ativo"] is True
+
+
+def test_success_page_uses_establishment_name(monkeypatch, client):
+    monkeypatch.setattr(
+        models,
+        "obter_agendamento_completo",
+        lambda appointment_id: {
+            "servico_nome": "Serviço de teste",
+            "servico_preco": 50,
+            "profissional_nome": "Profissional de teste",
+            "data": "2030-01-01",
+            "hora": "10:00",
+            "cliente_nome": "Cliente de teste",
+        },
+    )
+    monkeypatch.setattr(
+        app_module,
+        "_carregar_config_template",
+        lambda: {"nome_estabelecimento": "Estabelecimento de teste"},
+    )
+
+    response = client.get("/agendamento/sucesso/1")
+    page = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "<h1>Estabelecimento de teste</h1>" in page
+    assert "<title>Agendamento Confirmado — Estabelecimento de teste</title>" in page
+    assert "Barbearia Top" not in page
 
 
 def test_admin_auth_settings_and_service_description(client):
