@@ -1,4 +1,7 @@
-from datetime import datetime, timedelta
+import hashlib
+import re
+import secrets
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
@@ -11,10 +14,17 @@ from database import (
     init_db,
     db_session,
     obter_todas_configuracoes,
+    obter_configuracao,
     atualizar_configuracoes,
     admin_precisa_alterar_senha,
     admin_alterar_senha as db_admin_alterar_senha,
+    admin_concluir_primeiro_acesso as db_admin_concluir_primeiro_acesso,
+    obter_admin_por_email,
+    criar_token_recuperacao,
+    validar_token_recuperacao,
+    redefinir_senha_com_token,
 )
+from email_service import enviar_email_recuperacao
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
@@ -52,11 +62,25 @@ def _carregar_config_template():
 # Helpers
 # ---------------------------------------------------------------------------
 
+EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+
+
+def _validar_email(email):
+    if not email or len(email) > 254:
+        return False
+    return bool(EMAIL_REGEX.match(email))
+
+
 def login_requerido(f):
     @wraps(f)
     def decorada(*args, **kwargs):
         if not session.get("admin_logado"):
             return redirect(url_for("admin_login"))
+        if request.endpoint not in ("admin_configuracao_inicial", "admin_logout"):
+            usuario = session.get("admin_usuario")
+            with db_session() as conn:
+                if admin_precisa_alterar_senha(conn, usuario):
+                    return redirect(url_for("admin_configuracao_inicial"))
         return f(*args, **kwargs)
     return decorada
 
@@ -262,6 +286,9 @@ def api_appointments():
 @limiter.limit("5 per minute")
 def admin_login():
     erro = None
+    sucesso = None
+    if request.args.get("redefinida") == "1":
+        sucesso = "Senha redefinida com sucesso. Faça login com a sua nova senha."
     config = _carregar_config_template()
     if request.method == "POST":
         usuario = request.form.get("usuario", "").strip()
@@ -271,10 +298,10 @@ def admin_login():
             session["admin_usuario"] = usuario
             with db_session() as conn:
                 if admin_precisa_alterar_senha(conn, usuario):
-                    return redirect(url_for("admin_alterar_senha"))
+                    return redirect(url_for("admin_configuracao_inicial"))
             return redirect(url_for("admin_dashboard"))
         erro = "Usuário ou senha inválidos."
-    return render_template("admin_login.html", erro=erro, **config)
+    return render_template("admin_login.html", erro=erro, sucesso=sucesso, **config)
 
 
 @app.route("/admin/logout")
@@ -488,6 +515,190 @@ def admin_configuracoes():
     )
 
 
+@app.route("/admin/estabelecimento", methods=["GET", "POST"])
+@login_requerido
+def admin_estabelecimento():
+    erro = None
+    sucesso = None
+
+    with db_session() as conn:
+        configuracoes = obter_todas_configuracoes(conn)
+
+    telefone_padrao = configuracoes.get(
+        "telefone", configuracoes.get("telefone_estabelecimento", "")
+    )
+
+    dados = {
+        "nome_estabelecimento": configuracoes.get("nome_estabelecimento", ""),
+        "nome_fantasia": configuracoes.get("nome_fantasia", ""),
+        "razao_social": configuracoes.get("razao_social", ""),
+        "cpf_cnpj": configuracoes.get("cpf_cnpj", ""),
+        "cep": configuracoes.get("cep", ""),
+        "logradouro": configuracoes.get("logradouro", ""),
+        "numero": configuracoes.get("numero", ""),
+        "complemento": configuracoes.get("complemento", ""),
+        "bairro": configuracoes.get("bairro", ""),
+        "cidade": configuracoes.get("cidade", ""),
+        "estado": configuracoes.get("estado", ""),
+        "telefone": telefone_padrao,
+        "whatsapp": configuracoes.get("whatsapp", ""),
+        "email_comercial": configuracoes.get("email_comercial", ""),
+    }
+
+    if request.method == "POST":
+        nome_estabelecimento = request.form.get("nome_estabelecimento", "").strip()
+        nome_fantasia = request.form.get("nome_fantasia", "").strip()
+        razao_social = request.form.get("razao_social", "").strip()
+        cpf_cnpj = request.form.get("cpf_cnpj", "").strip()
+
+        cep = request.form.get("cep", "").strip()
+        logradouro = request.form.get("logradouro", "").strip()
+        numero = request.form.get("numero", "").strip()
+        complemento = request.form.get("complemento", "").strip()
+        bairro = request.form.get("bairro", "").strip()
+        cidade = request.form.get("cidade", "").strip()
+        estado = request.form.get("estado", "").strip()
+
+        telefone = request.form.get("telefone", "").strip()
+        whatsapp = request.form.get("whatsapp", "").strip()
+        email_comercial = request.form.get("email_comercial", "").strip()
+
+        if not nome_estabelecimento:
+            erro = "O nome do estabelecimento é obrigatório."
+        elif email_comercial and not _validar_email(email_comercial):
+            erro = "Informe um e-mail comercial com formato válido."
+        else:
+            novos_dados = {
+                "nome_estabelecimento": nome_estabelecimento,
+                "nome_fantasia": nome_fantasia,
+                "razao_social": razao_social,
+                "cpf_cnpj": cpf_cnpj,
+                "cep": cep,
+                "logradouro": logradouro,
+                "numero": numero,
+                "complemento": complemento,
+                "bairro": bairro,
+                "cidade": cidade,
+                "estado": estado,
+                "telefone": telefone,
+                "telefone_estabelecimento": telefone,
+                "whatsapp": whatsapp,
+                "email_comercial": email_comercial,
+            }
+
+            partes_end = []
+            if logradouro:
+                partes_end.append(f"{logradouro}, {numero}" if numero else logradouro)
+            if complemento:
+                partes_end.append(complemento)
+            if bairro:
+                partes_end.append(bairro)
+            if cidade or estado:
+                partes_end.append(
+                    f"{cidade} - {estado}"
+                    if (cidade and estado)
+                    else (cidade or estado)
+                )
+            if cep:
+                partes_end.append(f"CEP {cep}")
+            if partes_end:
+                novos_dados["endereco_estabelecimento"] = " - ".join(partes_end)
+
+            with db_session() as conn:
+                atualizar_configuracoes(conn, novos_dados)
+
+            models._limpar_cache_config()
+            sucesso = "Dados do estabelecimento salvos com sucesso."
+            dados = novos_dados
+
+    return render_template(
+        "admin_estabelecimento.html",
+        erro=erro,
+        sucesso=sucesso,
+        dados=dados,
+        **_carregar_config_template(),
+    )
+
+
+@app.route("/admin/configuracao-inicial", methods=["GET", "POST"])
+@login_requerido
+def admin_configuracao_inicial():
+    usuario = session.get("admin_usuario")
+    erro = None
+    config = _carregar_config_template()
+
+    with db_session() as conn:
+        primeiro_acesso = admin_precisa_alterar_senha(conn, usuario)
+        if not primeiro_acesso:
+            return redirect(url_for("admin_dashboard"))
+
+        admin_row = conn.execute(
+            "SELECT usuario, email, nome_responsavel FROM admin WHERE usuario = %s", (usuario,)
+        ).fetchone()
+        email_salvo = (admin_row["email"] or "").strip() if admin_row and "email" in admin_row and admin_row["email"] else ""
+        nome_resp_salvo = (admin_row["nome_responsavel"] or "").strip() if admin_row and "nome_responsavel" in admin_row and admin_row["nome_responsavel"] else ""
+        nome_est_salvo = (obter_configuracao(conn, "nome_estabelecimento") or "").strip()
+
+    nome_estabelecimento = nome_est_salvo
+    nome_responsavel = nome_resp_salvo
+    email = email_salvo
+    novo_login = "" if usuario == "admin" else (usuario or "")
+
+    if request.method == "POST":
+        nome_estabelecimento = request.form.get("nome_estabelecimento", "").strip()
+        nome_responsavel = request.form.get("nome_responsavel", "").strip()
+        email = request.form.get("email", "").strip()
+        novo_login = request.form.get("novo_login", "").strip()
+        nova_senha = request.form.get("nova_senha", "")
+        confirmar_senha = request.form.get("confirmar_senha", "")
+
+        if not nome_estabelecimento:
+            erro = "O nome do estabelecimento é obrigatório."
+        elif not nome_responsavel:
+            erro = "O nome do responsável é obrigatório."
+        elif not email:
+            erro = "O e-mail do responsável é obrigatório."
+        elif not _validar_email(email):
+            erro = "Informe um e-mail com formato válido."
+        elif not novo_login:
+            erro = "O novo login é obrigatório."
+        elif novo_login.lower() == "admin":
+            erro = "Defina um novo login diferente do usuário provisório 'admin'."
+        elif not nova_senha:
+            erro = "A nova senha é obrigatória."
+        elif len(nova_senha) < 8:
+            erro = "A nova senha deve ter pelo menos 8 caracteres."
+        elif nova_senha != confirmar_senha:
+            erro = "As novas senhas não conferem."
+        else:
+            with db_session() as conn:
+                ok, msg = db_admin_concluir_primeiro_acesso(
+                    conn,
+                    usuario_atual=usuario,
+                    novo_login=novo_login,
+                    nova_senha=nova_senha,
+                    email=email,
+                    nome_responsavel=nome_responsavel,
+                    nome_estabelecimento=nome_estabelecimento,
+                )
+            if ok:
+                session["admin_usuario"] = novo_login
+                models._limpar_cache_config()
+                return redirect(url_for("admin_dashboard"))
+            else:
+                erro = msg or "Não foi possível concluir a configuração inicial."
+
+    return render_template(
+        "admin_configuracao_inicial.html",
+        erro=erro,
+        nome_estabelecimento=nome_estabelecimento,
+        nome_responsavel=nome_responsavel,
+        email=email,
+        novo_login=novo_login,
+        nome_publico=config.get("nome_publico", "AllLogic Scheduler"),
+    )
+
+
 @app.route("/admin/alterar-senha", methods=["GET", "POST"])
 @login_requerido
 def admin_alterar_senha():
@@ -495,27 +706,130 @@ def admin_alterar_senha():
     erro = None
     sucesso = None
     config = _carregar_config_template()
+
     with db_session() as conn:
-        primeiro_acesso = admin_precisa_alterar_senha(conn, usuario)
+        if admin_precisa_alterar_senha(conn, usuario):
+            return redirect(url_for("admin_configuracao_inicial"))
+
     if request.method == "POST":
         senha_atual = request.form.get("senha_atual", "")
         nova_senha = request.form.get("nova_senha", "")
         confirmar_senha = request.form.get("confirmar_senha", "")
-        if not senha_atual or not nova_senha or not confirmar_senha:
-            erro = "Todos os campos são obrigatórios."
-        elif nova_senha != confirmar_senha:
-            erro = "As novas senhas não conferem."
+
+        if not senha_atual:
+            erro = "A senha atual é obrigatória."
+        elif not nova_senha:
+            erro = "A nova senha é obrigatória."
         elif len(nova_senha) < 8:
             erro = "A nova senha deve ter pelo menos 8 caracteres."
+        elif nova_senha != confirmar_senha:
+            erro = "As novas senhas não conferem."
+        elif nova_senha == senha_atual:
+            erro = "A nova senha deve ser diferente da senha atual."
         else:
             with db_session() as conn:
                 ok, msg = db_admin_alterar_senha(conn, usuario, senha_atual, nova_senha)
             if ok:
-                sucesso = "Senha alterada com sucesso. A senha inicial não é mais válida."
-                primeiro_acesso = False
+                sucesso = "Senha alterada com sucesso."
             else:
                 erro = msg or "Não foi possível alterar a senha."
-    return render_template("admin_alterar_senha.html", erro=erro, sucesso=sucesso, primeiro_acesso=primeiro_acesso, **config)
+
+    return render_template(
+        "admin_alterar_senha.html",
+        erro=erro,
+        sucesso=sucesso,
+        nome_estabelecimento=config.get("nome_estabelecimento", "AllLogic Scheduler"),
+    )
+
+
+@app.route("/admin/esqueci-senha", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
+def admin_esqueci_senha():
+    erro = None
+    sucesso = None
+    email = ""
+    config = _carregar_config_template()
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        if not email:
+            erro = "Informe o e-mail de recuperação."
+        elif not _validar_email(email):
+            erro = "Informe um e-mail com formato válido."
+        else:
+            with db_session() as conn:
+                admin_row = obter_admin_por_email(conn, email)
+                if admin_row:
+                    raw_token = secrets.token_urlsafe(32)
+                    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+                    expira_em = datetime.now(timezone.utc) + timedelta(minutes=30)
+                    criar_token_recuperacao(conn, admin_row["id"], token_hash, expira_em)
+                    link = url_for("admin_redefinir_senha", token=raw_token, _external=True)
+                    nome_resp = admin_row.get("nome_responsavel") or admin_row.get("usuario")
+                    enviar_email_recuperacao(
+                        destinatario=admin_row["email"],
+                        link_recuperacao=link,
+                        nome_responsavel=nome_resp,
+                    )
+            sucesso = "Se o e-mail estiver associado a uma conta, enviaremos instruções para redefinição da senha."
+            email = ""
+
+    return render_template(
+        "admin_esqueci_senha.html",
+        erro=erro,
+        sucesso=sucesso,
+        email=email,
+        **config,
+    )
+
+
+@app.route("/admin/redefinir-senha/<token>", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+def admin_redefinir_senha(token):
+    erro = None
+    token_invalido = False
+    config = _carregar_config_template()
+
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    with db_session() as conn:
+        valido, msg_erro, _ = validar_token_recuperacao(conn, token_hash)
+
+    if not valido:
+        return render_template(
+            "admin_redefinir_senha.html",
+            token_invalido=True,
+            erro=msg_erro,
+            token=token,
+            **config,
+        )
+
+    if request.method == "POST":
+        nova_senha = request.form.get("nova_senha", "")
+        confirmar_senha = request.form.get("confirmar_senha", "")
+
+        if not nova_senha:
+            erro = "A nova senha é obrigatória."
+        elif len(nova_senha) < 8:
+            erro = "A nova senha deve ter pelo menos 8 caracteres."
+        elif nova_senha != confirmar_senha:
+            erro = "As novas senhas não conferem."
+        else:
+            with db_session() as conn:
+                ok, msg_db = redefinir_senha_com_token(conn, token_hash, nova_senha)
+            if ok:
+                return redirect(url_for("admin_login", redefinida=1))
+            else:
+                token_invalido = True
+                erro = msg_db or "Não foi possível redefinir a senha."
+
+    return render_template(
+        "admin_redefinir_senha.html",
+        token_invalido=token_invalido,
+        erro=erro,
+        token=token,
+        **config,
+    )
 
 
 @app.route("/admin/agendamento/<int:agendamento_id>/cancelar", methods=["POST"])

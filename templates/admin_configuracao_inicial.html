@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block titulo %}Configuração Inicial — Painel Admin{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+    <header class="topo">
+        <h1>Configuração Inicial</h1>
+        <p>Para começar a usar o sistema, configure sua conta e os dados básicos do seu estabelecimento.</p>
+    </header>
+
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+
+    <div class="card">
+        <form id="form-configuracao-inicial" method="POST" action="{{ url_for('admin_configuracao_inicial') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grupo-campos">
+                <h2 class="subtitulo-grupo">Dados do estabelecimento</h2>
+                <label for="nome_estabelecimento">Nome do estabelecimento *</label>
+                <input type="text" id="nome_estabelecimento" name="nome_estabelecimento" value="{{ nome_estabelecimento or '' }}" placeholder="Ex.: Barbearia Top" required>
+            </div>
+
+            <div class="grupo-campos">
+                <h2 class="subtitulo-grupo">Dados do responsável</h2>
+                <label for="nome_responsavel">Nome do responsável *</label>
+                <input type="text" id="nome_responsavel" name="nome_responsavel" value="{{ nome_responsavel or '' }}" placeholder="Nome do proprietário ou responsável" required>
+
+                <label for="email">E-mail do responsável / recuperação da conta *</label>
+                <input type="email" id="email" name="email" value="{{ email or '' }}" placeholder="responsavel@exemplo.com" autocomplete="email" required>
+            </div>
+
+            <div class="grupo-campos">
+                <h2 class="subtitulo-grupo">Dados de acesso</h2>
+                <label for="novo_login">Novo Login *</label>
+                <input type="text" id="novo_login" name="novo_login" value="{{ novo_login or '' }}" placeholder="Ex.: barbeariatop ou seu@email.com" autocomplete="username" required>
+
+                <label for="nova_senha">Nova Senha *</label>
+                <input type="password" id="nova_senha" name="nova_senha" placeholder="Mínimo de 8 caracteres" autocomplete="new-password" required minlength="8">
+
+                <label for="confirmar_senha">Confirme a Nova Senha *</label>
+                <input type="password" id="confirmar_senha" name="confirmar_senha" placeholder="Repita a nova senha" autocomplete="new-password" required minlength="8">
+            </div>
+
+            <button type="submit" class="btn-primario" style="margin-top: 16px;">Salvar e Acessar o Painel</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var form = document.getElementById("form-configuracao-inicial");
+    if (!form) return;
+
+    var novaSenha = document.getElementById("nova_senha");
+    var confirmarSenha = document.getElementById("confirmar_senha");
+
+    function validarSenhas() {
+        if (novaSenha.value && confirmarSenha.value && novaSenha.value !== confirmarSenha.value) {
+            confirmarSenha.setCustomValidity("As novas senhas não conferem.");
+        } else {
+            confirmarSenha.setCustomValidity("");
+        }
+    }
+
+    if (novaSenha && confirmarSenha) {
+        novaSenha.addEventListener("input", validarSenhas);
+        confirmarSenha.addEventListener("input", validarSenhas);
+    }
+});
+</script>
+{% endblock %}

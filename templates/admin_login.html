@@ -13,6 +13,10 @@
     <div class="mensagem-erro">{{ erro }}</div>
     {% endif %}
 
+    {% if sucesso %}
+    <div class="mensagem-sucesso">{{ sucesso }}</div>
+    {% endif %}
+
     <div class="card">
         <form method="POST" action="{{ url_for('admin_login') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -24,6 +28,10 @@
 
             <button type="submit" class="btn-primario">Entrar</button>
         </form>
+
+        <p style="text-align: center; margin-top: 16px;">
+            <a href="{{ url_for('admin_esqueci_senha') }}" style="color: var(--dourado); text-decoration: none; font-size: 0.9rem;">Esqueci minha senha</a>
+        </p>
     </div>
 </div>
 {% endblock %}

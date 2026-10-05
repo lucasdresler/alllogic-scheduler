@@ -37,13 +37,7 @@
                         <td>{{ servico.duracao_minutos }} min</td>
                         <td>{{ "Ativo" if servico.ativo else "Inativo" }}</td>
                         <td>
-                            <div class="acao-inline">
-                                <a href="{{ url_for('admin_servico_editar', servico_id=servico.id) }}" class="btn-secundario">Editar</a>
-                                <form method="POST" action="{{ url_for('admin_servico_toggle', servico_id=servico.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-link">{{ 'Desativar' if servico.ativo else 'Ativar' }}</button>
-                                </form>
-                            </div>
+                            <a href="{{ url_for('admin_servico_editar', servico_id=servico.id) }}" class="btn-secundario">Editar</a>
                         </td>
                     </tr>
                     {% endfor %}

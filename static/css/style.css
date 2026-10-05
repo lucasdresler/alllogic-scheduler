@@ -154,6 +154,7 @@ header.topo p {
 
 input[type="text"],
 input[type="tel"],
+input[type="email"],
 input[type="password"] {
     width: 100%;
     background-color: var(--bg-card);
@@ -176,6 +177,24 @@ label {
     font-size: 0.85rem;
     color: var(--texto-secundario);
     margin-bottom: 6px;
+}
+
+.grupo-campos {
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--borda);
+}
+
+.grupo-campos:last-of-type {
+    border-bottom: none;
+    margin-bottom: 12px;
+}
+
+.subtitulo-grupo {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dourado);
+    margin-bottom: 12px;
 }
 
 .btn-primario {
