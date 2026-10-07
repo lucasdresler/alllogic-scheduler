@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 
-{% block titulo %}Barbearia Top — Agendar Horário{% endblock %}
+{% block titulo %}{{ nome_estabelecimento }} — Agendar Horário{% endblock %}
 
 {% block conteudo %}
 <div class="container">
     <header class="topo">
-        <h1>{{ nome_publico }}</h1>
+        {% if logotipo %}
+        <div class="logo-topo">
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}">
+        </div>
+        {% endif %}
+        <h1>{{ nome_estabelecimento }}</h1>
         <p>Agende seu horário</p>
     </header>
 
@@ -81,11 +86,23 @@
             <div class="resumo-item"><span>Profissional</span><span id="resumo-profissional"></span></div>
             <div class="resumo-item"><span>Data</span><span id="resumo-data"></span></div>
             <div class="resumo-item"><span>Horário</span><span id="resumo-hora"></span></div>
-            <div class="resumo-item"><span>Cliente</span><span id="resumo-cliente"></span></div>
         </div>
         <button type="button" class="btn-primario" id="btn-confirmar">Confirmar Agendamento</button>
         <button type="button" class="btn-secundario" data-voltar="4">Voltar</button>
     </section>
+
+    {% if endereco_estabelecimento or telefone_estabelecimento %}
+    <footer class="rodape-publico">
+        {% if endereco_estabelecimento %}
+        <p class="rodape-endereco">{{ endereco_estabelecimento }}</p>
+        {% endif %}
+        {% if telefone_estabelecimento %}
+        <p class="rodape-telefone">
+            <a href="tel:{{ telefone_limpo }}" class="link-telefone">{{ telefone_estabelecimento }}</a>
+        </p>
+        {% endif %}
+    </footer>
+    {% endif %}
 </div>
 {% endblock %}
 

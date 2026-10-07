@@ -5,12 +5,17 @@
 {% block conteudo %}
 <div class="container">
     <header class="topo">
+        {% if logotipo %}
+        <div class="logo-topo">
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}">
+        </div>
+        {% endif %}
         <h1>{{ nome_estabelecimento }}</h1>
     </header>
 
     <div class="card">
         <div class="confirmacao-icone">&#10003;</div>
-        <div class="etapa-titulo" style="text-align:center;">Agendamento Confirmado!</div>
+        <div class="etapa-titulo" style="text-align:center;">Agendamento realizado com sucesso!</div>
 
         <div class="resumo-item">
             <span>Serviços</span>
@@ -36,8 +41,36 @@
             <span>Cliente</span>
             <span>{{ agendamento.cliente_nome }}</span>
         </div>
+
+        <p class="mensagem-redirecionamento" style="text-align:center; color: var(--texto-secundario); font-size: 0.85rem; margin-top: 18px;">
+            Você será direcionado ao início em alguns segundos.
+        </p>
     </div>
 
-    <a href="{{ url_for('index') }}" class="btn-secundario">Voltar ao início</a>
+    {% if endereco_estabelecimento or telefone_estabelecimento %}
+    <footer class="rodape-publico">
+        {% if endereco_estabelecimento %}
+        <p class="rodape-endereco">{{ endereco_estabelecimento }}</p>
+        {% endif %}
+        {% if telefone_estabelecimento %}
+        <p class="rodape-telefone">
+            <a href="tel:{{ telefone_limpo }}" class="link-telefone">{{ telefone_estabelecimento }}</a>
+        </p>
+        {% endif %}
+    </footer>
+    {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    try {
+        localStorage.clear();
+        sessionStorage.clear();
+    } catch (e) {}
+
+    setTimeout(function () {
+        window.location.href = "{{ url_for('index') }}";
+    }, 5000);
+</script>
 {% endblock %}

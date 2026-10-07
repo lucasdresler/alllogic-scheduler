@@ -177,6 +177,12 @@ def test_admin_auth_settings_and_service_description(client):
         },
     )
     assert accepted.status_code == 302
+    with database.db_session() as conn:
+        conn.execute(
+            "UPDATE admin SET usuario = 'admin_ativo', senha_inicial_alterada = TRUE, email = 'admin@teste.com', nome_responsavel = 'Admin' WHERE usuario = 'admin'"
+        )
+    with client.session_transaction() as session:
+        session["admin_usuario"] = "admin_ativo"
     assert client.get("/admin/servicos").status_code == 200
 
     service_token = _csrf_token(client, "/admin/servicos/novo")

@@ -247,6 +247,7 @@ def seed_configuracao_padrao(conn):
             ("horario_fechamento", "19:00"),
             ("intervalo_slot_minutos", "30"),
             ("dias_funcionamento", "1,2,3,4,5,6"),
+            ("logotipo", ""),
         ]
         with conn.cursor() as cur:
             cur.executemany(

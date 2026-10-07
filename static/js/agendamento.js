@@ -336,7 +336,10 @@
         document.getElementById("resumo-profissional").textContent = estado.profissional.nome;
         document.getElementById("resumo-data").textContent = formatarDataBR(estado.data);
         document.getElementById("resumo-hora").textContent = estado.hora;
-        document.getElementById("resumo-cliente").textContent = estado.nome;
+        var elCliente = document.getElementById("resumo-cliente");
+        if (elCliente) {
+            elCliente.textContent = estado.nome;
+        }
     }
 
     function confirmarAgendamento() {
@@ -390,6 +393,49 @@
         });
     }
 
+    function limparEstadoAgendamento() {
+        estado = {
+            etapa: 1,
+            servicos: [],
+            profissional: null,
+            data: null,
+            hora: null,
+            nome: "",
+            telefone: ""
+        };
+
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch (e) {}
+
+        document.querySelectorAll('.opcao-btn[data-etapa="servico"]').forEach(function (btn) {
+            btn.classList.remove("selecionado");
+        });
+
+        var inputNome = document.getElementById("input-nome");
+        if (inputNome) inputNome.value = "";
+        var inputTelefone = document.getElementById("input-telefone");
+        if (inputTelefone) inputTelefone.value = "";
+
+        var btn1 = document.getElementById("btn-avancar-1");
+        if (btn1) btn1.disabled = true;
+        var btn2 = document.getElementById("btn-avancar-2");
+        if (btn2) btn2.disabled = true;
+        var btn3 = document.getElementById("btn-avancar-3");
+        if (btn3) btn3.disabled = true;
+        var btn4 = document.getElementById("btn-avancar-4");
+        if (btn4) btn4.disabled = true;
+
+        var elDias = document.getElementById("dias-grid");
+        if (elDias) elDias.innerHTML = "";
+        var elHorarios = document.getElementById("horarios-grid");
+        if (elHorarios) elHorarios.innerHTML = '<p class="vazio">Selecione uma data para ver os horários.</p>';
+
+        esconderErroGlobal();
+        irParaEtapa(1);
+    }
+
     // ---------------------------------------------------------------------
     // Inicialização
     // ---------------------------------------------------------------------
@@ -399,6 +445,10 @@
         configurarEtapa3();
         configurarEtapa4();
         configurarEtapa5();
-        atualizarProgresso();
+        limparEstadoAgendamento();
+    });
+
+    window.addEventListener("pageshow", function () {
+        limparEstadoAgendamento();
     });
 })();

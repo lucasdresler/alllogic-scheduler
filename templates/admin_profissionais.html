@@ -1,12 +1,19 @@
 {% extends "base.html" %}
 
-{% block titulo %}Profissionais — Administração{% endblock %}
+{% block titulo %}Profissionais — {{ nome_estabelecimento }}{% endblock %}
 
 {% block conteudo %}
 <div class="container-admin">
     <div class="topo-admin">
-        <h1>Gerenciar profissionais</h1>
-        <span>{{ nome_estabelecimento }}</span>
+        <div class="topo-admin-titulos">
+            {% if logotipo %}
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
+            {% endif %}
+            <div>
+                <h1>Gerenciar profissionais</h1>
+                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
+            </div>
+        </div>
         <a href="{{ url_for('admin_dashboard') }}" class="link-logout">Painel</a>
     </div>
 

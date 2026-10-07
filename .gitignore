@@ -26,3 +26,7 @@ Thumbs.db
 # Editores
 .vscode/
 .idea/
+
+# Uploads
+static/uploads/*
+!static/uploads/.gitkeep

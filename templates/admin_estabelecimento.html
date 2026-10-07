@@ -1,12 +1,19 @@
 {% extends "base.html" %}
 
-{% block titulo %}Dados do estabelecimento — Painel Admin{% endblock %}
+{% block titulo %}Dados do estabelecimento — {{ dados.get('nome_estabelecimento', nome_estabelecimento) }}{% endblock %}
 
 {% block conteudo %}
 <div class="container-admin">
     <div class="topo-admin">
-        <h1>Dados do estabelecimento</h1>
-        <span>{{ dados.get('nome_estabelecimento', nome_estabelecimento) }}</span>
+        <div class="topo-admin-titulos">
+            {% if logotipo %}
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ dados.get('nome_estabelecimento', nome_estabelecimento) }}" class="logo-admin-topo">
+            {% endif %}
+            <div>
+                <h1>Dados do estabelecimento</h1>
+                <span class="subtitulo-admin">{{ dados.get('nome_estabelecimento', nome_estabelecimento) }}</span>
+            </div>
+        </div>
         <a href="{{ url_for('admin_dashboard') }}" class="link-logout">Painel</a>
     </div>
 
@@ -19,14 +26,36 @@
     {% endif %}
 
     <div class="card">
-        <form method="POST" action="{{ url_for('admin_estabelecimento') }}">
+        <form method="POST" action="{{ url_for('admin_estabelecimento') }}" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grupo-campos">
+                <h2 class="subtitulo-grupo">Identidade visual</h2>
+
+                <label>Logotipo</label>
+                {% if dados.get('logotipo') %}
+                <div class="logo-preview-box">
+                    <img src="{{ url_for('static', filename=dados.get('logotipo')) }}" alt="Logotipo do estabelecimento">
+                    <button type="submit" name="remover_logo" value="1" class="btn-secundario btn-compacto" style="color: var(--erro, #e05252);">Remover logotipo</button>
+                </div>
+                {% endif %}
+                <label for="logotipo" style="font-size: 0.85rem; color: var(--texto-secundario);">
+                    {{ 'Substituir logotipo' if dados.get('logotipo') else 'Enviar logotipo' }}
+                </label>
+                <input type="file" id="logotipo" name="logotipo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                <small style="display: block; margin-top: 4px; color: var(--texto-secundario); font-size: 0.8rem;">
+                    Formatos aceitos: PNG, JPG, JPEG, WEBP e SVG. Tamanho máximo: 2 MB.
+                </small>
+            </div>
 
             <div class="grupo-campos">
                 <h2 class="subtitulo-grupo">Identificação</h2>
 
                 <label for="nome_estabelecimento">Nome do estabelecimento *</label>
                 <input type="text" id="nome_estabelecimento" name="nome_estabelecimento" value="{{ dados.get('nome_estabelecimento', '') }}" placeholder="Ex.: Barbearia Top" required>
+
+                <label for="nome_responsavel">Nome do responsável *</label>
+                <input type="text" id="nome_responsavel" name="nome_responsavel" value="{{ dados.get('nome_responsavel', '') }}" placeholder="Nome do proprietário ou responsável" required>
 
                 <label for="nome_fantasia">Nome fantasia</label>
                 <input type="text" id="nome_fantasia" name="nome_fantasia" value="{{ dados.get('nome_fantasia', '') }}" placeholder="Nome de fachada ou comercial">

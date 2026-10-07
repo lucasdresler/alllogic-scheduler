@@ -1,6 +1,8 @@
 import hashlib
+import os
 import re
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
@@ -15,6 +17,7 @@ from database import (
     db_session,
     obter_todas_configuracoes,
     obter_configuracao,
+    atualizar_configuracao,
     atualizar_configuracoes,
     admin_precisa_alterar_senha,
     admin_alterar_senha as db_admin_alterar_senha,
@@ -28,6 +31,7 @@ from email_service import enviar_email_recuperacao
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
 # CSRF Protection
 csrf = CSRFProtect(app)
@@ -43,19 +47,109 @@ limiter = Limiter(
 init_db()
 import models
 
+EXTENSOES_IMAGEM_PERMITIDAS = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
+TAMANHO_MAXIMO_IMAGEM = 2 * 1024 * 1024  # 2 MB
+
+
+def _remover_arquivo_logo(caminho_relativo):
+    if not caminho_relativo:
+        return
+    caminho_relativo = caminho_relativo.replace("\\", "/").lstrip("/")
+    if not caminho_relativo.startswith("uploads/"):
+        return
+    caminho_completo = os.path.join(app.root_path, "static", caminho_relativo)
+    try:
+        if os.path.isfile(caminho_completo):
+            os.remove(caminho_completo)
+    except OSError:
+        pass
+
+
+def _validar_e_salvar_logotipo(arquivo_storage, logo_atual=""):
+    if not arquivo_storage or not arquivo_storage.filename:
+        return logo_atual, None
+
+    nome_original = arquivo_storage.filename
+    _, ext = os.path.splitext(nome_original)
+    ext = ext.lower()
+
+    if ext not in EXTENSOES_IMAGEM_PERMITIDAS:
+        return None, "Formato de imagem inválido. Formatos aceitos: PNG, JPG, JPEG, WEBP e SVG."
+
+    arquivo_storage.seek(0, os.SEEK_END)
+    tamanho = arquivo_storage.tell()
+    arquivo_storage.seek(0)
+
+    if tamanho == 0:
+        return None, "O arquivo enviado está vazio."
+    if tamanho > TAMANHO_MAXIMO_IMAGEM:
+        return None, "O logotipo deve ter no máximo 2 MB."
+
+    conteudo_inicial = arquivo_storage.read(512)
+    arquivo_storage.seek(0)
+
+    valido = False
+    if ext == ".png" and conteudo_inicial.startswith(b"\x89PNG\r\n\x1a\n"):
+        valido = True
+    elif ext in (".jpg", ".jpeg") and conteudo_inicial.startswith(b"\xff\xd8\xff"):
+        valido = True
+    elif (
+        ext == ".webp"
+        and conteudo_inicial.startswith(b"RIFF")
+        and len(conteudo_inicial) >= 12
+        and conteudo_inicial[8:12] == b"WEBP"
+    ):
+        valido = True
+    elif ext == ".svg":
+        texto = conteudo_inicial.decode("utf-8", errors="ignore").lower()
+        if "<svg" in texto or "<?xml" in texto:
+            valido = True
+
+    if not valido:
+        return None, "O arquivo selecionado não é uma imagem válida."
+
+    pasta_uploads = os.path.join(app.root_path, "static", "uploads")
+    os.makedirs(pasta_uploads, exist_ok=True)
+
+    nome_arquivo = f"logo_{uuid.uuid4().hex[:12]}{ext}"
+    caminho_destino = os.path.join(pasta_uploads, nome_arquivo)
+    arquivo_storage.save(caminho_destino)
+
+    if logo_atual and logo_atual != f"uploads/{nome_arquivo}":
+        _remover_arquivo_logo(logo_atual)
+
+    return f"uploads/{nome_arquivo}", None
+
 
 def _carregar_config_template():
     """Carrega configurações do banco para uso nos templates."""
     with db_session() as conn:
         config = obter_todas_configuracoes(conn)
+
+    logotipo = config.get("logotipo", "")
+    if logotipo:
+        caminho_disco = os.path.join(app.root_path, "static", logotipo)
+        if not os.path.isfile(caminho_disco):
+            logotipo = ""
+
+    telefone = config.get("telefone_estabelecimento", "")
+    telefone_limpo = re.sub(r"[^\d+]", "", telefone) if telefone else ""
+
     return {
         "nome_estabelecimento": config.get("nome_estabelecimento", "AllLogic Scheduler"),
-        "telefone_estabelecimento": config.get("telefone_estabelecimento", ""),
+        "telefone_estabelecimento": telefone,
+        "telefone_limpo": telefone_limpo,
         "endereco_estabelecimento": config.get("endereco_estabelecimento", ""),
         "nome_publico": config.get("nome_publico", "AllLogic Scheduler"),
+        "logotipo": logotipo,
         "dias_antecedencia": models.dias_antecedencia_agendamento(),
         "dias_funcionamento": models.dias_funcionamento(),
     }
+
+
+@app.context_processor
+def inject_config_template():
+    return _carregar_config_template()
 
 
 # ---------------------------------------------------------------------------
@@ -128,9 +222,7 @@ def index():
         "index.html",
         servicos=servicos,
         profissionais=profissionais,
-        dias_antecedencia=config["dias_antecedencia"],
-        dias_funcionamento=config["dias_funcionamento"],
-        nome_publico=config["nome_publico"],
+        **config,
     )
 
 
@@ -486,16 +578,20 @@ def admin_configuracoes():
         valores = obter_todas_configuracoes(conn)
 
     if request.method == "POST":
+        dias_list = request.form.getlist("dias_funcionamento")
+        if len(dias_list) == 1 and "," in dias_list[0]:
+            dias_str = dias_list[0].strip()
+        elif dias_list:
+            dias_str = ",".join(d.strip() for d in dias_list)
+        else:
+            dias_str = request.form.get("dias_funcionamento", "").strip()
+
         dados = {
-            "nome_estabelecimento": request.form.get("nome_estabelecimento", "").strip(),
-            "telefone_estabelecimento": request.form.get("telefone_estabelecimento", "").strip(),
-            "endereco_estabelecimento": request.form.get("endereco_estabelecimento", "").strip(),
-            "nome_publico": request.form.get("nome_publico", "").strip(),
             "dias_antecedencia_agendamento": request.form.get("dias_antecedencia_agendamento", "14").strip(),
             "horario_abertura": request.form.get("horario_abertura", "09:00").strip(),
             "horario_fechamento": request.form.get("horario_fechamento", "19:00").strip(),
             "intervalo_slot_minutos": request.form.get("intervalo_slot_minutos", "30").strip(),
-            "dias_funcionamento": request.form.get("dias_funcionamento", "1,2,3,4,5,6").strip(),
+            "dias_funcionamento": dias_str,
         }
 
         erro = _validar_configuracoes_operacionais(dados)
@@ -503,8 +599,10 @@ def admin_configuracoes():
             with db_session() as conn:
                 atualizar_configuracoes(conn, dados)
             models._limpar_cache_config()
-            sucesso = "Configurações atualizadas com sucesso."
-            valores = dados
+            sucesso = "Configurações da agenda atualizadas com sucesso."
+            valores.update(dados)
+        else:
+            valores.update(dados)
 
     return render_template(
         "admin_configuracoes.html",
@@ -520,16 +618,29 @@ def admin_configuracoes():
 def admin_estabelecimento():
     erro = None
     sucesso = None
+    usuario = session.get("admin_usuario")
 
     with db_session() as conn:
         configuracoes = obter_todas_configuracoes(conn)
+        admin_row = conn.execute(
+            "SELECT id, usuario, email, nome_responsavel FROM admin WHERE usuario = %s",
+            (usuario,),
+        ).fetchone()
+
+    nome_responsavel_salvo = (
+        (admin_row["nome_responsavel"] or "").strip()
+        if admin_row and "nome_responsavel" in admin_row and admin_row["nome_responsavel"]
+        else ""
+    )
 
     telefone_padrao = configuracoes.get(
         "telefone", configuracoes.get("telefone_estabelecimento", "")
     )
 
     dados = {
+        "logotipo": configuracoes.get("logotipo", ""),
         "nome_estabelecimento": configuracoes.get("nome_estabelecimento", ""),
+        "nome_responsavel": nome_responsavel_salvo,
         "nome_fantasia": configuracoes.get("nome_fantasia", ""),
         "razao_social": configuracoes.get("razao_social", ""),
         "cpf_cnpj": configuracoes.get("cpf_cnpj", ""),
@@ -547,6 +658,7 @@ def admin_estabelecimento():
 
     if request.method == "POST":
         nome_estabelecimento = request.form.get("nome_estabelecimento", "").strip()
+        nome_responsavel = request.form.get("nome_responsavel", "").strip()
         nome_fantasia = request.form.get("nome_fantasia", "").strip()
         razao_social = request.form.get("razao_social", "").strip()
         cpf_cnpj = request.form.get("cpf_cnpj", "").strip()
@@ -563,13 +675,34 @@ def admin_estabelecimento():
         whatsapp = request.form.get("whatsapp", "").strip()
         email_comercial = request.form.get("email_comercial", "").strip()
 
-        if not nome_estabelecimento:
-            erro = "O nome do estabelecimento é obrigatório."
-        elif email_comercial and not _validar_email(email_comercial):
-            erro = "Informe um e-mail comercial com formato válido."
+        remover_logo_acao = request.form.get("remover_logo") == "1" or request.form.get("acao") == "remover_logo"
+        logo_a_salvar = configuracoes.get("logotipo", "")
+
+        if remover_logo_acao:
+            if logo_a_salvar:
+                _remover_arquivo_logo(logo_a_salvar)
+            logo_a_salvar = ""
         else:
+            arquivo_logo = request.files.get("logotipo")
+            if arquivo_logo and arquivo_logo.filename:
+                novo_logo, erro_logo = _validar_e_salvar_logotipo(arquivo_logo, logo_a_salvar)
+                if erro_logo:
+                    erro = erro_logo
+                else:
+                    logo_a_salvar = novo_logo
+
+        if not erro:
+            if not nome_estabelecimento:
+                erro = "O nome do estabelecimento é obrigatório."
+            elif not nome_responsavel:
+                erro = "O nome do responsável é obrigatório."
+            elif email_comercial and not _validar_email(email_comercial):
+                erro = "Informe um e-mail comercial com formato válido."
+
+        if not erro:
             novos_dados = {
                 "nome_estabelecimento": nome_estabelecimento,
+                "logotipo": logo_a_salvar,
                 "nome_fantasia": nome_fantasia,
                 "razao_social": razao_social,
                 "cpf_cnpj": cpf_cnpj,
@@ -606,10 +739,37 @@ def admin_estabelecimento():
 
             with db_session() as conn:
                 atualizar_configuracoes(conn, novos_dados)
+                if admin_row:
+                    conn.execute(
+                        "UPDATE admin SET nome_responsavel = %s WHERE id = %s",
+                        (nome_responsavel, admin_row["id"]),
+                    )
 
             models._limpar_cache_config()
-            sucesso = "Dados do estabelecimento salvos com sucesso."
-            dados = novos_dados
+            if remover_logo_acao:
+                sucesso = "Logotipo removido com sucesso."
+            else:
+                sucesso = "Dados do estabelecimento salvos com sucesso."
+            dados = {**novos_dados, "nome_responsavel": nome_responsavel}
+        else:
+            dados = {
+                "logotipo": logo_a_salvar,
+                "nome_estabelecimento": nome_estabelecimento,
+                "nome_responsavel": nome_responsavel,
+                "nome_fantasia": nome_fantasia,
+                "razao_social": razao_social,
+                "cpf_cnpj": cpf_cnpj,
+                "cep": cep,
+                "logradouro": logradouro,
+                "numero": numero,
+                "complemento": complemento,
+                "bairro": bairro,
+                "cidade": cidade,
+                "estado": estado,
+                "telefone": telefone,
+                "whatsapp": whatsapp,
+                "email_comercial": email_comercial,
+            }
 
     return render_template(
         "admin_estabelecimento.html",
@@ -738,7 +898,7 @@ def admin_alterar_senha():
         "admin_alterar_senha.html",
         erro=erro,
         sucesso=sucesso,
-        nome_estabelecimento=config.get("nome_estabelecimento", "AllLogic Scheduler"),
+        **config,
     )
 
 

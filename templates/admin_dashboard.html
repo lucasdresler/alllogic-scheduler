@@ -1,12 +1,19 @@
 {% extends "base.html" %}
 
-{% block titulo %}Painel Administrativo — Barbearia Top{% endblock %}
+{% block titulo %}Painel Administrativo — {{ nome_estabelecimento }}{% endblock %}
 
 {% block conteudo %}
 <div class="container-admin">
     <div class="topo-admin">
-        <h1>Painel Administrativo</h1>
-        <span>{{ nome_estabelecimento }}</span>
+        <div class="topo-admin-titulos">
+            {% if logotipo %}
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
+            {% endif %}
+            <div>
+                <h1>Painel Administrativo</h1>
+                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
+            </div>
+        </div>
         <a href="{{ url_for('admin_logout') }}" class="link-logout">Sair</a>
     </div>
 
@@ -15,7 +22,7 @@
             <a href="{{ url_for('admin_servicos') }}" class="btn-secundario">Serviços</a>
             <a href="{{ url_for('admin_profissionais') }}" class="btn-secundario">Profissionais</a>
             <a href="{{ url_for('admin_estabelecimento') }}" class="btn-secundario">Dados do estabelecimento</a>
-            <a href="{{ url_for('admin_configuracoes') }}" class="btn-secundario">Configurações</a>
+            <a href="{{ url_for('admin_configuracoes') }}" class="btn-secundario">Configurações da agenda</a>
             <a href="{{ url_for('admin_alterar_senha') }}" class="btn-secundario">Alterar senha</a>
         </div>
     </div>

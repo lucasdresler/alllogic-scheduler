@@ -362,3 +362,85 @@ table.tabela-agendamentos td {
         font-size: 0.95rem;
     }
 }
+
+/* Logotipo no topo público e admin login */
+.logo-topo {
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.logo-topo img {
+    max-height: 64px;
+    max-width: 200px;
+    object-fit: contain;
+    display: inline-block;
+}
+
+/* Cabeçalho do painel administrativo com logo */
+.topo-admin-titulos {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-admin-topo {
+    max-height: 44px;
+    max-width: 120px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.subtitulo-admin {
+    display: block;
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+    margin-top: 2px;
+}
+
+/* Box de visualização do logotipo em Dados do estabelecimento */
+.logo-preview-box {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--borda);
+}
+
+.logo-preview-box img {
+    max-height: 60px;
+    max-width: 160px;
+    object-fit: contain;
+}
+
+/* Rodapé discreto das páginas públicas */
+.rodape-publico {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--borda);
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--texto-secundario);
+}
+
+.rodape-publico p {
+    margin: 4px 0;
+}
+
+.rodape-publico .link-telefone {
+    color: var(--dourado);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.rodape-publico .link-telefone:hover {
+    text-decoration: underline;
+}
+
+.mensagem-redirecionamento {
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+    margin-top: 16px;
+}
