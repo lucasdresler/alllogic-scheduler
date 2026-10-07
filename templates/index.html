@@ -5,12 +5,12 @@
 {% block conteudo %}
 <div class="container">
     <header class="topo">
-        {% if logotipo %}
-        <div class="logo-topo">
-            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}">
+        <div class="topo-marca">
+            {% if logotipo %}
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-publico">
+            {% endif %}
+            <h1>{{ nome_estabelecimento }}</h1>
         </div>
-        {% endif %}
-        <h1>{{ nome_estabelecimento }}</h1>
         <p>Agende seu horário</p>
     </header>
 
