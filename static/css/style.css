@@ -458,3 +458,86 @@ table.tabela-agendamentos td {
     font-size: 0.85rem;
     margin-top: 16px;
 }
+
+/* Seção de disponibilidade do profissional */
+.secao-disponibilidade {
+    margin-top: 20px;
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.ajuda-disponibilidade {
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+    margin-top: 0;
+    margin-bottom: 14px;
+}
+
+.tabela-disponibilidade {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.linha-disponibilidade {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--borda);
+    border-radius: 6px;
+}
+
+.linha-disponibilidade .dia-label {
+    min-width: 140px;
+    margin: 0;
+    font-weight: 500;
+}
+
+.horarios-dia {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.campo-hora {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.campo-hora label {
+    font-size: 0.8rem;
+    color: var(--texto-secundario);
+    margin: 0;
+}
+
+.campo-hora input[type="time"] {
+    width: 110px;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    color: var(--texto-principal);
+    border-radius: 4px;
+}
+
+.separador-hora {
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 580px) {
+    .linha-disponibilidade {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .horarios-dia {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

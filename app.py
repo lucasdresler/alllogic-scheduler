@@ -539,21 +539,44 @@ def admin_profissional_editar(profissional_id):
     )
     servico_ids_atuais = profissional_com_servicos["servico_ids"] if profissional_com_servicos else []
 
+    disponibilidade = models.obter_disponibilidade_profissional(profissional_id)
     erro = None
     if request.method == "POST":
         nome = request.form.get("nome", "").strip()
         ativo = request.form.get("ativo") == "on"
         servico_ids = request.form.getlist("servicos", type=int)
 
-        ok, erro = models.atualizar_profissional(profissional_id, nome, ativo, servico_ids)
-        if ok:
-            return redirect(url_for("admin_profissionais"))
+        itens_disp = []
+        for d in models.DIAS_DA_SEMANA:
+            dia_num = d["numero"]
+            dia_ativo = request.form.get(f"disp_ativo_{dia_num}") == "on"
+            entrada = request.form.get(f"disp_entrada_{dia_num}", "").strip()
+            saida = request.form.get(f"disp_saida_{dia_num}", "").strip()
+            itens_disp.append({
+                "dia_semana": dia_num,
+                "nome_dia": d["nome"],
+                "ativo": dia_ativo,
+                "horario_entrada": entrada,
+                "horario_saida": saida,
+            })
+
+        disponibilidade = itens_disp
+
+        ok_disp, erro_disp = models.validar_disponibilidade_profissional(itens_disp)
+        if not ok_disp:
+            erro = erro_disp
+        else:
+            ok, erro = models.atualizar_profissional(profissional_id, nome, ativo, servico_ids)
+            if ok:
+                models.salvar_disponibilidade_profissional(profissional_id, itens_disp)
+                return redirect(url_for("admin_profissionais"))
 
     return render_template(
         "admin_profissional_form.html",
         erro=erro,
         profissional={**profissional, "servico_ids": servico_ids_atuais},
         servicos=servicos,
+        disponibilidade=disponibilidade,
         titulo="Editar profissional",
         **_carregar_config_template(),
     )

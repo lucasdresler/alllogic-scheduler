@@ -297,6 +297,136 @@ def atualizar_profissional_servicos(profissional_id, servico_ids):
     return True, None
 
 
+DIAS_DA_SEMANA = [
+    {"numero": 1, "nome": "Segunda-feira"},
+    {"numero": 2, "nome": "Terça-feira"},
+    {"numero": 3, "nome": "Quarta-feira"},
+    {"numero": 4, "nome": "Quinta-feira"},
+    {"numero": 5, "nome": "Sexta-feira"},
+    {"numero": 6, "nome": "Sábado"},
+    {"numero": 0, "nome": "Domingo"},
+]
+
+
+def obter_disponibilidade_profissional(profissional_id):
+    """
+    Retorna uma lista ordenada com a disponibilidade dos 7 dias da semana (Segunda a Domingo).
+    Se o profissional não possuir registros individuais, retorna os padrões baseados no estabelecimento.
+    """
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT dia_semana, horario_entrada, horario_saida, ativo
+            FROM profissional_disponibilidade
+            WHERE profissional_id = %s
+            """,
+            (profissional_id,),
+        ).fetchall()
+
+    cadastrados = {r["dia_semana"]: dict(r) for r in rows}
+    tem_customizado = len(cadastrados) > 0
+
+    abertura_padrao = horario_abertura()
+    fechamento_padrao = horario_fechamento()
+    dias_estab = dias_funcionamento()
+
+    resultado = []
+    for info in DIAS_DA_SEMANA:
+        dia_num = info["numero"]
+        if tem_customizado and dia_num in cadastrados:
+            c = cadastrados[dia_num]
+            resultado.append({
+                "dia_semana": dia_num,
+                "nome_dia": info["nome"],
+                "ativo": bool(c["ativo"]),
+                "horario_entrada": c["horario_entrada"] or "",
+                "horario_saida": c["horario_saida"] or "",
+            })
+        else:
+            resultado.append({
+                "dia_semana": dia_num,
+                "nome_dia": info["nome"],
+                "ativo": (dia_num in dias_estab) if not tem_customizado else False,
+                "horario_entrada": abertura_padrao,
+                "horario_saida": fechamento_padrao,
+            })
+
+    return resultado
+
+
+def validar_disponibilidade_profissional(itens_disponibilidade):
+    """
+    Valida a lista de disponibilidade semanal de um profissional.
+    Retorna (True, None) se válido ou (False, mensagem_erro) se inválido.
+    """
+    nomes_por_numero = {d["numero"]: d["nome"] for d in DIAS_DA_SEMANA}
+
+    for item in itens_disponibilidade:
+        dia_num = item.get("dia_semana")
+        if dia_num not in nomes_por_numero:
+            return False, "Dia da semana inválido."
+
+        nome_dia = nomes_por_numero[dia_num]
+        ativo = bool(item.get("ativo"))
+        entrada = (item.get("horario_entrada") or "").strip()
+        saida = (item.get("horario_saida") or "").strip()
+
+        if ativo:
+            if not entrada or not saida:
+                return False, f"{nome_dia}: horários de entrada e saída são obrigatórios quando o dia estiver ativo."
+
+            try:
+                hora_ent = datetime.strptime(entrada, "%H:%M")
+                hora_sai = datetime.strptime(saida, "%H:%M")
+            except (ValueError, TypeError):
+                return False, f"{nome_dia}: formato de horário inválido. Utilize o formato HH:MM."
+
+            if hora_sai <= hora_ent:
+                return False, f"{nome_dia}: o horário de saída deve ser posterior ao horário de entrada."
+
+    return True, None
+
+
+def salvar_disponibilidade_profissional(profissional_id, itens_disponibilidade):
+    """
+    Salva a disponibilidade semanal do profissional no banco.
+    """
+    ok, erro = validar_disponibilidade_profissional(itens_disponibilidade)
+    if not ok:
+        return False, erro
+
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id FROM profissional WHERE id = %s",
+            (profissional_id,),
+        ).fetchone()
+        if not row:
+            return False, "Profissional não encontrado."
+
+        with conn.cursor() as cur:
+            for item in itens_disponibilidade:
+                dia_num = item["dia_semana"]
+                ativo = bool(item.get("ativo"))
+                entrada = (item.get("horario_entrada") or "").strip() if ativo else ""
+                saida = (item.get("horario_saida") or "").strip() if ativo else ""
+
+                cur.execute(
+                    """
+                    INSERT INTO profissional_disponibilidade (
+                        profissional_id, dia_semana, horario_entrada, horario_saida, ativo
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (profissional_id, dia_semana) DO UPDATE SET
+                        horario_entrada = EXCLUDED.horario_entrada,
+                        horario_saida = EXCLUDED.horario_saida,
+                        ativo = EXCLUDED.ativo
+                    """,
+                    (profissional_id, dia_num, entrada, saida, ativo),
+                )
+
+    return True, None
+
+
 # Propriedades dinâmicas que leem do cache a cada acesso
 def horario_abertura():
     return _obter_config("horario_abertura", "09:00")
@@ -400,19 +530,25 @@ def obter_profissional(profissional_id):
         return dict(row) if row else None
 
 
-def _gerar_slots_do_dia():
+def _gerar_slots_intervalo(inicio_dt, fim_dt, intervalo):
     try:
         slots = []
-        inicio = datetime.strptime(horario_abertura(), "%H:%M")
-        fim = datetime.strptime(horario_fechamento(), "%H:%M")
-        intervalo = intervalo_slot_minutos()
-        if intervalo <= 0 or inicio >= fim:
+        if intervalo <= 0 or inicio_dt >= fim_dt:
             return slots
-        atual = inicio
-        while atual < fim:
+        atual = inicio_dt
+        while atual < fim_dt:
             slots.append(atual.strftime("%H:%M"))
             atual += timedelta(minutes=intervalo)
         return slots
+    except (TypeError, ValueError):
+        return []
+
+
+def _gerar_slots_do_dia():
+    try:
+        inicio = datetime.strptime(horario_abertura(), "%H:%M")
+        fim = datetime.strptime(horario_fechamento(), "%H:%M")
+        return _gerar_slots_intervalo(inicio, fim, intervalo_slot_minutos())
     except (TypeError, ValueError):
         return []
 
@@ -466,9 +602,43 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids):
         return []
 
     duracao_total = sum(servico["duracao_minutos"] for servico in servicos)
-    fechamento = datetime.strptime(horario_fechamento(), "%H:%M")
     data = datetime.strptime(data_str, "%Y-%m-%d").date()
-    fechamento = datetime.combine(data, fechamento.time())
+    dia_semana = (data.weekday() + 1) % 7
+
+    # Consulta disponibilidade individual do profissional
+    disp_rows = conn.execute(
+        """
+        SELECT dia_semana, horario_entrada, horario_saida, ativo
+        FROM profissional_disponibilidade
+        WHERE profissional_id = %s
+        """,
+        (profissional_id,),
+    ).fetchall()
+
+    if disp_rows:
+        disp_dia = next((r for r in disp_rows if r["dia_semana"] == dia_semana), None)
+        if not disp_dia or not disp_dia["ativo"] or not disp_dia["horario_entrada"] or not disp_dia["horario_saida"]:
+            return []
+
+        try:
+            prof_entrada = datetime.strptime(disp_dia["horario_entrada"], "%H:%M")
+            prof_saida = datetime.strptime(disp_dia["horario_saida"], "%H:%M")
+            estab_abertura = datetime.strptime(horario_abertura(), "%H:%M")
+            estab_fechamento = datetime.strptime(horario_fechamento(), "%H:%M")
+        except (ValueError, TypeError):
+            return []
+
+        inicio_jornada = max(prof_entrada, estab_abertura)
+        fim_jornada = min(prof_saida, estab_fechamento)
+        if inicio_jornada >= fim_jornada:
+            return []
+    else:
+        # Fallback para profissionais sem jornada individual cadastrada
+        inicio_jornada = datetime.strptime(horario_abertura(), "%H:%M")
+        fim_jornada = datetime.strptime(horario_fechamento(), "%H:%M")
+
+    limite_saida = datetime.combine(data, fim_jornada.time())
+
     ocupados = conn.execute(
         """
         SELECT a.hora,
@@ -487,10 +657,11 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids):
 
     agora = datetime.now()
     disponiveis = []
-    for slot in _gerar_slots_do_dia():
+    slots_dia = _gerar_slots_intervalo(inicio_jornada, fim_jornada, intervalo_slot_minutos())
+    for slot in slots_dia:
         inicio = datetime.combine(data, datetime.strptime(slot, "%H:%M").time())
         fim = inicio + timedelta(minutes=duracao_total)
-        if fim > fechamento or (data == agora.date() and inicio <= agora):
+        if fim > limite_saida or (data == agora.date() and inicio <= agora):
             continue
 
         conflito = False

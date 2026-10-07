@@ -53,6 +53,34 @@
                 {% endif %}
             </fieldset>
 
+            {% if profissional %}
+            <fieldset class="secao-disponibilidade">
+                <legend>Disponibilidade</legend>
+                <p class="ajuda-disponibilidade">Defina os dias e horários em que este profissional atende:</p>
+                <div class="tabela-disponibilidade">
+                    {% for disp in disponibilidade %}
+                    <div class="linha-disponibilidade">
+                        <label class="checkbox-row dia-label">
+                            <input type="checkbox" name="disp_ativo_{{ disp.dia_semana }}" {% if disp.ativo %}checked{% endif %}>
+                            <span>{{ disp.nome_dia }}</span>
+                        </label>
+                        <div class="horarios-dia">
+                            <div class="campo-hora">
+                                <label for="disp_entrada_{{ disp.dia_semana }}">Entrada</label>
+                                <input type="time" id="disp_entrada_{{ disp.dia_semana }}" name="disp_entrada_{{ disp.dia_semana }}" value="{{ disp.horario_entrada }}">
+                            </div>
+                            <span class="separador-hora">às</span>
+                            <div class="campo-hora">
+                                <label for="disp_saida_{{ disp.dia_semana }}">Saída</label>
+                                <input type="time" id="disp_saida_{{ disp.dia_semana }}" name="disp_saida_{{ disp.dia_semana }}" value="{{ disp.horario_saida }}">
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            {% endif %}
+
             <div class="botoes-acoes">
                 <button type="submit" class="btn-primario">Salvar</button>
                 <a href="{{ url_for('admin_profissionais') }}" class="btn-secundario">Cancelar</a>
