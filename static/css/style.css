@@ -541,3 +541,204 @@ table.tabela-agendamentos td {
         justify-content: space-between;
     }
 }
+
+/* Painel administrativo: Filtros e Abas */
+.painel-filtros-card {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.tabs-e-filtro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.tabs-e-filtro .tabs {
+    margin-bottom: 0;
+}
+
+.filtro-profissionais-container {
+    display: flex;
+    align-items: center;
+}
+
+.form-filtro-prof {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.form-filtro-prof label {
+    font-size: 0.85rem;
+    color: var(--texto-secundario);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.form-filtro-prof select {
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    color: var(--texto-principal);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+/* Contato do cliente: telefone e WhatsApp */
+.contato-cliente {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.link-tel {
+    color: var(--texto-principal);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.link-tel:hover {
+    color: var(--dourado);
+    text-decoration: underline;
+}
+
+.link-zap {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge-zap {
+    display: inline-flex;
+    align-items: center;
+    background: #25d366;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.02em;
+    transition: opacity 0.2s;
+}
+
+.link-zap:hover .badge-zap {
+    opacity: 0.85;
+}
+
+/* Badges de Status do Agendamento */
+.badge-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-agendado {
+    background: rgba(200, 155, 60, 0.15);
+    color: var(--dourado, #c89b3c);
+    border: 1px solid rgba(200, 155, 60, 0.3);
+}
+
+.badge-realizado {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.badge-falta {
+    background: rgba(230, 126, 34, 0.15);
+    color: #e67e22;
+    border: 1px solid rgba(230, 126, 34, 0.3);
+}
+
+.badge-cancelado {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* Coluna de Ações e Botões de Operação */
+.col-acoes {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.acoes-agendamento {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.btn-acao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease-in-out;
+    background: transparent;
+    line-height: 1.2;
+}
+
+.btn-acao-primario {
+    background: rgba(200, 155, 60, 0.15);
+    color: var(--dourado, #c89b3c);
+    border-color: rgba(200, 155, 60, 0.4);
+}
+
+.btn-acao-primario:hover {
+    background: var(--dourado, #c89b3c);
+    color: #121212;
+}
+
+.btn-acao-sucesso {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border-color: rgba(46, 204, 113, 0.4);
+}
+
+.btn-acao-sucesso:hover {
+    background: #2ecc71;
+    color: #ffffff;
+}
+
+.btn-acao-alerta {
+    background: rgba(230, 126, 34, 0.15);
+    color: #e67e22;
+    border-color: rgba(230, 126, 34, 0.4);
+}
+
+.btn-acao-alerta:hover {
+    background: #e67e22;
+    color: #ffffff;
+}
+
+.btn-acao-perigo {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border-color: rgba(231, 76, 60, 0.4);
+}
+
+.btn-acao-perigo:hover {
+    background: #e74c3c;
+    color: #ffffff;
+}
+
+.acao-concluida {
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+}

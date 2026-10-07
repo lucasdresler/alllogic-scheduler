@@ -27,10 +27,35 @@
         </div>
     </div>
 
-    <div class="tabs">
-        <a href="{{ url_for('admin_dashboard', aba='hoje') }}" class="tab-link{% if aba == 'hoje' %} ativo{% endif %}">Hoje</a>
-        <a href="{{ url_for('admin_dashboard', aba='semana') }}" class="tab-link{% if aba == 'semana' %} ativo{% endif %}">Semana</a>
-        <a href="{{ url_for('admin_dashboard', aba='mes') }}" class="tab-link{% if aba == 'mes' %} ativo{% endif %}">Mês</a>
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+    {% if sucesso %}
+    <div class="mensagem-sucesso">{{ sucesso }}</div>
+    {% endif %}
+
+    <div class="card painel-filtros-card">
+        <div class="tabs-e-filtro">
+            <div class="tabs">
+                <a href="{{ url_for('admin_dashboard', aba='hoje', profissional_id=profissional_selecionado or '') }}" class="tab-link{% if aba == 'hoje' %} ativo{% endif %}">Hoje</a>
+                <a href="{{ url_for('admin_dashboard', aba='semana', profissional_id=profissional_selecionado or '') }}" class="tab-link{% if aba == 'semana' %} ativo{% endif %}">Semana</a>
+                <a href="{{ url_for('admin_dashboard', aba='mes', profissional_id=profissional_selecionado or '') }}" class="tab-link{% if aba == 'mes' %} ativo{% endif %}">Mês</a>
+            </div>
+            <div class="filtro-profissionais-container">
+                <form method="GET" action="{{ url_for('admin_dashboard') }}" class="form-filtro-prof">
+                    <input type="hidden" name="aba" value="{{ aba }}">
+                    <label for="filtro-prof">Profissional:</label>
+                    <select name="profissional_id" id="filtro-prof" onchange="this.form.submit()">
+                        <option value="">Todos os profissionais</option>
+                        {% for prof in profissionais_filtro %}
+                        <option value="{{ prof.id }}" {% if profissional_selecionado == prof.id %}selected{% endif %}>
+                            {{ prof.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
     </div>
 
     <div class="card">
@@ -58,6 +83,7 @@
                             <th>Profissional</th>
                             <th>Status</th>
                             <th>Preço</th>
+                            <th class="col-acoes">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -65,11 +91,63 @@
                         <tr>
                             <td>{{ ag.hora }}</td>
                             <td>{{ ag.cliente_nome }}</td>
-                            <td>{{ ag.cliente_telefone }}</td>
+                            <td>
+                                <div class="contato-cliente">
+                                    <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
+                                    {% set zap_num = ag.cliente_telefone|zap_link %}
+                                    {% if zap_num %}
+                                    <a href="https://wa.me/{{ zap_num }}" target="_blank" rel="noopener noreferrer" class="link-zap" title="Abrir WhatsApp com {{ ag.cliente_nome }}">
+                                        <span class="badge-zap">WhatsApp</span>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td>{{ ag.servico_nome }}</td>
                             <td>{{ ag.profissional_nome }}</td>
-                            <td>{{ "Cancelado" if ag.status == "cancelado" else "Realizado" if ag.status == "realizado" else "Agendado" }}</td>
+                            <td>
+                                {% if ag.status == "cancelado" %}
+                                <span class="badge-status badge-cancelado">Cancelado</span>
+                                {% elif ag.status == "realizado" %}
+                                <span class="badge-status badge-realizado">Realizado</span>
+                                {% elif ag.status == "nao_compareceu" %}
+                                <span class="badge-status badge-falta">Não compareceu</span>
+                                {% else %}
+                                <span class="badge-status badge-agendado">Agendado</span>
+                                {% endif %}
+                            </td>
                             <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                            <td class="col-acoes">
+                                <div class="acoes-agendamento">
+                                    {% if ag.status == 'agendado' %}
+                                        {% if ag.ja_passou %}
+                                        <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="status" value="realizado">
+                                            <input type="hidden" name="aba" value="{{ aba }}">
+                                            <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                            <button type="submit" class="btn-acao btn-acao-sucesso" title="Marcar como atendimento realizado">Realizado</button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="status" value="nao_compareceu">
+                                            <input type="hidden" name="aba" value="{{ aba }}">
+                                            <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                            <button type="submit" class="btn-acao btn-acao-alerta" title="Marcar que o cliente não compareceu">Faltou</button>
+                                        </form>
+                                        {% else %}
+                                        <a href="{{ url_for('admin_reagendar_agendamento', agendamento_id=ag.id, aba=aba, profissional_id=profissional_selecionado or '') }}" class="btn-acao btn-acao-primario" title="Reagendar atendimento">Reagendar</a>
+                                        {% endif %}
+                                        <form method="POST" action="{{ url_for('admin_cancelar_agendamento', agendamento_id=ag.id) }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja cancelar este agendamento?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="aba" value="{{ aba }}">
+                                            <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                            <button type="submit" class="btn-acao btn-acao-perigo" title="Cancelar agendamento">Cancelar</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="acao-concluida">—</span>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -95,6 +173,7 @@
                                 <th>Profissional</th>
                                 <th>Status</th>
                                 <th>Preço</th>
+                                <th class="col-acoes">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -102,11 +181,63 @@
                             <tr>
                                 <td>{{ ag.hora }}</td>
                                 <td>{{ ag.cliente_nome }}</td>
-                                <td>{{ ag.cliente_telefone }}</td>
+                                <td>
+                                    <div class="contato-cliente">
+                                        <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
+                                        {% set zap_num = ag.cliente_telefone|zap_link %}
+                                        {% if zap_num %}
+                                        <a href="https://wa.me/{{ zap_num }}" target="_blank" rel="noopener noreferrer" class="link-zap" title="Abrir WhatsApp com {{ ag.cliente_nome }}">
+                                            <span class="badge-zap">WhatsApp</span>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
                                 <td>{{ ag.servico_nome }}</td>
                                 <td>{{ ag.profissional_nome }}</td>
-                                <td>{{ "Cancelado" if ag.status == "cancelado" else "Realizado" if ag.status == "realizado" else "Agendado" }}</td>
+                                <td>
+                                    {% if ag.status == "cancelado" %}
+                                    <span class="badge-status badge-cancelado">Cancelado</span>
+                                    {% elif ag.status == "realizado" %}
+                                    <span class="badge-status badge-realizado">Realizado</span>
+                                    {% elif ag.status == "nao_compareceu" %}
+                                    <span class="badge-status badge-falta">Não compareceu</span>
+                                    {% else %}
+                                    <span class="badge-status badge-agendado">Agendado</span>
+                                    {% endif %}
+                                </td>
                                 <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                                <td class="col-acoes">
+                                    <div class="acoes-agendamento">
+                                        {% if ag.status == 'agendado' %}
+                                            {% if ag.ja_passou %}
+                                            <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="status" value="realizado">
+                                                <input type="hidden" name="aba" value="{{ aba }}">
+                                                <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                                <button type="submit" class="btn-acao btn-acao-sucesso" title="Marcar como atendimento realizado">Realizado</button>
+                                            </form>
+                                            <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="status" value="nao_compareceu">
+                                                <input type="hidden" name="aba" value="{{ aba }}">
+                                                <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                                <button type="submit" class="btn-acao btn-acao-alerta" title="Marcar que o cliente não compareceu">Faltou</button>
+                                            </form>
+                                            {% else %}
+                                            <a href="{{ url_for('admin_reagendar_agendamento', agendamento_id=ag.id, aba=aba, profissional_id=profissional_selecionado or '') }}" class="btn-acao btn-acao-primario" title="Reagendar atendimento">Reagendar</a>
+                                            {% endif %}
+                                            <form method="POST" action="{{ url_for('admin_cancelar_agendamento', agendamento_id=ag.id) }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja cancelar este agendamento?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="aba" value="{{ aba }}">
+                                                <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                                <button type="submit" class="btn-acao btn-acao-perigo" title="Cancelar agendamento">Cancelar</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="acao-concluida">—</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

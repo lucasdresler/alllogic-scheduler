@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reagendar Atendimento — {{ nome_estabelecimento }}{% endblock %}
+
+{% block conteudo %}
+<div class="container-admin">
+    <div class="topo-admin">
+        <div class="topo-admin-titulos">
+            {% if logotipo %}
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
+            {% endif %}
+            <div>
+                <h1>Reagendar Atendimento</h1>
+                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
+            </div>
+        </div>
+        <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '') }}" class="link-logout">Voltar ao painel</a>
+    </div>
+
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+
+    <div class="card">
+        <h2 class="subtitulo-grupo">Dados do agendamento atual</h2>
+        <div class="resumo-item">
+            <span>Cliente</span>
+            <span><strong>{{ agendamento.cliente_nome }}</strong> ({{ agendamento.cliente_telefone }})</span>
+        </div>
+        <div class="resumo-item">
+            <span>Profissional</span>
+            <span>{{ agendamento.profissional_nome }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Serviços</span>
+            <span>{{ agendamento.servico_nome }} ({{ agendamento.servico_duracao_minutos }} min)</span>
+        </div>
+        <div class="resumo-item">
+            <span>Valor</span>
+            <span>R$ {{ "%.2f"|format(agendamento.servico_preco)|replace(".", ",") }}</span>
+        </div>
+        <div class="resumo-item">
+            <span>Data e horário atuais</span>
+            <span><strong>{{ agendamento.data[8:10] }}/{{ agendamento.data[5:7] }}/{{ agendamento.data[0:4] }} às {{ agendamento.hora }}</strong></span>
+        </div>
+    </div>
+
+    {% if historico %}
+    <div class="card">
+        <h2 class="subtitulo-grupo">Histórico de alterações deste atendimento</h2>
+        <div style="overflow-x:auto">
+            <table class="tabela-agendamentos">
+                <thead>
+                    <tr>
+                        <th>Data/Hora anterior</th>
+                        <th>Nova Data/Hora</th>
+                        <th>Registrado em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in historico %}
+                    <tr>
+                        <td>{{ h.data_anterior[8:10] }}/{{ h.data_anterior[5:7] }}/{{ h.data_anterior[0:4] }} às {{ h.hora_anterior }}</td>
+                        <td>{{ h.data_nova[8:10] }}/{{ h.data_nova[5:7] }}/{{ h.data_nova[0:4] }} às {{ h.hora_nova }}</td>
+                        <td>{{ h.criado_em.strftime('%d/%m/%Y %H:%M') if h.criado_em else '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2 class="subtitulo-grupo">Definir nova data e horário</h2>
+        <form method="POST" id="form-reagendar" action="{{ url_for('admin_reagendar_agendamento', agendamento_id=agendamento.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="aba" value="{{ aba }}">
+            <input type="hidden" name="profissional_id" value="{{ profissional_id_filtro or '' }}">
+
+            <label for="nova_data">Nova data *</label>
+            <input type="date" id="nova_data" name="nova_data" value="{{ data_selecionada }}" min="{{ hoje }}" max="{{ data_limite }}" required>
+            <small style="display: block; margin-top: 4px; margin-bottom: 16px; color: var(--texto-secundario); font-size: 0.8rem;">
+                Permitido até {{ data_limite[8:10] }}/{{ data_limite[5:7] }}/{{ data_limite[0:4] }} (respeitando a antecedência máxima configurada).
+            </small>
+
+            <label for="novo_horario">Novo horário *</label>
+            <select id="novo_horario" name="novo_horario" required>
+                {% if horarios_disponiveis %}
+                    <option value="">Selecione um horário disponível</option>
+                    {% for h in horarios_disponiveis %}
+                    <option value="{{ h }}" {% if h == agendamento.hora and data_selecionada == agendamento.data %}selected{% endif %}>{{ h }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="">Nenhum horário disponível nesta data</option>
+                {% endif %}
+            </select>
+            <p id="aviso-carregando-horarios" style="display:none; color: var(--texto-secundario); font-size: 0.85rem; margin-top: 6px;">
+                Consultando horários disponíveis...
+            </p>
+
+            <div class="botoes-acoes" style="margin-top: 24px;">
+                <button type="submit" id="btn-submit-reagendar" class="btn-primario">Confirmar Reagendamento</button>
+                <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '') }}" class="btn-secundario">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var inputData = document.getElementById("nova_data");
+    var selectHorario = document.getElementById("novo_horario");
+    var avisoCarregando = document.getElementById("aviso-carregando-horarios");
+    var btnSubmit = document.getElementById("btn-submit-reagendar");
+
+    var profissionalId = {{ agendamento.profissional_id }};
+    var agendamentoId = {{ agendamento.id }};
+    var servicoQuery = "{% for s in agendamento.servicos %}&servico_id={{ s.id }}{% endfor %}";
+
+    function carregarHorarios(dataStr) {
+        if (!dataStr) return;
+        avisoCarregando.style.display = "block";
+        selectHorario.disabled = true;
+
+        var url = "/api/horarios-disponiveis?profissional_id=" + profissionalId +
+                  "&data=" + dataStr +
+                  "&ignorar_agendamento_id=" + agendamentoId +
+                  servicoQuery;
+
+        fetch(url)
+            .then(function(res) {
+                if (!res.ok) throw new Error("Erro na consulta");
+                return res.json();
+            })
+            .then(function(data) {
+                avisoCarregando.style.display = "none";
+                selectHorario.disabled = false;
+                selectHorario.innerHTML = "";
+
+                var horarios = data.horarios || [];
+                if (horarios.length === 0) {
+                    var optVazia = document.createElement("option");
+                    optVazia.value = "";
+                    optVazia.textContent = "Nenhum horário disponível nesta data";
+                    selectHorario.appendChild(optVazia);
+                    btnSubmit.disabled = true;
+                } else {
+                    btnSubmit.disabled = false;
+                    var optPadrao = document.createElement("option");
+                    optPadrao.value = "";
+                    optPadrao.textContent = "Selecione um horário disponível";
+                    selectHorario.appendChild(optPadrao);
+
+                    horarios.forEach(function(h) {
+                        var opt = document.createElement("option");
+                        opt.value = h;
+                        opt.textContent = h;
+                        selectHorario.appendChild(opt);
+                    });
+                }
+            })
+            .catch(function(err) {
+                avisoCarregando.style.display = "none";
+                selectHorario.disabled = false;
+            });
+    }
+
+    inputData.addEventListener("change", function() {
+        carregarHorarios(this.value);
+    });
+})();
+</script>
+{% endblock %}

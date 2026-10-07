@@ -571,7 +571,7 @@ def data_permitida(data_str):
     return True
 
 
-def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids):
+def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids, ignorar_agendamento_id=None):
     profissional = conn.execute(
         "SELECT ativo FROM profissional WHERE id = %s",
         (profissional_id,),
@@ -639,8 +639,7 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids):
 
     limite_saida = datetime.combine(data, fim_jornada.time())
 
-    ocupados = conn.execute(
-        """
+    query_ocupados = """
         SELECT a.hora,
                COALESCE(SUM(COALESCE(ags.duracao_minutos, s.duracao_minutos)), 0)
                    AS duracao_minutos
@@ -650,10 +649,14 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids):
         WHERE a.profissional_id = %s
           AND a.data = %s
           AND a.status = 'agendado'
-        GROUP BY a.id, a.hora
-        """,
-        (profissional_id, data_str),
-    ).fetchall()
+    """
+    params_ocupados = [profissional_id, data_str]
+    if ignorar_agendamento_id is not None:
+        query_ocupados += " AND a.id != %s"
+        params_ocupados.append(ignorar_agendamento_id)
+    query_ocupados += " GROUP BY a.id, a.hora"
+
+    ocupados = conn.execute(query_ocupados, tuple(params_ocupados)).fetchall()
 
     agora = datetime.now()
     disponiveis = []
@@ -683,7 +686,7 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids):
     return disponiveis
 
 
-def horarios_disponiveis(profissional_id, data_str, servico_ids):
+def horarios_disponiveis(profissional_id, data_str, servico_ids, ignorar_agendamento_id=None):
     """Retorna horários livres considerando os serviços e estados atuais."""
     if not data_permitida(data_str):
         return []
@@ -699,6 +702,7 @@ def horarios_disponiveis(profissional_id, data_str, servico_ids):
             profissional_id,
             data_str,
             servico_ids,
+            ignorar_agendamento_id=ignorar_agendamento_id,
         )
 
 
@@ -846,10 +850,9 @@ def obter_agendamento_completo(agendamento_id):
         return resultado
 
 
-def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str):
+def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str, profissional_id=None):
     with db_session() as conn:
-        rows = conn.execute(
-            """
+        query = """
             SELECT a.*,
                    COALESCE(a.profissional_nome_snapshot, p.nome) AS profissional_nome,
                    COALESCE(
@@ -869,12 +872,19 @@ def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str):
             LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
             LEFT JOIN servico s ON s.id = ags.servico_id
             WHERE a.data BETWEEN %s AND %s
+        """
+        params = [data_inicio_str, data_fim_str]
+        if profissional_id is not None:
+            query += " AND a.profissional_id = %s"
+            params.append(profissional_id)
+
+        query += """
             GROUP BY a.id, p.nome
             ORDER BY a.data ASC, a.hora ASC
-            """,
-            (data_inicio_str, data_fim_str),
-        ).fetchall()
+        """
+        rows = conn.execute(query, tuple(params)).fetchall()
 
+        agora = datetime.now()
         resultados = []
 
         for row in rows:
@@ -888,25 +898,244 @@ def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str):
             resultado["servico_duracao_minutos"] = sum(
                 servico["duracao_minutos"] for servico in resultado["servicos"]
             )
+            try:
+                dt_ag = datetime.strptime(f"{resultado['data']} {resultado['hora']}", "%Y-%m-%d %H:%M")
+                resultado["ja_passou"] = dt_ag <= agora
+            except Exception:
+                resultado["ja_passou"] = False
+
             resultados.append(resultado)
 
         return resultados
 
 
-def cancelar_agendamento(agendamento_id):
-    """Cancela um agendamento preservando seu registro histórico."""
+def cancelar_agendamento(agendamento_id, usuario=None):
+    """Cancela um agendamento preservando seu registro histórico e impedindo cancelamento duplicado."""
     with db_session() as conn:
-        cursor = conn.execute(
+        row = conn.execute(
+            """
+            SELECT id, status
+            FROM agendamento
+            WHERE id = %s
+            FOR UPDATE
+            """,
+            (agendamento_id,),
+        ).fetchone()
+
+        if not row:
+            return False, "Agendamento não encontrado."
+
+        if row["status"] == "cancelado":
+            return False, "Este agendamento já está cancelado."
+
+        if row["status"] in ("realizado", "nao_compareceu"):
+            return False, f"Não é possível cancelar um agendamento com status '{row['status']}'."
+
+        conn.execute(
             """
             UPDATE agendamento
             SET status = 'cancelado'
-            WHERE id = %s AND status = 'agendado'
-            RETURNING id
+            WHERE id = %s
             """,
             (agendamento_id,),
         )
-        row = cursor.fetchone()
-        return row is not None
+        conn.execute(
+            """
+            INSERT INTO agendamento_status_historico (
+                agendamento_id, status_anterior, status_novo, usuario
+            )
+            VALUES (%s, %s, 'cancelado', %s)
+            """,
+            (agendamento_id, row["status"], usuario),
+        )
+        return True, None
+
+
+def atualizar_status_agendamento(agendamento_id, novo_status, usuario=None):
+    """
+    Atualiza o status de um agendamento para 'realizado' ou 'nao_compareceu'.
+    Não permite alterar atendimentos futuros e preserva o histórico.
+    """
+    if novo_status not in ("realizado", "nao_compareceu"):
+        return False, "Status inválido."
+
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT id, data, hora, status
+            FROM agendamento
+            WHERE id = %s
+            FOR UPDATE
+            """,
+            (agendamento_id,),
+        ).fetchone()
+
+        if not row:
+            return False, "Agendamento não encontrado."
+
+        if row["status"] != "agendado":
+            return False, f"Apenas agendamentos ativos podem ter status alterado (status atual: {row['status']})."
+
+        agora = datetime.now()
+        try:
+            dt_agendamento = datetime.strptime(f"{row['data']} {row['hora']}", "%Y-%m-%d %H:%M")
+        except Exception:
+            return False, "Data ou horário do agendamento inválidos."
+
+        if dt_agendamento > agora:
+            return False, "Não é permitido marcar como realizado ou não compareceu atendimentos futuros."
+
+        conn.execute(
+            """
+            UPDATE agendamento
+            SET status = %s
+            WHERE id = %s
+            """,
+            (novo_status, agendamento_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO agendamento_status_historico (
+                agendamento_id, status_anterior, status_novo, usuario
+            )
+            VALUES (%s, %s, %s, %s)
+            """,
+            (agendamento_id, row["status"], novo_status, usuario),
+        )
+        return True, None
+
+
+def reagendar_agendamento(agendamento_id, nova_data, novo_horario, usuario=None):
+    """
+    Altera data e horário de um agendamento preservando cliente, serviços, snapshots e histórico.
+    Valida disponibilidade completa no mesmo motor do agendamento público, ignorando o próprio agendamento.
+    A operação é estritamente transacional.
+    """
+    with db_session() as conn:
+        ag = conn.execute(
+            """
+            SELECT id, profissional_id, data, hora, status
+            FROM agendamento
+            WHERE id = %s
+            FOR UPDATE
+            """,
+            (agendamento_id,),
+        ).fetchone()
+
+        if not ag:
+            return False, "Agendamento não encontrado."
+
+        if ag["status"] != "agendado":
+            return False, f"Apenas agendamentos ativos podem ser reagendados (status atual: {ag['status']})."
+
+        if nova_data == ag["data"] and novo_horario == ag["hora"]:
+            return False, "A nova data e horário devem ser diferentes dos atuais."
+
+        # Buscar serviços vinculados
+        servicos_rows = conn.execute(
+            """
+            SELECT servico_id
+            FROM agendamento_servico
+            WHERE agendamento_id = %s
+            ORDER BY servico_id
+            """,
+            (agendamento_id,),
+        ).fetchall()
+
+        if not servicos_rows:
+            return False, "Agendamento não possui serviços cadastrados."
+
+        servico_ids = [r["servico_id"] for r in servicos_rows]
+
+        # Validar formato da data
+        try:
+            datetime.strptime(nova_data, "%Y-%m-%d")
+        except (ValueError, TypeError):
+            return False, "Data inválida. Use o formato YYYY-MM-DD."
+
+        if not data_permitida(nova_data):
+            return False, "Data selecionada indisponível para agendamento."
+
+        # Validar profissional ativo
+        prof = conn.execute(
+            "SELECT id, ativo FROM profissional WHERE id = %s",
+            (ag["profissional_id"],),
+        ).fetchone()
+        if not prof or not prof["ativo"]:
+            return False, "Profissional inativo ou não encontrado."
+
+        # Validar serviços ativos
+        servicos_ativos = conn.execute(
+            "SELECT id FROM servico WHERE id = ANY(%s) AND ativo = TRUE",
+            (servico_ids,),
+        ).fetchall()
+        if len(servicos_ativos) != len(servico_ids):
+            return False, "Um ou mais serviços deste agendamento estão inativos."
+
+        # Validar compatibilidade
+        vinculos = conn.execute(
+            """
+            SELECT servico_id FROM profissional_servico
+            WHERE profissional_id = %s AND servico_id = ANY(%s)
+            """,
+            (ag["profissional_id"], servico_ids),
+        ).fetchall()
+        if {r["servico_id"] for r in vinculos} != set(servico_ids):
+            return False, "Profissional incompatível com os serviços do agendamento."
+
+        # Advisory lock na data e profissional para prevenir concorrência
+        lock_key = (ag["profissional_id"] * 1000000) + int(nova_data.replace("-", ""))
+        conn.execute("SELECT pg_advisory_xact_lock(%s)", (lock_key,))
+
+        # Buscar horários disponíveis ignorando o próprio agendamento
+        disponiveis = _horarios_disponiveis_conn(
+            conn,
+            ag["profissional_id"],
+            nova_data,
+            servico_ids,
+            ignorar_agendamento_id=agendamento_id,
+        )
+
+        if novo_horario not in disponiveis:
+            return False, "Horário indisponível para o profissional na data selecionada."
+
+        # Registrar no histórico de reagendamentos
+        conn.execute(
+            """
+            INSERT INTO agendamento_reagendamento (
+                agendamento_id, data_anterior, hora_anterior, data_nova, hora_nova
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (agendamento_id, ag["data"], ag["hora"], nova_data, novo_horario),
+        )
+
+        # Atualizar agendamento mantendo status 'agendado'
+        conn.execute(
+            """
+            UPDATE agendamento
+            SET data = %s, hora = %s
+            WHERE id = %s
+            """,
+            (nova_data, novo_horario, agendamento_id),
+        )
+
+        return True, None
+
+
+def obter_historico_reagendamentos(agendamento_id):
+    """Retorna os registros de reagendamento de um agendamento."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, agendamento_id, data_anterior, hora_anterior, data_nova, hora_nova, motivo, criado_em
+            FROM agendamento_reagendamento
+            WHERE agendamento_id = %s
+            ORDER BY criado_em ASC
+            """,
+            (agendamento_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
 
 
 

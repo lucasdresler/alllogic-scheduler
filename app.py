@@ -47,6 +47,31 @@ limiter = Limiter(
 init_db()
 import models
 
+def normalizar_para_whatsapp(telefone):
+    if not telefone:
+        return ""
+    digitos = "".join(c for c in str(telefone) if c.isdigit())
+    if len(digitos) in (10, 11):
+        return f"55{digitos}"
+    if len(digitos) in (12, 13) and digitos.startswith("55"):
+        return digitos
+    return digitos
+
+
+def normalizar_para_tel(telefone):
+    if not telefone:
+        return ""
+    digitos = "".join(c for c in str(telefone) if c.isdigit())
+    if len(digitos) in (10, 11):
+        return f"+55{digitos}"
+    if len(digitos) in (12, 13) and digitos.startswith("55"):
+        return f"+{digitos}"
+    return f"+{digitos}" if digitos else ""
+
+
+app.jinja_env.filters["zap_link"] = normalizar_para_whatsapp
+app.jinja_env.filters["tel_link"] = normalizar_para_tel
+
 EXTENSOES_IMAGEM_PERMITIDAS = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
 TAMANHO_MAXIMO_IMAGEM = 2 * 1024 * 1024  # 2 MB
 
@@ -262,10 +287,12 @@ def api_professionals():
     return jsonify(models.listar_profissionais_para_servicos(servico_ids))
 
 
+@app.route("/api/horarios-disponiveis")
 @app.route("/api/availability")
 def api_availability():
     profissional_id = request.args.get("profissional_id", type=int)
     data_str = request.args.get("data", type=str)
+    ignorar_agendamento_id = request.args.get("ignorar_agendamento_id", type=int)
 
     servico_ids = request.args.getlist("servico_id", type=int)
     if not servico_ids:
@@ -299,6 +326,7 @@ def api_availability():
         profissional_id,
         data_str,
         servico_ids,
+        ignorar_agendamento_id=ignorar_agendamento_id,
     )
     return jsonify({"horarios": horarios})
 
@@ -1018,9 +1046,114 @@ def admin_redefinir_senha(token):
 @app.route("/admin/agendamento/<int:agendamento_id>/cancelar", methods=["POST"])
 @login_requerido
 def admin_cancelar_agendamento(agendamento_id):
-    models.cancelar_agendamento(agendamento_id)
-    return redirect(url_for("admin_dashboard"))
+    aba = request.args.get("aba") or request.form.get("aba") or "hoje"
+    profissional_id = request.args.get("profissional_id") or request.form.get("profissional_id")
+    ok, erro = models.cancelar_agendamento(agendamento_id, usuario=session.get("admin_usuario"))
+    params = {"aba": aba}
+    if profissional_id:
+        params["profissional_id"] = profissional_id
+    if ok:
+        params["sucesso"] = "Agendamento cancelado com sucesso."
+    elif erro:
+        params["erro"] = erro
+    return redirect(url_for("admin_dashboard", **params))
 
+
+@app.route("/admin/agendamento/<int:agendamento_id>/status", methods=["POST"])
+@login_requerido
+def admin_atualizar_status_agendamento(agendamento_id):
+    novo_status = (request.form.get("status") or "").strip()
+    aba = request.args.get("aba") or request.form.get("aba") or "hoje"
+    profissional_id = request.args.get("profissional_id") or request.form.get("profissional_id")
+    ok, erro = models.atualizar_status_agendamento(
+        agendamento_id, novo_status, usuario=session.get("admin_usuario")
+    )
+    params = {"aba": aba}
+    if profissional_id:
+        params["profissional_id"] = profissional_id
+    if ok:
+        msg = (
+            "Atendimento marcado como realizado com sucesso."
+            if novo_status == "realizado"
+            else "Atendimento marcado como não compareceu."
+        )
+        params["sucesso"] = msg
+    elif erro:
+        params["erro"] = erro
+    return redirect(url_for("admin_dashboard", **params))
+
+
+@app.route("/admin/agendamento/<int:agendamento_id>/reagendar", methods=["GET", "POST"])
+@login_requerido
+def admin_reagendar_agendamento(agendamento_id):
+    aba = request.args.get("aba") or request.form.get("aba") or "hoje"
+    profissional_id_filtro = request.args.get("profissional_id") or request.form.get("profissional_id")
+
+    agendamento = models.obter_agendamento_completo(agendamento_id)
+    if not agendamento:
+        return redirect(url_for("admin_dashboard", aba=aba, erro="Agendamento não encontrado."))
+
+    if agendamento["status"] != "agendado":
+        return redirect(
+            url_for(
+                "admin_dashboard",
+                aba=aba,
+                erro=f"Apenas agendamentos ativos podem ser reagendados (status atual: {agendamento['status']}).",
+            )
+        )
+
+    erro = None
+    hoje = datetime.now().date()
+    max_dias = models.dias_antecedencia_agendamento() or 14
+    data_limite = hoje + timedelta(days=max_dias)
+    servico_ids = [s["id"] for s in agendamento["servicos"]]
+    data_selecionada = (request.form.get("nova_data") or agendamento["data"]).strip()
+
+    if request.method == "POST":
+        nova_data = (request.form.get("nova_data") or "").strip()
+        novo_horario = (request.form.get("novo_horario") or "").strip()
+
+        if not nova_data:
+            erro = "Selecione uma data para o reagendamento."
+        elif not novo_horario:
+            erro = "Selecione um horário para o reagendamento."
+        else:
+            ok, erro_reagendar = models.reagendar_agendamento(
+                agendamento_id,
+                nova_data,
+                novo_horario,
+                usuario=session.get("admin_usuario"),
+            )
+            if ok:
+                params = {"aba": aba, "sucesso": "Agendamento reagendado com sucesso."}
+                if profissional_id_filtro:
+                    params["profissional_id"] = profissional_id_filtro
+                return redirect(url_for("admin_dashboard", **params))
+            else:
+                erro = erro_reagendar
+                data_selecionada = nova_data
+
+    historico = models.obter_historico_reagendamentos(agendamento_id)
+    horarios_disponiveis = models.horarios_disponiveis(
+        agendamento["profissional_id"],
+        data_selecionada,
+        servico_ids,
+        ignorar_agendamento_id=agendamento_id,
+    )
+
+    return render_template(
+        "admin_reagendar.html",
+        agendamento=agendamento,
+        historico=historico,
+        hoje=hoje.isoformat(),
+        data_limite=data_limite.isoformat(),
+        data_selecionada=data_selecionada,
+        horarios_disponiveis=horarios_disponiveis,
+        erro=erro,
+        aba=aba,
+        profissional_id_filtro=profissional_id_filtro,
+        **_carregar_config_template(),
+    )
 
 
 @app.route("/admin")
@@ -1028,6 +1161,13 @@ def admin_cancelar_agendamento(agendamento_id):
 def admin_dashboard():
     aba = request.args.get("aba", "hoje")
     hoje = datetime.now().date()
+    profissional_id_raw = request.args.get("profissional_id")
+    profissional_id = None
+    if profissional_id_raw:
+        try:
+            profissional_id = int(profissional_id_raw)
+        except ValueError:
+            profissional_id = None
 
     if aba == "mes":
         inicio_mes = hoje.replace(day=1)
@@ -1036,16 +1176,20 @@ def admin_dashboard():
         else:
             inicio_proximo_mes = hoje.replace(month=hoje.month + 1, day=1)
         fim_mes = inicio_proximo_mes - timedelta(days=1)
-        agendamentos = models.listar_agendamentos_por_periodo(inicio_mes.isoformat(), fim_mes.isoformat())
+        agendamentos = models.listar_agendamentos_por_periodo(
+            inicio_mes.isoformat(), fim_mes.isoformat(), profissional_id=profissional_id
+        )
     elif aba == "semana":
         inicio_semana = hoje - timedelta(days=hoje.weekday())
         fim_semana = inicio_semana + timedelta(days=6)
         agendamentos = models.listar_agendamentos_por_periodo(
-            inicio_semana.isoformat(), fim_semana.isoformat()
+            inicio_semana.isoformat(), fim_semana.isoformat(), profissional_id=profissional_id
         )
     else:
         aba = "hoje"
-        agendamentos = models.listar_agendamentos_por_periodo(hoje.isoformat(), hoje.isoformat())
+        agendamentos = models.listar_agendamentos_por_periodo(
+            hoje.isoformat(), hoje.isoformat(), profissional_id=profissional_id
+        )
 
     total_agendamentos = len(agendamentos)
     receita_prevista = sum(
@@ -1062,6 +1206,10 @@ def admin_dashboard():
         for ag in agendamentos:
             agrupados.setdefault(ag["data"], []).append(ag)
 
+    profissionais_filtro = models.listar_profissionais(apenas_ativos=True)
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
     return render_template(
         "admin_dashboard.html",
         aba=aba,
@@ -1071,6 +1219,10 @@ def admin_dashboard():
         receita_prevista=receita_prevista,
         receita_periodo=receita_periodo,
         hoje=hoje.isoformat(),
+        profissionais_filtro=profissionais_filtro,
+        profissional_selecionado=profissional_id,
+        sucesso=sucesso,
+        erro=erro,
         **_carregar_config_template(),
     )
 
