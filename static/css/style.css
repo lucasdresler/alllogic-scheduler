@@ -742,3 +742,106 @@ table.tabela-agendamentos td {
     color: var(--texto-secundario);
     font-size: 0.85rem;
 }
+
+/* Formulário de Pesquisa Integrada na Agenda */
+.card-pesquisa {
+    margin-bottom: 16px;
+}
+
+.form-pesquisa {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.grid-pesquisa {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+}
+
+.campo-pesquisa {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.campo-pesquisa label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--texto-secundario);
+}
+
+.campo-pesquisa input,
+.campo-pesquisa select {
+    background-color: var(--bg-card);
+    border: 1px solid var(--borda);
+    color: var(--texto-principal);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    width: 100%;
+}
+
+.campo-pesquisa input:focus,
+.campo-pesquisa select:focus {
+    outline: none;
+    border-color: var(--dourado);
+}
+
+.acoes-pesquisa {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.acoes-pesquisa .btn-primario,
+.acoes-pesquisa .btn-secundario {
+    padding: 8px 16px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.navegacao-semana {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 12px;
+}
+
+.btn-navegacao-semana {
+    background: transparent;
+    border: 1px solid var(--borda);
+    color: var(--texto-principal);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.btn-navegacao-semana:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--dourado);
+    color: var(--dourado);
+}
+
+.periodo-semana-rotulo {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--dourado);
+    text-align: center;
+}

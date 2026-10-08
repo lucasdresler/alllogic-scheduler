@@ -69,8 +69,37 @@ def normalizar_para_tel(telefone):
     return f"+{digitos}" if digitos else ""
 
 
+def obter_nome_dia_semana(data_str):
+    if not data_str:
+        return ""
+    try:
+        dt = datetime.strptime(str(data_str)[:10], "%Y-%m-%d").date()
+        dias = [
+            "Segunda-feira",
+            "Terça-feira",
+            "Quarta-feira",
+            "Quinta-feira",
+            "Sexta-feira",
+            "Sábado",
+            "Domingo",
+        ]
+        return dias[dt.weekday()]
+    except Exception:
+        return ""
+
+
 app.jinja_env.filters["zap_link"] = normalizar_para_whatsapp
 app.jinja_env.filters["tel_link"] = normalizar_para_tel
+app.jinja_env.filters["dia_semana_nome"] = obter_nome_dia_semana
+
+
+@app.after_request
+def adicionar_cabecalhos_cache_admin(response):
+    if request.path.startswith("/admin") and not request.path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 EXTENSOES_IMAGEM_PERMITIDAS = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
 TAMANHO_MAXIMO_IMAGEM = 2 * 1024 * 1024  # 2 MB
@@ -1052,6 +1081,14 @@ def admin_cancelar_agendamento(agendamento_id):
     params = {"aba": aba}
     if profissional_id:
         params["profissional_id"] = profissional_id
+    for param in ("cliente", "telefone", "data_inicio", "data_fim"):
+        val = request.args.get(param) or request.form.get(param)
+        if val:
+            params[param] = val
+    st = request.args.get("filtro_status") or request.form.get("filtro_status") or request.args.get("status")
+    if st:
+        params["status"] = st
+
     if ok:
         params["sucesso"] = "Agendamento cancelado com sucesso."
     elif erro:
@@ -1071,6 +1108,14 @@ def admin_atualizar_status_agendamento(agendamento_id):
     params = {"aba": aba}
     if profissional_id:
         params["profissional_id"] = profissional_id
+    for param in ("cliente", "telefone", "data_inicio", "data_fim"):
+        val = request.args.get(param) or request.form.get(param)
+        if val:
+            params[param] = val
+    st = request.args.get("filtro_status") or request.form.get("filtro_status")
+    if st:
+        params["status"] = st
+
     if ok:
         msg = (
             "Atendimento marcado como realizado com sucesso."
@@ -1088,19 +1133,40 @@ def admin_atualizar_status_agendamento(agendamento_id):
 def admin_reagendar_agendamento(agendamento_id):
     aba = request.args.get("aba") or request.form.get("aba") or "hoje"
     profissional_id_filtro = request.args.get("profissional_id") or request.form.get("profissional_id")
+    cliente_filtro = request.args.get("cliente") or request.form.get("cliente")
+    telefone_filtro = request.args.get("telefone") or request.form.get("telefone")
+    status_filtro = request.args.get("filtro_status") or request.form.get("filtro_status") or request.args.get("status")
+    data_inicio_filtro = request.args.get("data_inicio") or request.form.get("data_inicio")
+    data_fim_filtro = request.args.get("data_fim") or request.form.get("data_fim")
+
+    filtros_retorno = {}
+    if cliente_filtro:
+        filtros_retorno["cliente"] = cliente_filtro
+    if telefone_filtro:
+        filtros_retorno["telefone"] = telefone_filtro
+    if status_filtro:
+        filtros_retorno["status"] = status_filtro
+    if data_inicio_filtro:
+        filtros_retorno["data_inicio"] = data_inicio_filtro
+    if data_fim_filtro:
+        filtros_retorno["data_fim"] = data_fim_filtro
 
     agendamento = models.obter_agendamento_completo(agendamento_id)
     if not agendamento:
-        return redirect(url_for("admin_dashboard", aba=aba, erro="Agendamento não encontrado."))
+        params_err = {"aba": aba, "erro": "Agendamento não encontrado.", **filtros_retorno}
+        if profissional_id_filtro:
+            params_err["profissional_id"] = profissional_id_filtro
+        return redirect(url_for("admin_dashboard", **params_err))
 
     if agendamento["status"] != "agendado":
-        return redirect(
-            url_for(
-                "admin_dashboard",
-                aba=aba,
-                erro=f"Apenas agendamentos ativos podem ser reagendados (status atual: {agendamento['status']}).",
-            )
-        )
+        params_err = {
+            "aba": aba,
+            "erro": f"Apenas agendamentos ativos podem ser reagendados (status atual: {agendamento['status']}).",
+            **filtros_retorno,
+        }
+        if profissional_id_filtro:
+            params_err["profissional_id"] = profissional_id_filtro
+        return redirect(url_for("admin_dashboard", **params_err))
 
     erro = None
     hoje = datetime.now().date()
@@ -1125,7 +1191,7 @@ def admin_reagendar_agendamento(agendamento_id):
                 usuario=session.get("admin_usuario"),
             )
             if ok:
-                params = {"aba": aba, "sucesso": "Agendamento reagendado com sucesso."}
+                params = {"aba": aba, "sucesso": "Agendamento reagendado com sucesso.", **filtros_retorno}
                 if profissional_id_filtro:
                     params["profissional_id"] = profissional_id_filtro
                 return redirect(url_for("admin_dashboard", **params))
@@ -1152,15 +1218,31 @@ def admin_reagendar_agendamento(agendamento_id):
         erro=erro,
         aba=aba,
         profissional_id_filtro=profissional_id_filtro,
+        filtros_retorno=filtros_retorno,
         **_carregar_config_template(),
     )
+
+
+@app.route("/admin/pesquisa")
+@login_requerido
+def admin_pesquisa():
+    args = dict(request.args)
+    args["aba"] = "pesquisa"
+    return redirect(url_for("admin_dashboard", **args))
 
 
 @app.route("/admin")
 @login_requerido
 def admin_dashboard():
     aba = request.args.get("aba", "hoje")
+    data_raw = (request.args.get("data") or "").strip()
     hoje = datetime.now().date()
+    if data_raw:
+        try:
+            hoje = datetime.strptime(data_raw, "%Y-%m-%d").date()
+        except ValueError:
+            hoje = datetime.now().date()
+
     profissional_id_raw = request.args.get("profissional_id")
     profissional_id = None
     if profissional_id_raw:
@@ -1169,7 +1251,43 @@ def admin_dashboard():
         except ValueError:
             profissional_id = None
 
-    if aba == "mes":
+    cliente_filtro = (request.args.get("cliente") or "").strip()
+    telefone_filtro = (request.args.get("telefone") or "").strip()
+    status_filtro = (request.args.get("status") or request.args.get("filtro_status") or "").strip()
+    data_inicio_raw = (request.args.get("data_inicio") or "").strip()
+    data_fim_raw = (request.args.get("data_fim") or "").strip()
+
+    data_inicio_filtro = models._normalizar_data_iso(data_inicio_raw) if data_inicio_raw else ""
+    data_fim_filtro = models._normalizar_data_iso(data_fim_raw) if data_fim_raw else ""
+
+    tem_param_pesquisa = bool(
+        cliente_filtro
+        or telefone_filtro
+        or status_filtro
+        or data_inicio_filtro
+        or data_fim_filtro
+    )
+    if aba == "pesquisa" or (tem_param_pesquisa and aba not in ("hoje", "semana", "mes")):
+        aba = "pesquisa"
+
+    receita_prevista = 0.0
+    receita_periodo = 0.0
+    agrupados = {}
+    inicio_semana = None
+    fim_semana = None
+    semana_anterior = None
+    proxima_semana = None
+
+    if aba == "pesquisa":
+        agendamentos = models.pesquisar_agendamentos(
+            cliente=cliente_filtro or None,
+            telefone=telefone_filtro or None,
+            profissional_id=profissional_id,
+            status=status_filtro or None,
+            data_inicio=data_inicio_filtro or None,
+            data_fim=data_fim_filtro or None,
+        )
+    elif aba == "mes":
         inicio_mes = hoje.replace(day=1)
         if hoje.month == 12:
             inicio_proximo_mes = hoje.replace(year=hoje.year + 1, month=1, day=1)
@@ -1180,8 +1298,11 @@ def admin_dashboard():
             inicio_mes.isoformat(), fim_mes.isoformat(), profissional_id=profissional_id
         )
     elif aba == "semana":
-        inicio_semana = hoje - timedelta(days=hoje.weekday())
+        dias_desde_domingo = (hoje.weekday() + 1) % 7
+        inicio_semana = hoje - timedelta(days=dias_desde_domingo)
         fim_semana = inicio_semana + timedelta(days=6)
+        semana_anterior = (inicio_semana - timedelta(days=7)).isoformat()
+        proxima_semana = (inicio_semana + timedelta(days=7)).isoformat()
         agendamentos = models.listar_agendamentos_por_periodo(
             inicio_semana.isoformat(), fim_semana.isoformat(), profissional_id=profissional_id
         )
@@ -1192,19 +1313,24 @@ def admin_dashboard():
         )
 
     total_agendamentos = len(agendamentos)
-    receita_prevista = sum(
-        a["servico_preco"] for a in agendamentos
-        if a["status"] == "agendado"
-    )
-    receita_periodo = sum(
-        a["servico_preco"] for a in agendamentos
-        if a["status"] in ("agendado", "realizado")
-    )
-
-    agrupados = {}
-    if aba in ("semana", "mes"):
-        for ag in agendamentos:
-            agrupados.setdefault(ag["data"], []).append(ag)
+    if aba != "pesquisa":
+        receita_prevista = sum(
+            a["servico_preco"] for a in agendamentos
+            if a["status"] == "agendado"
+        )
+        receita_periodo = sum(
+            a["servico_preco"] for a in agendamentos
+            if a["status"] in ("agendado", "realizado")
+        )
+        if aba == "semana":
+            for i in range(7):
+                dia_data = inicio_semana + timedelta(days=i)
+                agrupados[dia_data.isoformat()] = []
+            for ag in agendamentos:
+                agrupados.setdefault(ag["data"], []).append(ag)
+        elif aba == "mes":
+            for ag in agendamentos:
+                agrupados.setdefault(ag["data"], []).append(ag)
 
     profissionais_filtro = models.listar_profissionais(apenas_ativos=True)
     sucesso = request.args.get("sucesso")
@@ -1219,12 +1345,22 @@ def admin_dashboard():
         receita_prevista=receita_prevista,
         receita_periodo=receita_periodo,
         hoje=hoje.isoformat(),
+        inicio_semana=inicio_semana,
+        fim_semana=fim_semana,
+        semana_anterior=semana_anterior,
+        proxima_semana=proxima_semana,
         profissionais_filtro=profissionais_filtro,
         profissional_selecionado=profissional_id,
+        filtro_cliente=cliente_filtro,
+        filtro_telefone=telefone_filtro,
+        filtro_status=status_filtro,
+        filtro_data_inicio=data_inicio_filtro,
+        filtro_data_fim=data_fim_filtro,
         sucesso=sucesso,
         erro=erro,
         **_carregar_config_template(),
     )
+
 
 
 # Exempt API endpoints from CSRF (they use JSON, not forms)

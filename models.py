@@ -298,13 +298,13 @@ def atualizar_profissional_servicos(profissional_id, servico_ids):
 
 
 DIAS_DA_SEMANA = [
+    {"numero": 0, "nome": "Domingo"},
     {"numero": 1, "nome": "Segunda-feira"},
     {"numero": 2, "nome": "Terça-feira"},
     {"numero": 3, "nome": "Quarta-feira"},
     {"numero": 4, "nome": "Quinta-feira"},
     {"numero": 5, "nome": "Sexta-feira"},
     {"numero": 6, "nome": "Sábado"},
-    {"numero": 0, "nome": "Domingo"},
 ]
 
 
@@ -881,6 +881,130 @@ def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str, profissional_
         query += """
             GROUP BY a.id, p.nome
             ORDER BY a.data ASC, a.hora ASC
+        """
+        rows = conn.execute(query, tuple(params)).fetchall()
+
+        agora = datetime.now()
+        resultados = []
+
+        for row in rows:
+            resultado = dict(row)
+            resultado["servico_nome"] = ", ".join(
+                servico["nome"] for servico in resultado["servicos"]
+            )
+            resultado["servico_preco"] = sum(
+                servico["preco"] for servico in resultado["servicos"]
+            )
+            resultado["servico_duracao_minutos"] = sum(
+                servico["duracao_minutos"] for servico in resultado["servicos"]
+            )
+            try:
+                dt_ag = datetime.strptime(f"{resultado['data']} {resultado['hora']}", "%Y-%m-%d %H:%M")
+                resultado["ja_passou"] = dt_ag <= agora
+            except Exception:
+                resultado["ja_passou"] = False
+
+            resultados.append(resultado)
+
+        return resultados
+
+
+def _normalizar_data_iso(data_str):
+    """Converte datas em formatos variados (ex.: DD/MM/AAAA) para o padrão ISO (YYYY-MM-DD)."""
+    if not data_str:
+        return None
+    data_str = data_str.strip()
+    if not data_str:
+        return None
+    if "/" in data_str:
+        partes = data_str.split("/")
+        if len(partes) == 3:
+            try:
+                d, m, y = int(partes[0]), int(partes[1]), int(partes[2])
+                return f"{y:04d}-{m:02d}-{d:02d}"
+            except ValueError:
+                pass
+    return data_str
+
+
+def pesquisar_agendamentos(
+    cliente=None,
+    telefone=None,
+    profissional_id=None,
+    status=None,
+    data_inicio=None,
+    data_fim=None,
+):
+    """
+    Pesquisa agendamentos com filtros combináveis:
+    - cliente: busca textual (ILIKE) pelo nome do cliente;
+    - telefone: busca por dígitos ou formatação;
+    - profissional_id: ID do profissional (ou None para todos);
+    - status: status específico (ou None/vazio para todos);
+    - data_inicio: limite inferior de data (YYYY-MM-DD);
+    - data_fim: limite superior de data (YYYY-MM-DD).
+    """
+    with db_session() as conn:
+        query = """
+            SELECT a.*,
+                   COALESCE(a.profissional_nome_snapshot, p.nome) AS profissional_nome,
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'id', s.id,
+                               'nome', COALESCE(ags.nome_servico, s.nome),
+                               'preco', COALESCE(ags.preco_unitario, s.preco),
+                               'duracao_minutos', COALESCE(ags.duracao_minutos, s.duracao_minutos)
+                           )
+                           ORDER BY s.id
+                       ) FILTER (WHERE s.id IS NOT NULL),
+                       '[]'::json
+                   ) AS servicos
+            FROM agendamento a
+            JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            LEFT JOIN servico s ON s.id = ags.servico_id
+            WHERE 1=1
+        """
+        params = []
+
+        if cliente and cliente.strip():
+            query += " AND a.cliente_nome ILIKE %s"
+            params.append(f"%{cliente.strip()}%")
+
+        if telefone and telefone.strip():
+            tel_limpo = telefone.strip()
+            digitos = "".join(c for c in tel_limpo if c.isdigit())
+            if digitos:
+                query += " AND (a.cliente_telefone ILIKE %s OR REGEXP_REPLACE(a.cliente_telefone, '\\D', '', 'g') LIKE %s)"
+                params.append(f"%{tel_limpo}%")
+                params.append(f"%{digitos}%")
+            else:
+                query += " AND a.cliente_telefone ILIKE %s"
+                params.append(f"%{tel_limpo}%")
+
+        if profissional_id is not None:
+            query += " AND a.profissional_id = %s"
+            params.append(profissional_id)
+
+        if status and status.strip() and status.strip().lower() != "todos":
+            query += " AND a.status = %s"
+            params.append(status.strip())
+
+        data_inicio_iso = _normalizar_data_iso(data_inicio) if data_inicio else None
+        data_fim_iso = _normalizar_data_iso(data_fim) if data_fim else None
+
+        if data_inicio_iso:
+            query += " AND a.data >= %s"
+            params.append(data_inicio_iso)
+
+        if data_fim_iso:
+            query += " AND a.data <= %s"
+            params.append(data_fim_iso)
+
+        query += """
+            GROUP BY a.id, p.nome
+            ORDER BY a.data ASC, a.hora ASC, a.id ASC
         """
         rows = conn.execute(query, tuple(params)).fetchall()
 

@@ -14,7 +14,7 @@
                 <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
             </div>
         </div>
-        <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '') }}" class="link-logout">Voltar ao painel</a>
+        <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '', **(filtros_retorno or {})) }}" class="link-logout">Voltar ao painel</a>
     </div>
 
     {% if erro %}
@@ -73,10 +73,15 @@
 
     <div class="card">
         <h2 class="subtitulo-grupo">Definir nova data e horário</h2>
-        <form method="POST" id="form-reagendar" action="{{ url_for('admin_reagendar_agendamento', agendamento_id=agendamento.id) }}">
+        <form method="POST" id="form-reagendar" action="{{ url_for('admin_reagendar_agendamento', agendamento_id=agendamento.id, **(filtros_retorno or {})) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="aba" value="{{ aba }}">
             <input type="hidden" name="profissional_id" value="{{ profissional_id_filtro or '' }}">
+            {% if filtros_retorno %}
+                {% for k, v in filtros_retorno.items() %}
+                <input type="hidden" name="{{ k }}" value="{{ v }}">
+                {% endfor %}
+            {% endif %}
 
             <label for="nova_data">Nova data *</label>
             <input type="date" id="nova_data" name="nova_data" value="{{ data_selecionada }}" min="{{ hoje }}" max="{{ data_limite }}" required>
@@ -101,7 +106,7 @@
 
             <div class="botoes-acoes" style="margin-top: 24px;">
                 <button type="submit" id="btn-submit-reagendar" class="btn-primario">Confirmar Reagendamento</button>
-                <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '') }}" class="btn-secundario">Cancelar</a>
+                <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '', **(filtros_retorno or {})) }}" class="btn-secundario">Cancelar</a>
             </div>
         </form>
     </div>

@@ -4,6 +4,7 @@
 
 {% block conteudo %}
 <div class="container-admin">
+    <div style="display:none;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></div>
     <div class="topo-admin">
         <div class="topo-admin-titulos">
             {% if logotipo %}
@@ -40,7 +41,9 @@
                 <a href="{{ url_for('admin_dashboard', aba='hoje', profissional_id=profissional_selecionado or '') }}" class="tab-link{% if aba == 'hoje' %} ativo{% endif %}">Hoje</a>
                 <a href="{{ url_for('admin_dashboard', aba='semana', profissional_id=profissional_selecionado or '') }}" class="tab-link{% if aba == 'semana' %} ativo{% endif %}">Semana</a>
                 <a href="{{ url_for('admin_dashboard', aba='mes', profissional_id=profissional_selecionado or '') }}" class="tab-link{% if aba == 'mes' %} ativo{% endif %}">Mês</a>
+                <a href="{{ url_for('admin_dashboard', aba='pesquisa') }}" class="tab-link{% if aba == 'pesquisa' %} ativo{% endif %}">Pesquisar</a>
             </div>
+            {% if aba != 'pesquisa' %}
             <div class="filtro-profissionais-container">
                 <form method="GET" action="{{ url_for('admin_dashboard') }}" class="form-filtro-prof">
                     <input type="hidden" name="aba" value="{{ aba }}">
@@ -55,21 +58,190 @@
                     </select>
                 </form>
             </div>
+            {% endif %}
         </div>
     </div>
+
+    {% if aba == 'semana' and inicio_semana and fim_semana %}
+    <div class="card navegacao-semana">
+        <a href="{{ url_for('admin_dashboard', aba='semana', data=semana_anterior, profissional_id=profissional_selecionado or '') }}" class="btn-navegacao-semana" id="btn-semana-anterior" title="Semana anterior">&larr; Semana anterior</a>
+        <span class="periodo-semana-rotulo">
+            {{ inicio_semana.strftime('%d/%m/%Y') }} a {{ fim_semana.strftime('%d/%m/%Y') }}
+        </span>
+        <a href="{{ url_for('admin_dashboard', aba='semana', data=proxima_semana, profissional_id=profissional_selecionado or '') }}" class="btn-navegacao-semana" id="btn-proxima-semana" title="Próxima semana">Próxima semana &rarr;</a>
+    </div>
+    {% endif %}
+
+    {% if aba == 'pesquisa' %}
+    <div class="card card-pesquisa">
+        <form method="GET" action="{{ url_for('admin_dashboard') }}" class="form-pesquisa">
+            <input type="hidden" name="aba" value="pesquisa">
+            <div class="grid-pesquisa">
+                <div class="campo-pesquisa">
+                    <label for="filtro-cliente">Cliente</label>
+                    <input type="text" id="filtro-cliente" name="cliente" value="{{ filtro_cliente or '' }}" placeholder="Nome do cliente">
+                </div>
+                <div class="campo-pesquisa">
+                    <label for="filtro-telefone">Telefone</label>
+                    <input type="text" id="filtro-telefone" name="telefone" value="{{ filtro_telefone or '' }}" placeholder="Telefone ou WhatsApp">
+                </div>
+                <div class="campo-pesquisa">
+                    <label for="filtro-profissional">Profissional</label>
+                    <select id="filtro-profissional" name="profissional_id">
+                        <option value="">Todos os profissionais</option>
+                        {% for prof in profissionais_filtro %}
+                        <option value="{{ prof.id }}" {% if profissional_selecionado == prof.id %}selected{% endif %}>
+                            {{ prof.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="campo-pesquisa">
+                    <label for="filtro-status">Status</label>
+                    <select id="filtro-status" name="status">
+                        <option value="">Todos os status</option>
+                        <option value="agendado" {% if filtro_status == 'agendado' %}selected{% endif %}>Agendado</option>
+                        <option value="realizado" {% if filtro_status == 'realizado' %}selected{% endif %}>Realizado</option>
+                        <option value="nao_compareceu" {% if filtro_status == 'nao_compareceu' %}selected{% endif %}>Não compareceu</option>
+                        <option value="cancelado" {% if filtro_status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                    </select>
+                </div>
+                <div class="campo-pesquisa">
+                    <label for="filtro-data-inicio">Data inicial</label>
+                    <input type="date" id="filtro-data-inicio" name="data_inicio" value="{{ filtro_data_inicio or '' }}">
+                </div>
+                <div class="campo-pesquisa">
+                    <label for="filtro-data-fim">Data final</label>
+                    <input type="date" id="filtro-data-fim" name="data_fim" value="{{ filtro_data_fim or '' }}">
+                </div>
+            </div>
+            <div class="acoes-pesquisa">
+                <button type="submit" class="btn-primario" id="btn-pesquisar">Pesquisar</button>
+                <a href="{{ url_for('admin_dashboard', aba='pesquisa') }}" class="btn-secundario" id="btn-limpar-filtros">Limpar filtros</a>
+            </div>
+        </form>
+    </div>
+    {% endif %}
 
     <div class="card">
         <div class="resumo-item">
-            <span>Total de agendamentos</span>
+            <span>{{ "Agendamentos encontrados" if aba == 'pesquisa' else "Total de agendamentos" }}</span>
             <span>{{ total_agendamentos }}</span>
         </div>
+        {% if aba != 'pesquisa' %}
         <div class="resumo-item">
-            <span>{{ "Receita do período" if aba in ("semana", "mes") else "Receita prevista" }}</span>
+            <span>{{ "Valor dos agendamentos do período" if aba in ("semana", "mes") else "Valor dos agendamentos previstos" }}</span>
             <span>R$ {{ "%.2f"|format(receita_periodo if aba in ("semana", "mes") else receita_prevista)|replace(".", ",") }}</span>
         </div>
+        {% endif %}
     </div>
 
-    {% if aba == 'hoje' %}
+    {% if aba == 'pesquisa' %}
+        {% if agendamentos %}
+        <div class="card">
+            <div style="overflow-x:auto">
+                <table class="tabela-agendamentos">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Horário</th>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Serviço</th>
+                            <th>Profissional</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th class="col-acoes">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ag in agendamentos %}
+                        <tr>
+                            <td>{{ ag.data[8:10] }}/{{ ag.data[5:7] }}/{{ ag.data[0:4] }}</td>
+                            <td>{{ ag.hora }}</td>
+                            <td>{{ ag.cliente_nome }}</td>
+                            <td>
+                                <div class="contato-cliente">
+                                    <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
+                                    {% set zap_num = ag.cliente_telefone|zap_link %}
+                                    {% if zap_num %}
+                                    <a href="https://wa.me/{{ zap_num }}" target="_blank" rel="noopener noreferrer" class="link-zap" title="Abrir WhatsApp com {{ ag.cliente_nome }}">
+                                        <span class="badge-zap">WhatsApp</span>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>{{ ag.servico_nome }}</td>
+                            <td>{{ ag.profissional_nome }}</td>
+                            <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                            <td>
+                                {% if ag.status == "cancelado" %}
+                                <span class="badge-status badge-cancelado">Cancelado</span>
+                                {% elif ag.status == "realizado" %}
+                                <span class="badge-status badge-realizado">Realizado</span>
+                                {% elif ag.status == "nao_compareceu" %}
+                                <span class="badge-status badge-falta">Não compareceu</span>
+                                {% else %}
+                                <span class="badge-status badge-agendado">Agendado</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-acoes">
+                                <div class="acoes-agendamento">
+                                    {% if ag.status == 'agendado' %}
+                                        {% if ag.ja_passou %}
+                                        <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="status" value="realizado">
+                                            <input type="hidden" name="aba" value="{{ aba }}">
+                                            <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                            <input type="hidden" name="cliente" value="{{ filtro_cliente or '' }}">
+                                            <input type="hidden" name="telefone" value="{{ filtro_telefone or '' }}">
+                                            <input type="hidden" name="filtro_status" value="{{ filtro_status or '' }}">
+                                            <input type="hidden" name="data_inicio" value="{{ filtro_data_inicio or '' }}">
+                                            <input type="hidden" name="data_fim" value="{{ filtro_data_fim or '' }}">
+                                            <button type="submit" class="btn-acao btn-acao-sucesso" title="Marcar como atendimento realizado">Realizado</button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="status" value="nao_compareceu">
+                                            <input type="hidden" name="aba" value="{{ aba }}">
+                                            <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                            <input type="hidden" name="cliente" value="{{ filtro_cliente or '' }}">
+                                            <input type="hidden" name="telefone" value="{{ filtro_telefone or '' }}">
+                                            <input type="hidden" name="filtro_status" value="{{ filtro_status or '' }}">
+                                            <input type="hidden" name="data_inicio" value="{{ filtro_data_inicio or '' }}">
+                                            <input type="hidden" name="data_fim" value="{{ filtro_data_fim or '' }}">
+                                            <button type="submit" class="btn-acao btn-acao-alerta" title="Marcar que o cliente não compareceu">Faltou</button>
+                                        </form>
+                                        {% else %}
+                                        <a href="{{ url_for('admin_reagendar_agendamento', agendamento_id=ag.id, aba=aba, profissional_id=profissional_selecionado or '', cliente=filtro_cliente or '', telefone=filtro_telefone or '', filtro_status=filtro_status or '', data_inicio=filtro_data_inicio or '', data_fim=filtro_data_fim or '') }}" class="btn-acao btn-acao-primario" title="Reagendar atendimento">Reagendar</a>
+                                        {% endif %}
+                                        <form method="POST" action="{{ url_for('admin_cancelar_agendamento', agendamento_id=ag.id) }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja cancelar este agendamento?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="aba" value="{{ aba }}">
+                                            <input type="hidden" name="profissional_id" value="{{ profissional_selecionado or '' }}">
+                                            <input type="hidden" name="cliente" value="{{ filtro_cliente or '' }}">
+                                            <input type="hidden" name="telefone" value="{{ filtro_telefone or '' }}">
+                                            <input type="hidden" name="filtro_status" value="{{ filtro_status or '' }}">
+                                            <input type="hidden" name="data_inicio" value="{{ filtro_data_inicio or '' }}">
+                                            <input type="hidden" name="data_fim" value="{{ filtro_data_fim or '' }}">
+                                            <button type="submit" class="btn-acao btn-acao-perigo" title="Cancelar agendamento">Cancelar</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="acao-concluida">—</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <p class="vazio">Nenhum agendamento encontrado.</p>
+        {% endif %}
+    {% elif aba == 'hoje' %}
         {% if agendamentos %}
         <div class="card">
             <div style="overflow-x:auto">
@@ -160,8 +332,10 @@
     {% else %}
         {% if agrupados %}
             {% for data_str, agendamentos_do_dia in agrupados.items() %}
-            <div class="dia-agrupador">{{ data_str[8:10] }}/{{ data_str[5:7] }}/{{ data_str[0:4] }}</div>
+            {% set d_nome = data_str|dia_semana_nome %}
+            <div class="dia-agrupador">{{ (d_nome + ' — ') if d_nome else '' }}{{ data_str[8:10] }}/{{ data_str[5:7] }}/{{ data_str[0:4] }}</div>
             <div class="card">
+                {% if agendamentos_do_dia %}
                 <div style="overflow-x:auto">
                     <table class="tabela-agendamentos">
                         <thead>
@@ -243,10 +417,13 @@
                         </tbody>
                     </table>
                 </div>
+                {% else %}
+                <p class="vazio" style="margin: 4px 0;">Nenhum agendamento para este dia.</p>
+                {% endif %}
             </div>
             {% endfor %}
         {% else %}
-        <p class="vazio">Nenhum agendamento esta semana.</p>
+        <p class="vazio">Nenhum agendamento {{ "este mês" if aba == "mes" else "esta semana" }}.</p>
         {% endif %}
     {% endif %}
 </div>
