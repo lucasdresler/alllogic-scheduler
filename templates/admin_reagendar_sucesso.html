@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reagendamento Confirmado — {{ nome_estabelecimento }}{% endblock %}
+
+{% block head_extra %}
+<meta http-equiv="refresh" content="5;url={{ url_retorno }}">
+{% endblock %}
+
+{% block conteudo %}
+<div class="container-admin">
+    <div class="topo-admin">
+        <div class="topo-admin-titulos">
+            {% if logotipo %}
+            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
+            {% endif %}
+            <div>
+                <h1>Confirmação de Reagendamento</h1>
+                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
+            </div>
+        </div>
+        <a href="{{ url_retorno }}" class="link-logout">Ir para a Agenda</a>
+    </div>
+
+    <div class="card" style="max-width: 640px; margin: 0 auto;">
+        <div class="confirmacao-icone">&#10003;</div>
+        <h2 class="subtitulo-grupo" style="text-align: center; color: var(--sucesso); margin-bottom: 24px;">Reagendamento realizado com sucesso!</h2>
+
+        <div class="resumo-confirmacao" style="border-top: 1px solid var(--borda); padding-top: 16px;">
+            <div class="resumo-item">
+                <span>Cliente</span>
+                <span><strong>{{ agendamento.cliente_nome }}</strong>{% if agendamento.cliente_telefone %} ({{ agendamento.cliente_telefone }}){% endif %}</span>
+            </div>
+            <div class="resumo-item">
+                <span>Serviço</span>
+                <span>{{ agendamento.servico_nome }}{% if agendamento.servico_duracao_minutos %} ({{ agendamento.servico_duracao_minutos }} min){% endif %}</span>
+            </div>
+            <div class="resumo-item">
+                <span>Nova data</span>
+                <span><strong>{{ agendamento.data[8:10] }}/{{ agendamento.data[5:7] }}/{{ agendamento.data[0:4] }}</strong></span>
+            </div>
+            <div class="resumo-item">
+                <span>Novo horário</span>
+                <span><strong>{{ agendamento.hora }}</strong></span>
+            </div>
+            <div class="resumo-item">
+                <span>Profissional</span>
+                <span>{{ agendamento.profissional_nome }}</span>
+            </div>
+            {% if agendamento.servico_preco is not none and agendamento.servico_preco > 0 %}
+            <div class="resumo-item">
+                <span>Valor</span>
+                <span>R$ {{ "%.2f"|format(agendamento.servico_preco)|replace(".", ",") }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <p class="mensagem-redirecionamento" style="text-align: center; margin-top: 24px;">
+            Retornando para a Agenda em 5 segundos...
+        </p>
+
+        <div class="botoes-acoes" style="margin-top: 16px; justify-content: center; display: flex;">
+            <a href="{{ url_retorno }}" id="btn-retorno-agenda" class="btn-primario" style="text-align: center;">Ir para a Agenda agora</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    setTimeout(function () {
+        window.location.href = {{ url_retorno|tojson }};
+    }, 5000);
+</script>
+{% endblock %}

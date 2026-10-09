@@ -1138,6 +1138,7 @@ def admin_reagendar_agendamento(agendamento_id):
     status_filtro = request.args.get("filtro_status") or request.form.get("filtro_status") or request.args.get("status")
     data_inicio_filtro = request.args.get("data_inicio") or request.form.get("data_inicio")
     data_fim_filtro = request.args.get("data_fim") or request.form.get("data_fim")
+    data_filtro = request.args.get("data") or request.form.get("data")
 
     filtros_retorno = {}
     if cliente_filtro:
@@ -1150,6 +1151,8 @@ def admin_reagendar_agendamento(agendamento_id):
         filtros_retorno["data_inicio"] = data_inicio_filtro
     if data_fim_filtro:
         filtros_retorno["data_fim"] = data_fim_filtro
+    if data_filtro:
+        filtros_retorno["data"] = data_filtro
 
     agendamento = models.obter_agendamento_completo(agendamento_id)
     if not agendamento:
@@ -1191,10 +1194,19 @@ def admin_reagendar_agendamento(agendamento_id):
                 usuario=session.get("admin_usuario"),
             )
             if ok:
-                params = {"aba": aba, "sucesso": "Agendamento reagendado com sucesso.", **filtros_retorno}
+                params = {"aba": aba, "sucesso": "Reagendamento realizado com sucesso.", **filtros_retorno}
                 if profissional_id_filtro:
                     params["profissional_id"] = profissional_id_filtro
-                return redirect(url_for("admin_dashboard", **params))
+                url_retorno = url_for("admin_dashboard", **params)
+                agendamento_atualizado = models.obter_agendamento_completo(agendamento_id) or agendamento
+                return render_template(
+                    "admin_reagendar_sucesso.html",
+                    agendamento=agendamento_atualizado,
+                    nova_data=nova_data,
+                    novo_horario=novo_horario,
+                    url_retorno=url_retorno,
+                    **_carregar_config_template(),
+                )
             else:
                 erro = erro_reagendar
                 data_selecionada = nova_data

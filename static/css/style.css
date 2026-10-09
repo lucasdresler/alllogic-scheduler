@@ -1,4 +1,5 @@
 :root {
+    color-scheme: dark;
     --bg-principal: #0d0d0d;
     --bg-card: #1a1a1a;
     --bg-card-hover: #242424;
@@ -169,7 +170,12 @@ header.topo p {
 input[type="text"],
 input[type="tel"],
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="date"],
+input[type="time"],
+input[type="number"],
+select,
+textarea {
     width: 100%;
     background-color: var(--bg-card);
     border: 1px solid var(--borda);
@@ -179,11 +185,29 @@ input[type="password"] {
     font-family: inherit;
     font-size: 0.95rem;
     margin-bottom: 12px;
+    box-sizing: border-box;
 }
 
-input:focus {
+input:focus,
+select:focus,
+textarea:focus {
     outline: none;
     border-color: var(--dourado);
+}
+
+select {
+    cursor: pointer;
+}
+
+select option {
+    background-color: var(--bg-card);
+    color: var(--texto-principal);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+    cursor: pointer;
 }
 
 label {

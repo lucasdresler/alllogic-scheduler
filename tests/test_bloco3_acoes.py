@@ -190,7 +190,7 @@ def test_reagendamento_valido_e_historico(client, logged_admin):
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert "Agendamento reagendado com sucesso" in resp.get_data(as_text=True)
+    assert "Reagendamento realizado com sucesso" in resp.get_data(as_text=True)
 
     # Verificar que data e hora foram atualizadas e status continua 'agendado'
     ag_atualizado = models.obter_agendamento_completo(ag_id)
@@ -210,6 +210,68 @@ def test_reagendamento_valido_e_historico(client, logged_admin):
     # Horário 1 original liberado; Horário 2 agora ocupado
     assert hora1 in models.horarios_disponiveis(prof_id, data1, [serv_id])
     assert hora2 not in models.horarios_disponiveis(prof_id, data2, [serv_id])
+
+
+def test_tela_confirmacao_reagendamento(client, logged_admin):
+    """Testa tela/estado de confirmação após reagendamento com sucesso:
+    - Retorna status 200 (não redireciona imediatamente ao dashboard)
+    - Informa: Reagendamento realizado com sucesso, Cliente, Serviço, Nova data, Novo horário, Profissional, Valor
+    - Redirecionamento automático configurado para aproximadamente 3 segundos (3000ms / meta refresh)
+    - Preserva contexto da agenda (aba, profissional_id, filtros de pesquisa)
+    """
+    prof_id, serv_id = _criar_profissional_e_servico(nome_prof="Carlos", nome_servico="Barba Premium", preco=60.0)
+    data_orig = _proxima_data(2)
+    data_nova = _proxima_data(4)
+    hora_orig = "10:00"
+    hora_nova = "14:00"
+
+    ag_id, _ = models.criar_agendamento(
+        "Maria Santos", "(11) 98888-7777", [serv_id], prof_id, data_orig, hora_orig
+    )
+
+    token = _csrf_token(client, f"/admin/agendamento/{ag_id}/reagendar")
+    resp = client.post(
+        f"/admin/agendamento/{ag_id}/reagendar",
+        data={
+            "csrf_token": token,
+            "nova_data": data_nova,
+            "novo_horario": hora_nova,
+            "aba": "semana",
+            "profissional_id": str(prof_id),
+            "cliente": "Maria",
+        },
+        follow_redirects=False,
+    )
+
+    # Não deve retornar imediatamente com redirect (302) para o dashboard
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+
+    # Mensagem de sucesso
+    assert "Reagendamento realizado com sucesso" in html
+    assert "Agendamento reagendado com sucesso" not in html
+
+    # Dados do agendamento confirmados
+    assert "Maria Santos" in html
+    assert "Barba Premium" in html
+    assert f"{data_nova[8:10]}/{data_nova[5:7]}/{data_nova[0:4]}" in html
+    assert hora_nova in html
+    assert "Carlos" in html
+    assert "60,00" in html
+
+    # Retorno automático em ~5 segundos
+    assert "5000" in html
+    assert 'content="5;url=' in html or "setTimeout" in html
+    assert "Retornando para a Agenda em 5 segundos" in html
+
+    # Botão de retorno imediato
+    assert "Ir para a Agenda agora" in html
+    assert 'id="btn-retorno-agenda"' in html
+
+    # Preservação do contexto (aba=semana, profissional_id, filtros)
+    assert "aba=semana" in html
+    assert f"profissional_id={prof_id}" in html
+    assert "cliente=Maria" in html
 
 
 def test_reagendamento_conflito(client, logged_admin):

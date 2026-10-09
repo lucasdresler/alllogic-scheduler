@@ -5,6 +5,12 @@ import uuid
 import pytest
 from datetime import date, timedelta
 
+if os.environ.get("SCHEDULER_TEST_DATABASE") != "1":
+    pytest.skip(
+        "Defina SCHEDULER_TEST_DATABASE=1 para habilitar testes com PostgreSQL isolado.",
+        allow_module_level=True,
+    )
+
 _database_name = os.environ.get("POSTGRES_DB", "")
 _database_host = os.environ.get("POSTGRES_HOST", "")
 try:
