@@ -814,17 +814,17 @@ def obter_agendamento_completo(agendamento_id):
                    COALESCE(
                        json_agg(
                            json_build_object(
-                               'id', s.id,
+                               'id', COALESCE(ags.servico_id, s.id),
                                'nome', COALESCE(ags.nome_servico, s.nome),
                                'preco', COALESCE(ags.preco_unitario, s.preco),
                                'duracao_minutos', COALESCE(ags.duracao_minutos, s.duracao_minutos)
                            )
-                           ORDER BY s.id
-                       ) FILTER (WHERE s.id IS NOT NULL),
+                           ORDER BY COALESCE(ags.servico_id, s.id)
+                       ) FILTER (WHERE ags.servico_id IS NOT NULL OR s.id IS NOT NULL),
                        '[]'::json
                    ) AS servicos
             FROM agendamento a
-            JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN profissional p ON p.id = a.profissional_id
             LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
             LEFT JOIN servico s ON s.id = ags.servico_id
             WHERE a.id = %s
@@ -858,17 +858,17 @@ def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str, profissional_
                    COALESCE(
                        json_agg(
                            json_build_object(
-                               'id', s.id,
+                               'id', COALESCE(ags.servico_id, s.id),
                                'nome', COALESCE(ags.nome_servico, s.nome),
                                'preco', COALESCE(ags.preco_unitario, s.preco),
                                'duracao_minutos', COALESCE(ags.duracao_minutos, s.duracao_minutos)
                            )
-                           ORDER BY s.id
-                       ) FILTER (WHERE s.id IS NOT NULL),
+                           ORDER BY COALESCE(ags.servico_id, s.id)
+                       ) FILTER (WHERE ags.servico_id IS NOT NULL OR s.id IS NOT NULL),
                        '[]'::json
                    ) AS servicos
             FROM agendamento a
-            JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN profissional p ON p.id = a.profissional_id
             LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
             LEFT JOIN servico s ON s.id = ags.servico_id
             WHERE a.data BETWEEN %s AND %s
@@ -951,17 +951,17 @@ def pesquisar_agendamentos(
                    COALESCE(
                        json_agg(
                            json_build_object(
-                               'id', s.id,
+                               'id', COALESCE(ags.servico_id, s.id),
                                'nome', COALESCE(ags.nome_servico, s.nome),
                                'preco', COALESCE(ags.preco_unitario, s.preco),
                                'duracao_minutos', COALESCE(ags.duracao_minutos, s.duracao_minutos)
                            )
-                           ORDER BY s.id
-                       ) FILTER (WHERE s.id IS NOT NULL),
+                           ORDER BY COALESCE(ags.servico_id, s.id)
+                       ) FILTER (WHERE ags.servico_id IS NOT NULL OR s.id IS NOT NULL),
                        '[]'::json
                    ) AS servicos
             FROM agendamento a
-            JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN profissional p ON p.id = a.profissional_id
             LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
             LEFT JOIN servico s ON s.id = ags.servico_id
             WHERE 1=1

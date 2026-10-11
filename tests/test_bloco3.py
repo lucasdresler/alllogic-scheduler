@@ -153,6 +153,13 @@ def test_success_page_uses_establishment_name(monkeypatch, client):
 
 
 def test_admin_auth_settings_and_service_description(client):
+    from werkzeug.security import generate_password_hash
+    with database.db_session() as conn:
+        conn.execute("DELETE FROM admin WHERE usuario IN ('admin', 'admin_ativo')")
+        conn.execute(
+            "INSERT INTO admin (usuario, senha_hash, senha_inicial_alterada) VALUES ('admin', %s, FALSE)",
+            (generate_password_hash(os.environ["ADMIN_SENHA_INICIAL"]),)
+        )
     assert client.get("/admin/servicos").status_code == 302
 
     login_token = _csrf_token(client, "/admin/login")
