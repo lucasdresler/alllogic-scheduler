@@ -1,27 +1,22 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "agenda" %}
 
 {% block titulo %}Reagendar Atendimento — {{ nome_estabelecimento }}{% endblock %}
 
-{% block conteudo %}
-<div class="container-admin">
-    <div class="topo-admin">
-        <div class="topo-admin-titulos">
-            {% if logotipo %}
-            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
-            {% endif %}
-            <div>
-                <h1>Reagendar Atendimento</h1>
-                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
-            </div>
-        </div>
-        <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '', **(filtros_retorno or {})) }}" class="link-logout">Voltar ao painel</a>
+{% block titulo_pagina %}Reagendar Atendimento{% endblock %}
+
+{% block conteudo_admin %}
+    <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <span class="subtitulo-admin" style="font-size: 0.875rem; color: var(--cor-mutada);">Alteração de data e horário de agendamento</span>
+        <a href="{{ url_for('admin_dashboard', aba=aba, profissional_id=profissional_id_filtro or '', **(filtros_retorno or {})) }}" class="btn-secundario btn-compacto">← Voltar à agenda</a>
     </div>
 
     {% if erro %}
     <div class="mensagem-erro">{{ erro }}</div>
     {% endif %}
 
-    <div class="card">
+    <div class="card" style="max-width: 720px; margin-bottom: 20px;">
         <h2 class="subtitulo-grupo">Dados do agendamento atual</h2>
         <div class="resumo-item">
             <span>Cliente</span>
@@ -46,7 +41,7 @@
     </div>
 
     {% if historico %}
-    <div class="card">
+    <div class="card" style="max-width: 720px; margin-bottom: 20px;">
         <h2 class="subtitulo-grupo">Histórico de alterações deste atendimento</h2>
         <div style="overflow-x:auto">
             <table class="tabela-agendamentos">
@@ -61,7 +56,7 @@
                     {% for h in historico %}
                     <tr>
                         <td>{{ h.data_anterior[8:10] }}/{{ h.data_anterior[5:7] }}/{{ h.data_anterior[0:4] }} às {{ h.hora_anterior }}</td>
-                        <td>{{ h.data_nova[8:10] }}/{{ h.data_nova[5:7] }}/{{ h.data_nova[0:4] }} às {{ h.hora_nova }}</td>
+                        <td><strong>{{ h.data_nova[8:10] }}/{{ h.data_nova[5:7] }}/{{ h.data_nova[0:4] }} às {{ h.hora_nova }}</strong></td>
                         <td>{{ h.criado_em.strftime('%d/%m/%Y %H:%M') if h.criado_em else '—' }}</td>
                     </tr>
                     {% endfor %}
@@ -71,7 +66,7 @@
     </div>
     {% endif %}
 
-    <div class="card">
+    <div class="card" style="max-width: 720px;">
         <h2 class="subtitulo-grupo">Definir nova data e horário</h2>
         <form method="POST" id="form-reagendar" action="{{ url_for('admin_reagendar_agendamento', agendamento_id=agendamento.id, **(filtros_retorno or {})) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -85,7 +80,7 @@
 
             <label for="nova_data">Nova data *</label>
             <input type="date" id="nova_data" name="nova_data" value="{{ data_selecionada }}" min="{{ hoje }}" max="{{ data_limite }}" required>
-            <small style="display: block; margin-top: 4px; margin-bottom: 16px; color: var(--texto-secundario); font-size: 0.85rem;">
+            <small style="display: block; margin-top: 4px; margin-bottom: 16px; color: var(--cor-mutada); font-size: 0.85rem;">
                 Permitido até {{ data_limite[8:10] }}/{{ data_limite[5:7] }}/{{ data_limite[0:4] }} (respeitando a antecedência máxima configurada).
             </small>
 
@@ -100,7 +95,7 @@
                     <option value="">Nenhum horário disponível nesta data</option>
                 {% endif %}
             </select>
-            <p id="aviso-carregando-horarios" style="display:none; color: var(--texto-secundario); font-size: 0.85rem; margin-top: 6px;">
+            <p id="aviso-carregando-horarios" style="display:none; color: var(--cor-mutada); font-size: 0.85rem; margin-top: 6px;">
                 Consultando horários disponíveis...
             </p>
 
@@ -110,10 +105,10 @@
             </div>
         </form>
     </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 (function() {
     var inputData = document.getElementById("nova_data");

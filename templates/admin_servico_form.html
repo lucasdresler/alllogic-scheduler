@@ -1,23 +1,20 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "servicos" %}
 
 {% block titulo %}{{ titulo }} — {{ nome_estabelecimento }}{% endblock %}
 
-{% block conteudo %}
-<div class="container-admin">
-    <div class="topo-admin">
-        <div class="topo-admin-titulos">
-            {% if logotipo %}
-            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
-            {% endif %}
-            <div>
-                <h1>{{ titulo }}</h1>
-                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
-            </div>
-        </div>
-        <a href="{{ url_for('admin_servicos') }}" class="link-logout" style="color: var(--dourado);">Voltar</a>
-    </div>
+{% block titulo_pagina %}{{ titulo }}{% endblock %}
 
-    <div class="card">
+{% block conteudo_admin %}
+    <div class="card" style="max-width: 680px;">
+        <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span class="subtitulo-admin" style="font-size: 0.875rem; color: var(--cor-mutada);">Preencha os dados abaixo</span>
+            </div>
+            <a href="{{ url_for('admin_servicos') }}" class="btn-secundario btn-compacto">← Voltar para serviços</a>
+        </div>
+
         {% if erro %}
         <div class="mensagem-erro">{{ erro }}</div>
         {% endif %}
@@ -31,15 +28,15 @@
             <label for="descricao">Descrição</label>
             <textarea id="descricao" name="descricao" rows="3">{{ servico.descricao if servico else '' }}</textarea>
 
-            <label for="preco">Preço</label>
+            <label for="preco">Preço (R$)</label>
             <input type="number" id="preco" name="preco" step="0.01" min="0.01" value="{{ servico.preco if servico else '' }}" required>
 
             <label for="duracao_minutos">Duração (minutos)</label>
             <input type="number" id="duracao_minutos" name="duracao_minutos" min="15" step="15" value="{{ servico.duracao_minutos if servico else '' }}" required>
 
-            <label class="checkbox-row">
+            <label class="checkbox-row" style="margin-top: 12px; margin-bottom: 20px;">
                 <input type="checkbox" name="ativo" {% if servico and servico.ativo %}checked{% endif %}>
-                Serviço ativo
+                <span>Serviço ativo para agendamento</span>
             </label>
 
             <div class="botoes-acoes">
@@ -48,5 +45,4 @@
             </div>
         </form>
     </div>
-</div>
 {% endblock %}

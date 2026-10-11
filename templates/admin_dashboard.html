@@ -1,32 +1,13 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "agenda" %}
 
 {% block titulo %}Painel Administrativo — {{ nome_estabelecimento }}{% endblock %}
 
-{% block conteudo %}
-<div class="container-admin">
-    <div style="display:none;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></div>
-    <div class="topo-admin">
-        <div class="topo-admin-titulos">
-            {% if logotipo %}
-            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
-            {% endif %}
-            <div>
-                <h1>Painel Administrativo</h1>
-                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
-            </div>
-        </div>
-        <a href="{{ url_for('admin_logout') }}" class="link-logout">Sair</a>
-    </div>
+{% block titulo_pagina %}Agenda & Painel{% endblock %}
 
-    <div class="card">
-        <div class="acoes-topo">
-            <a href="{{ url_for('admin_servicos') }}" class="btn-secundario">Serviços</a>
-            <a href="{{ url_for('admin_profissionais') }}" class="btn-secundario">Profissionais</a>
-            <a href="{{ url_for('admin_estabelecimento') }}" class="btn-secundario">Dados do estabelecimento</a>
-            <a href="{{ url_for('admin_configuracoes') }}" class="btn-secundario">Configurações da agenda</a>
-            <a href="{{ url_for('admin_alterar_senha') }}" class="btn-secundario">Alterar senha</a>
-        </div>
-    </div>
+{% block conteudo_admin %}
+    <div style="display:none;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></div>
 
     {% if erro %}
     <div class="mensagem-erro">{{ erro }}</div>
@@ -143,24 +124,24 @@
                 <table class="tabela-agendamentos">
                     <thead>
                         <tr>
-                            <th>Data</th>
-                            <th>Horário</th>
-                            <th>Cliente</th>
-                            <th>Telefone</th>
-                            <th>Serviço</th>
-                            <th>Profissional</th>
-                            <th>Valor</th>
-                            <th>Status</th>
+                            <th class="col-data">Data</th>
+                            <th class="col-hora">Horário</th>
+                            <th class="col-cliente">Cliente</th>
+                            <th class="col-telefone">Telefone</th>
+                            <th class="col-servico">Serviço</th>
+                            <th class="col-profissional">Profissional</th>
+                            <th class="col-preco">Valor</th>
+                            <th class="col-status">Status</th>
                             <th class="col-acoes">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ag in agendamentos %}
                         <tr>
-                            <td>{{ ag.data[8:10] }}/{{ ag.data[5:7] }}/{{ ag.data[0:4] }}</td>
-                            <td>{{ ag.hora }}</td>
-                            <td>{{ ag.cliente_nome }}</td>
-                            <td>
+                            <td class="col-data">{{ ag.data[8:10] }}/{{ ag.data[5:7] }}/{{ ag.data[0:4] }}</td>
+                            <td class="col-hora">{{ ag.hora }}</td>
+                            <td class="col-cliente">{{ ag.cliente_nome }}</td>
+                            <td class="col-telefone">
                                 <div class="contato-cliente">
                                     <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
                                     {% set zap_num = ag.cliente_telefone|zap_link %}
@@ -171,10 +152,14 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td>{{ ag.servico_nome }}</td>
-                            <td>{{ ag.profissional_nome }}</td>
-                            <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
-                            <td>
+                            <td class="col-servico" title="{{ ag.servico_nome }}">
+                                <span class="celula-texto-longo">{{ ag.servico_nome }}</span>
+                            </td>
+                            <td class="col-profissional" title="{{ ag.profissional_nome }}">
+                                <span class="celula-texto-longo">{{ ag.profissional_nome }}</span>
+                            </td>
+                            <td class="col-preco">R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                            <td class="col-status">
                                 {% if ag.status == "cancelado" %}
                                 <span class="badge-status badge-cancelado">Cancelado</span>
                                 {% elif ag.status == "realizado" %}
@@ -248,22 +233,22 @@
                 <table class="tabela-agendamentos">
                     <thead>
                         <tr>
-                            <th>Hora</th>
-                            <th>Cliente</th>
-                            <th>Telefone</th>
-                            <th>Serviços</th>
-                            <th>Profissional</th>
-                            <th>Status</th>
-                            <th>Preço</th>
+                            <th class="col-hora">Hora</th>
+                            <th class="col-cliente">Cliente</th>
+                            <th class="col-telefone">Telefone</th>
+                            <th class="col-servico">Serviços</th>
+                            <th class="col-profissional">Profissional</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-preco">Preço</th>
                             <th class="col-acoes">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ag in agendamentos %}
                         <tr>
-                            <td>{{ ag.hora }}</td>
-                            <td>{{ ag.cliente_nome }}</td>
-                            <td>
+                            <td class="col-hora">{{ ag.hora }}</td>
+                            <td class="col-cliente">{{ ag.cliente_nome }}</td>
+                            <td class="col-telefone">
                                 <div class="contato-cliente">
                                     <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
                                     {% set zap_num = ag.cliente_telefone|zap_link %}
@@ -274,9 +259,13 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td>{{ ag.servico_nome }}</td>
-                            <td>{{ ag.profissional_nome }}</td>
-                            <td>
+                            <td class="col-servico" title="{{ ag.servico_nome }}">
+                                <span class="celula-texto-longo">{{ ag.servico_nome }}</span>
+                            </td>
+                            <td class="col-profissional" title="{{ ag.profissional_nome }}">
+                                <span class="celula-texto-longo">{{ ag.profissional_nome }}</span>
+                            </td>
+                            <td class="col-status">
                                 {% if ag.status == "cancelado" %}
                                 <span class="badge-status badge-cancelado">Cancelado</span>
                                 {% elif ag.status == "realizado" %}
@@ -287,7 +276,7 @@
                                 <span class="badge-status badge-agendado">Agendado</span>
                                 {% endif %}
                             </td>
-                            <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                            <td class="col-preco">R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
                             <td class="col-acoes">
                                 <div class="acoes-agendamento">
                                     {% if ag.status == 'agendado' %}
@@ -340,22 +329,22 @@
                     <table class="tabela-agendamentos">
                         <thead>
                             <tr>
-                                <th>Hora</th>
-                                <th>Cliente</th>
-                                <th>Telefone</th>
-                                <th>Serviços</th>
-                                <th>Profissional</th>
-                                <th>Status</th>
-                                <th>Preço</th>
+                                <th class="col-hora">Hora</th>
+                                <th class="col-cliente">Cliente</th>
+                                <th class="col-telefone">Telefone</th>
+                                <th class="col-servico">Serviços</th>
+                                <th class="col-profissional">Profissional</th>
+                                <th class="col-status">Status</th>
+                                <th class="col-preco">Preço</th>
                                 <th class="col-acoes">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for ag in agendamentos_do_dia %}
                             <tr>
-                                <td>{{ ag.hora }}</td>
-                                <td>{{ ag.cliente_nome }}</td>
-                                <td>
+                                <td class="col-hora">{{ ag.hora }}</td>
+                                <td class="col-cliente">{{ ag.cliente_nome }}</td>
+                                <td class="col-telefone">
                                     <div class="contato-cliente">
                                         <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
                                         {% set zap_num = ag.cliente_telefone|zap_link %}
@@ -366,9 +355,13 @@
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td>{{ ag.servico_nome }}</td>
-                                <td>{{ ag.profissional_nome }}</td>
-                                <td>
+                                <td class="col-servico" title="{{ ag.servico_nome }}">
+                                    <span class="celula-texto-longo">{{ ag.servico_nome }}</span>
+                                </td>
+                                <td class="col-profissional" title="{{ ag.profissional_nome }}">
+                                    <span class="celula-texto-longo">{{ ag.profissional_nome }}</span>
+                                </td>
+                                <td class="col-status">
                                     {% if ag.status == "cancelado" %}
                                     <span class="badge-status badge-cancelado">Cancelado</span>
                                     {% elif ag.status == "realizado" %}
@@ -379,7 +372,7 @@
                                     <span class="badge-status badge-agendado">Agendado</span>
                                     {% endif %}
                                 </td>
-                                <td>R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                                <td class="col-preco">R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
                                 <td class="col-acoes">
                                     <div class="acoes-agendamento">
                                         {% if ag.status == 'agendado' %}
@@ -426,5 +419,4 @@
         <p class="vazio">Nenhum agendamento {{ "este mês" if aba == "mes" else "esta semana" }}.</p>
         {% endif %}
     {% endif %}
-</div>
 {% endblock %}

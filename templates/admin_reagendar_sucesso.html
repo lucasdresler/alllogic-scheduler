@@ -1,26 +1,17 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "agenda" %}
 
 {% block titulo %}Reagendamento Confirmado — {{ nome_estabelecimento }}{% endblock %}
 
+{% block titulo_pagina %}Confirmação de Reagendamento{% endblock %}
+
 {% block head_extra %}
+{{ super() }}
 <meta http-equiv="refresh" content="5;url={{ url_retorno }}">
 {% endblock %}
 
-{% block conteudo %}
-<div class="container-admin">
-    <div class="topo-admin">
-        <div class="topo-admin-titulos">
-            {% if logotipo %}
-            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
-            {% endif %}
-            <div>
-                <h1>Confirmação de Reagendamento</h1>
-                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
-            </div>
-        </div>
-        <a href="{{ url_retorno }}" class="link-logout">Ir para a Agenda</a>
-    </div>
-
+{% block conteudo_admin %}
     <div class="card" style="max-width: 640px; margin: 0 auto;">
         <div class="confirmacao-icone">&#10003;</div>
         <h2 class="subtitulo-grupo" style="text-align: center; color: var(--sucesso); margin-bottom: 24px;">Reagendamento realizado com sucesso!</h2>
@@ -62,10 +53,10 @@
             <a href="{{ url_retorno }}" id="btn-retorno-agenda" class="btn-primario" style="text-align: center;">Ir para a Agenda agora</a>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
     setTimeout(function () {
         window.location.href = {{ url_retorno|tojson }};

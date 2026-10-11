@@ -1,23 +1,20 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "profissionais" %}
 
 {% block titulo %}{{ titulo }} — {{ nome_estabelecimento }}{% endblock %}
 
-{% block conteudo %}
-<div class="container-admin">
-    <div class="topo-admin">
-        <div class="topo-admin-titulos">
-            {% if logotipo %}
-            <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" class="logo-admin-topo">
-            {% endif %}
-            <div>
-                <h1>{{ titulo }}</h1>
-                <span class="subtitulo-admin">{{ nome_estabelecimento }}</span>
-            </div>
-        </div>
-        <a href="{{ url_for('admin_profissionais') }}" class="link-logout">Voltar</a>
-    </div>
+{% block titulo_pagina %}{{ titulo }}{% endblock %}
 
-    <div class="card">
+{% block conteudo_admin %}
+    <div class="card" style="max-width: 760px;">
+        <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span class="subtitulo-admin" style="font-size: 0.875rem; color: var(--cor-mutada);">Preencha os dados do profissional</span>
+            </div>
+            <a href="{{ url_for('admin_profissionais') }}" class="btn-secundario btn-compacto">← Voltar para profissionais</a>
+        </div>
+
         {% if erro %}
         <div class="mensagem-erro">{{ erro }}</div>
         {% endif %}
@@ -28,23 +25,25 @@
             <label for="nome">Nome do profissional</label>
             <input type="text" id="nome" name="nome" value="{{ profissional.nome if profissional else '' }}" required>
 
-            <label class="checkbox-row">
+            <label class="checkbox-row" style="margin-top: 12px; margin-bottom: 16px;">
                 <input type="checkbox" name="ativo" {% if profissional and profissional.ativo %}checked{% endif %}>
-                {% if profissional %}
-                    Profissional ativo (desmarque para desativar)
-                {% else %}
-                    Profissional ativo
-                {% endif %}
+                <span>
+                    {% if profissional %}
+                        Profissional ativo (desmarque para desativar)
+                    {% else %}
+                        Profissional ativo
+                    {% endif %}
+                </span>
             </label>
 
-            <fieldset>
-                <legend>Serviços realizados</legend>
+            <fieldset style="border: 1px solid var(--borda); border-radius: var(--raio-medio); padding: 16px; margin: 20px 0;">
+                <legend style="color: var(--cor-texto); font-size: 0.95rem; font-weight: 600; padding: 0 8px;">Serviços realizados</legend>
                 {% if servicos %}
                     <div class="lista-checks">
                         {% for servico in servicos %}
                         <label class="checkbox-row">
                             <input type="checkbox" name="servicos" value="{{ servico.id }}" {% if profissional and servico.id in profissional.servico_ids %}checked{% endif %}>
-                            {{ servico.nome }}
+                            <span>{{ servico.nome }}</span>
                         </label>
                         {% endfor %}
                     </div>
@@ -54,9 +53,9 @@
             </fieldset>
 
             {% if profissional %}
-            <fieldset class="secao-disponibilidade">
-                <legend>Disponibilidade</legend>
-                <p class="ajuda-disponibilidade">Defina os dias e horários em que este profissional atende:</p>
+            <fieldset class="secao-disponibilidade" style="border: 1px solid var(--borda); border-radius: var(--raio-medio); padding: 16px; margin: 20px 0;">
+                <legend style="color: var(--cor-texto); font-size: 0.95rem; font-weight: 600; padding: 0 8px;">Disponibilidade</legend>
+                <p class="ajuda-disponibilidade" style="margin-top: 0; font-size: 0.85rem; color: var(--cor-mutada);">Defina os dias e horários em que este profissional atende:</p>
                 <div class="tabela-disponibilidade">
                     {% for disp in disponibilidade %}
                     <div class="linha-disponibilidade">
@@ -87,5 +86,4 @@
             </div>
         </form>
     </div>
-</div>
 {% endblock %}
