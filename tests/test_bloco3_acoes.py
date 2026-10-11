@@ -309,38 +309,49 @@ def test_reagendamento_ignora_proprio_conflito(client, logged_admin):
 
 def test_reagendamento_jornada_e_estabelecimento(client, logged_admin):
     prof_id, serv_id = _criar_profissional_e_servico()
-    data_valida = _proxima_data(2)
-    ag_id, erro_c = models.criar_agendamento("Cliente Jornada", "(11) 94444-4444", [serv_id], prof_id, data_valida, "10:00")
-    assert ag_id is not None, f"Falha ao criar agendamento: {erro_c}"
 
-    # Configurar profissional para trabalhar apenas das 09:00 às 12:00 na terça-feira (dia 2)
+    # Achar próxima terça-feira (dia 2) e quarta-feira seguinte (dia 3)
+    hoje = datetime.now().date()
+    terca_date = None
+    for i in range(1, 14):
+        c = hoje + timedelta(days=i)
+        if (c.weekday() + 1) % 7 == 2:
+            terca_date = c
+            break
+
+    quarta_date = terca_date + timedelta(days=1)
+    terca = terca_date.strftime("%Y-%m-%d")
+    quarta = quarta_date.strftime("%Y-%m-%d")
+
+    # Configurar profissional para trabalhar:
+    # - Terça-feira (dia 2): jornada restrita das 09:00 às 12:00
+    # - Quarta-feira (dia 3): jornada normal das 09:00 às 18:00
     with database.db_session() as conn:
         conn.execute(
             """
             INSERT INTO profissional_disponibilidade (profissional_id, dia_semana, horario_entrada, horario_saida, ativo)
-            VALUES (%s, 2, '09:00', '12:00', TRUE)
+            VALUES
+                (%s, 2, '09:00', '12:00', TRUE),
+                (%s, 3, '09:00', '18:00', TRUE)
             ON CONFLICT (profissional_id, dia_semana) DO UPDATE SET
-                horario_entrada = '09:00', horario_saida = '12:00', ativo = TRUE
+                horario_entrada = EXCLUDED.horario_entrada,
+                horario_saida = EXCLUDED.horario_saida,
+                ativo = TRUE
             """,
-            (prof_id,),
+            (prof_id, prof_id),
         )
 
-    # Achar próxima terça-feira
-    hoje = datetime.now().date()
-    terca = None
-    for i in range(1, 14):
-        c = hoje + timedelta(days=i)
-        if (c.weekday() + 1) % 7 == 2:
-            terca = c.strftime("%Y-%m-%d")
-            break
+    # Agendamento original em data e horário permitidos (quarta-feira às 10:00)
+    ag_id, erro_c = models.criar_agendamento("Cliente Jornada", "(11) 94444-4444", [serv_id], prof_id, quarta, "10:00")
+    assert ag_id is not None, f"Falha ao criar agendamento: {erro_c}"
 
     # Tenta reagendar para terça-feira às 15:00 (fora da jornada do profissional que acaba às 12:00)
     ok, erro = models.reagendar_agendamento(ag_id, terca, "15:00", usuario=logged_admin)
     assert ok is False
     assert "Horário indisponível" in erro
 
-    # Tenta reagendar para terça-feira às 10:00 (dentro da jornada)
-    ok2, erro2 = models.reagendar_agendamento(ag_id, terca, "10:00", usuario=logged_admin)
+    # Tenta reagendar para terça-feira às 11:00 (dentro da jornada de terça e com data/hora distintas do original)
+    ok2, erro2 = models.reagendar_agendamento(ag_id, terca, "11:00", usuario=logged_admin)
     assert ok2 is True
     assert erro2 is None
 
