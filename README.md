@@ -1,6 +1,6 @@
 # AllLogic Scheduler
 
-Primeiro aplicativo oficial da plataforma AllLogic.
+Agillex Agenda é o sistema de agendamento online da AllLogic Online.
 
 ## Descrição
 
@@ -40,4 +40,4 @@ A definição da arquitetura de publicação em produção deverá seguir a infr
 
 ## Status
 
-🚧 Em desenvolvimento – Projeto Fênix / AllLogic
+🚧 Em desenvolvimento — Agillex Agenda, produto da AllLogic Online.
