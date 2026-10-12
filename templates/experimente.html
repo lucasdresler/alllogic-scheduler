@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block titulo %}Agillex Agenda — Experimente Grátis por 14 Dias{% endblock %}
+
+{% block conteudo %}
+<div class="container container-experimente">
+    <header class="topo experimente-topo">
+        <div class="experimente-badge">14 Dias de Teste Grátis</div>
+        <h1>Agillex Agenda para o seu Negócio</h1>
+        <div class="experimente-intro-bloco">
+            <p class="experimente-subtitulo">
+                A solução de agendamento online que centraliza os agendamentos, clientes e serviços do seu negócio em um só lugar.
+            </p>
+            <p class="experimente-publico-alvo">
+                Desenvolvido para barbearias, salões de beleza, clínicas, estúdios e empresas de serviços que atendem por hora marcada.
+            </p>
+        </div>
+    </header>
+
+    <div class="card card-beneficios">
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Agendamento Online 24/7</strong>
+                <p>Seus clientes agendam serviços a qualquer hora, pelo celular, tablet ou desktop, com uma experiência rápida e simples.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Equipe e Horários sob Controle</strong>
+                <p>Defina a disponibilidade individual de cada profissional, intervalos entre atendimentos e tabela de serviços.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Painel Administrativo Completo</strong>
+                <p>Visualize atendimentos do dia, semana e mês, com cancelamento, reagendamento e pesquisa rápida.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>14 Dias de Avaliação Gratuita</strong>
+                <p>Experimente todos os recursos no dia a dia do seu negócio com acesso completo e sem burocracia.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="experimente-cta-box">
+        <a href="https://wa.me/5511966381915?text=Ol%C3%A1!%20Gostaria%20de%20iniciar%20meu%20teste%20gratuito%20de%2014%20dias%20do%20Agillex%20Agenda."
+           class="btn-primario btn-iniciar-teste"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Solicitar início do teste gratuito pelo WhatsApp">
+            Iniciar 14 dias de teste grátis
+        </a>
+
+        <div class="experimente-selo-sem-cartao">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <polyline points="9 12 11 14 15 10"></polyline>
+            </svg>
+            <span>Sem necessidade de cartão de crédito</span>
+        </div>
+
+        <div class="experimente-contatos-canais">
+            <span class="experimente-contato-label">Atendimento comercial:</span>
+            <a href="tel:+5511966381915" class="experimente-link-canal" title="Ligue para (11) 96638-1915">
+                (11) 96638-1915
+            </a>
+            <span class="experimente-contato-sep" aria-hidden="true">·</span>
+            <a href="mailto:contato@alllogiconline.com.br" class="experimente-link-canal" title="Envie um e-mail para contato@alllogiconline.com.br">
+                contato@alllogiconline.com.br
+            </a>
+        </div>
+    </div>
+
+    <div class="experimente-acoes-retorno">
+        <a href="{{ url_for('index') }}" class="btn-secundario btn-voltar-agendamento">
+            Voltar ao agendamento
+        </a>
+    </div>
+
+    <footer class="rodape-publico experimente-rodape">
+        <p class="rodape-comercial-marca">AllLogic Online</p>
+        <p class="rodape-slogan">Tecnologia que trabalha para as pessoas.</p>
+        <p class="rodape-copy">&copy; 2026 AllLogic Online. Todos os direitos reservados.</p>
+    </footer>
+</div>
+{% endblock %}

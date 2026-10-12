@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block titulo %}Agillex Agenda — Cadastre-se e Experimente 14 Dias Grátis{% endblock %}
+
+{% block conteudo %}
+<div class="container container-experimente container-agillex">
+    <header class="topo experimente-topo">
+        <div class="experimente-badge">14 Dias de Teste Grátis</div>
+        <h1>Agillex Agenda para o seu Negócio</h1>
+        <div class="experimente-intro-bloco">
+            <p class="experimente-subtitulo">
+                A solução de agendamento online que centraliza os agendamentos, clientes e serviços do seu negócio em um só lugar.
+            </p>
+            <p class="experimente-publico-alvo">
+                Desenvolvido para barbearias, salões de beleza, clínicas, estúdios e empresas de serviços que atendem por hora marcada.
+            </p>
+        </div>
+    </header>
+
+    <div class="card card-beneficios">
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Agendamento Online 24/7</strong>
+                <p>Seus clientes agendam serviços a qualquer hora, pelo celular, tablet ou desktop, com uma experiência rápida e simples.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Equipe e Horários sob Controle</strong>
+                <p>Defina a disponibilidade individual de cada profissional, intervalos entre atendimentos e tabela de serviços.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Painel Administrativo Completo</strong>
+                <p>Visualize atendimentos do dia, semana e mês, com cancelamento, reagendamento e pesquisa rápida.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>14 Dias de Avaliação Gratuita</strong>
+                <p>Experimente todos os recursos no dia a dia do seu negócio com acesso completo e sem burocracia.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="experimente-cta-box">
+        <a href="#cadastro" class="btn-primario btn-iniciar-teste" id="btn-scroll-cadastro">
+            Iniciar 14 dias de teste grátis
+        </a>
+
+        <div class="experimente-selo-sem-cartao">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <polyline points="9 12 11 14 15 10"></polyline>
+            </svg>
+            <span>Sem necessidade de cartão de crédito</span>
+        </div>
+
+        <div class="experimente-contatos-canais">
+            <span class="experimente-contato-label">Atendimento comercial:</span>
+            <a href="tel:+5511966381915" class="experimente-link-canal" title="Ligue para (11) 96638-1915">
+                (11) 96638-1915
+            </a>
+            <span class="experimente-contato-sep" aria-hidden="true">·</span>
+            <a href="mailto:contato@alllogiconline.com.br" class="experimente-link-canal" title="Envie um e-mail para contato@alllogiconline.com.br">
+                contato@alllogiconline.com.br
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulário de Cadastro Automatizado -->
+    <section class="card card-cadastro" id="cadastro" aria-labelledby="titulo-cadastro">
+        <div class="cadastro-cabecalho">
+            <span class="cadastro-tag">Ativação Imediata</span>
+            <h2 id="titulo-cadastro">Cadastre seu Estabelecimento</h2>
+            <p>Ative seus 14 dias de teste gratuito agora mesmo. Sem cartão de crédito e sem burocracia.</p>
+        </div>
+
+        {% if erro %}
+        <div class="mensagem-erro mensagem-erro-cadastro" role="alert">
+            {{ erro }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('agillex') }}" class="form-cadastro" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <div class="form-cadastro-grid">
+                <div class="campo-grupo">
+                    <label for="input-estabelecimento">Nome do Estabelecimento *</label>
+                    <input type="text" id="input-estabelecimento" name="nome_estabelecimento"
+                           value="{{ valores.get('nome_estabelecimento', '') }}"
+                           placeholder="Ex.: Barbearia Estilo, Studio Bella" required maxlength="100">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="input-responsavel">Nome do Responsável *</label>
+                    <input type="text" id="input-responsavel" name="nome_responsavel"
+                           value="{{ valores.get('nome_responsavel', '') }}"
+                           placeholder="Seu nome completo" required maxlength="100">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="input-email">E-mail Comercial *</label>
+                    <input type="email" id="input-email" name="email"
+                           value="{{ valores.get('email', '') }}"
+                           placeholder="seu.email@empresa.com.br" required maxlength="120">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="input-telefone">Telefone / WhatsApp com DDD *</label>
+                    <input type="tel" id="input-telefone" name="telefone"
+                           value="{{ valores.get('telefone', '') }}"
+                           placeholder="(11) 98765-4321" required maxlength="20">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="input-usuario">Usuário de Acesso ao Painel *</label>
+                    <input type="text" id="input-usuario" name="usuario"
+                           value="{{ valores.get('usuario', '') }}"
+                           placeholder="Ex.: carlossilva (mínimo 3 caracteres)" required maxlength="30" autocomplete="username">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="input-senha">Senha de Acesso *</label>
+                    <input type="password" id="input-senha" name="senha"
+                           placeholder="Mínimo de 8 caracteres" required minlength="8" autocomplete="new-password">
+                </div>
+
+                <div class="campo-grupo campo-span-2">
+                    <label for="input-confirmar-senha">Confirmar Senha *</label>
+                    <input type="password" id="input-confirmar-senha" name="confirmar_senha"
+                           placeholder="Repita sua senha" required minlength="8" autocomplete="new-password">
+                </div>
+            </div>
+
+            <div class="cadastro-termos">
+                <label class="checkbox-label" for="input-termos">
+                    <input type="checkbox" id="input-termos" name="termos" value="1" {% if valores.get('termos') %}checked{% endif %} required>
+                    <span>Concordo com os termos de uso e política de privacidade da AllLogic Online para ativação dos 14 dias de teste.</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-primario btn-submit-cadastro" id="btn-criar-conta">
+                Criar conta e iniciar 14 dias grátis
+            </button>
+
+            <div class="cadastro-rodape-info">
+                <span>✓ Ativação imediata</span>
+                <span class="sep">·</span>
+                <span>✓ Sem cartão de crédito</span>
+                <span class="sep">·</span>
+                <span>✓ Cancele quando quiser</span>
+            </div>
+        </form>
+    </section>
+
+    <div class="experimente-acoes-retorno">
+        <a href="{{ url_for('admin_login') }}" class="experimente-link-secundario" style="margin-right: 18px;">
+            Já possui uma conta? Acesse o painel
+        </a>
+        <a href="{{ url_for('index') }}" class="btn-secundario btn-voltar-agendamento">
+            Voltar ao agendamento
+        </a>
+    </div>
+
+    <footer class="rodape-publico experimente-rodape">
+        <p class="rodape-comercial-marca">AllLogic Online</p>
+        <p class="rodape-slogan">Tecnologia que trabalha para as pessoas.</p>
+        <p class="rodape-copy">&copy; 2026 AllLogic Online. Todos os direitos reservados.</p>
+    </footer>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block titulo %}Período de Teste Encerrado — Agillex Agenda{% endblock %}
+
+{% block conteudo %}
+<div class="container container-trial-expirado">
+    <header class="topo topo-trial-expirado">
+        <div class="trial-expirado-badge">Avaliação de 14 Dias Concluída</div>
+        <h1>Seu período de teste terminou</h1>
+        <p class="trial-expirado-subtitulo">
+            Esperamos que o Agillex Agenda tenha facilitado e organizado os atendimentos do seu negócio.
+        </p>
+    </header>
+
+    <div class="card card-trial-expirado">
+        <div class="trial-preservacao-box">
+            <div class="trial-preservacao-icone" aria-hidden="true">🔒</div>
+            <div class="trial-preservacao-conteudo">
+                <strong>Seus dados continuam 100% seguros e preservados</strong>
+                <p>Todos os seus serviços cadastrados, profissionais, agendamentos e histórico de clientes permanecem salvos em nosso banco de dados. Nenhum dado foi excluído.</p>
+            </div>
+        </div>
+
+        <div class="trial-passos-reativacao">
+            <h2>Como ativar sua assinatura definitiva</h2>
+            <p>Entre em contato com nossa equipe comercial para escolher o plano ideal para a sua empresa e reativar seu acesso completo imediatamente:</p>
+
+            <div class="trial-contatos-cards">
+                <a href="https://wa.me/5511966381915?text=Ol%C3%A1!%20Meu%20per%C3%ADodo%20de%20teste%20do%20Agillex%20Agenda%20encerrou%20e%20gostaria%20de%20ativar%20meu%20plano."
+                   target="_blank" rel="noopener noreferrer" class="trial-card-canal" title="Falar via WhatsApp">
+                    <span class="canal-titulo">WhatsApp Comercial</span>
+                    <span class="canal-valor">(11) 96638-1915</span>
+                </a>
+
+                <a href="mailto:contato@alllogiconline.com.br?subject=Ativa%C3%A7%C3%A3o%20de%20Plano%20-%20Agillex%20Agenda"
+                   class="trial-card-canal" title="Enviar e-mail">
+                    <span class="canal-titulo">E-mail Comercial</span>
+                    <span class="canal-valor">contato@alllogiconline.com.br</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="trial-acoes">
+            <a href="{{ url_for('admin_logout') }}" class="btn-secundario btn-sair-trial">
+                Sair da conta
+            </a>
+        </div>
+    </div>
+
+    <footer class="rodape-publico rodape-trial">
+        <p class="rodape-comercial-marca">AllLogic Online</p>
+        <p class="rodape-slogan">Tecnologia que trabalha para as pessoas.</p>
+        <p class="rodape-copy">&copy; 2026 AllLogic Online. Todos os direitos reservados.</p>
+    </footer>
+</div>
+{% endblock %}

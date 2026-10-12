@@ -230,6 +230,7 @@ def login_requerido(f):
                 if admin_precisa_alterar_senha(conn, usuario):
                     return redirect(url_for("admin_configuracao_inicial"))
         return f(*args, **kwargs)
+
     return decorada
 
 
@@ -290,6 +291,16 @@ def agendamento_sucesso(agendamento_id):
         agendamento=agendamento,
         **_carregar_config_template(),
     )
+
+
+@app.route("/experimente")
+def experimente():
+    return render_template("experimente.html", **_carregar_config_template())
+
+
+@app.route("/agillex")
+def agillex():
+    return render_template("experimente.html", **_carregar_config_template())
 
 
 # ---------------------------------------------------------------------------

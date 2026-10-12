@@ -1,0 +1,309 @@
+/* ==========================================================================
+   Agillex Agenda — Estilos de Cadastro Automatizado e Trial Expirado
+   Preservado para futura reativação conforme decisão de publicação seletiva.
+   ========================================================================== */
+
+.container-agillex {
+    max-width: 680px;
+}
+
+.card-cadastro {
+    margin-top: 24px;
+    padding: 32px 28px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 20px rgba(20, 33, 61, 0.05);
+}
+
+.cadastro-cabecalho {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.cadastro-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--gold-subtle);
+    color: var(--navy-900);
+    border: 1px solid var(--champagne-dourado);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.cadastro-cabecalho h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--navy-profundo);
+    margin: 0 0 8px;
+}
+
+.cadastro-cabecalho p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.mensagem-erro-cadastro {
+    margin-bottom: 20px;
+}
+
+.form-cadastro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.campo-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.campo-grupo label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-body);
+}
+
+.campo-grupo input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--text-title);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box;
+}
+
+.campo-grupo input:focus {
+    border-color: var(--navy-profundo);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(20, 33, 61, 0.1);
+}
+
+.campo-span-2 {
+    grid-column: span 2;
+}
+
+.cadastro-termos {
+    margin-bottom: 22px;
+    padding: 12px 14px;
+    background: var(--bg-app);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--text-body);
+    line-height: 1.4;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: var(--navy-profundo);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.btn-submit-cadastro {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+}
+
+.cadastro-rodape-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.cadastro-rodape-info .sep {
+    color: var(--border-subtle);
+}
+
+.experimente-link-secundario {
+    font-size: 0.85rem;
+    color: var(--navy-profundo);
+    text-decoration: underline;
+    font-weight: 600;
+    transition: color 0.15s ease;
+}
+
+.experimente-link-secundario:hover {
+    color: var(--navy-700);
+}
+
+/* ==========================================================================
+   Agillex Agenda — Tela de Teste Expirado (/admin/trial-expirado)
+   ========================================================================== */
+.container-trial-expirado {
+    max-width: 620px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.topo-trial-expirado {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.trial-expirado-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FCD34D;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.topo-trial-expirado h1 {
+    font-size: 1.5rem;
+    color: var(--navy-profundo);
+    margin: 0 0 8px;
+}
+
+.trial-expirado-subtitulo {
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.card-trial-expirado {
+    padding: 28px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 20px rgba(20, 33, 61, 0.05);
+}
+
+.trial-preservacao-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    background: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: var(--radius-sm);
+    margin-bottom: 24px;
+}
+
+.trial-preservacao-icone {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.trial-preservacao-conteudo strong {
+    display: block;
+    font-size: 0.92rem;
+    color: #166534;
+    margin-bottom: 4px;
+}
+
+.trial-preservacao-conteudo p {
+    font-size: 0.85rem;
+    color: #15803D;
+    margin: 0;
+    line-height: 1.45;
+}
+
+.trial-passos-reativacao h2 {
+    font-size: 1.1rem;
+    color: var(--navy-profundo);
+    margin: 0 0 8px;
+}
+
+.trial-passos-reativacao p {
+    font-size: 0.88rem;
+    color: var(--text-body);
+    margin: 0 0 16px;
+}
+
+.trial-contatos-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.trial-card-canal {
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    background: var(--bg-app);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.trial-card-canal:hover {
+    border-color: var(--champagne-dourado);
+    background: var(--bg-surface-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(20, 33, 61, 0.06);
+}
+
+.trial-card-canal .canal-titulo {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.trial-card-canal .canal-valor {
+    font-size: 0.95rem;
+    color: var(--navy-profundo);
+    font-weight: 700;
+}
+
+.trial-acoes {
+    text-align: center;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 20px;
+}
+
+.btn-sair-trial {
+    display: inline-block;
+    padding: 10px 24px;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+
+@media (max-width: 640px) {
+    .form-cadastro-grid {
+        grid-template-columns: 1fr;
+    }
+    .campo-span-2 {
+        grid-column: span 1;
+    }
+    .trial-contatos-cards {
+        grid-template-columns: 1fr;
+    }
+}

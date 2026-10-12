@@ -91,7 +91,6 @@
         <button type="button" class="btn-secundario" data-voltar="4">Voltar</button>
     </section>
 
-    {% if endereco_estabelecimento or telefone_estabelecimento %}
     <footer class="rodape-publico">
         {% if endereco_estabelecimento %}
         <p class="rodape-endereco">{{ endereco_estabelecimento }}</p>
@@ -101,8 +100,12 @@
             <a href="tel:{{ telefone_limpo }}" class="link-telefone">{{ telefone_estabelecimento }}</a>
         </p>
         {% endif %}
+        <div class="rodape-comercial">
+            <span class="rodape-comercial-marca">Agillex Agenda</span>
+            <span class="rodape-comercial-sep">·</span>
+            <a href="https://agenda.alllogiconline.com.br/agillex" class="link-experimente">Experimente grátis por 14 dias</a>
+        </div>
     </footer>
-    {% endif %}
 </div>
 {% endblock %}
 

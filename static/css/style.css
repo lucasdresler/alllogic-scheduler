@@ -706,11 +706,281 @@ table.tabela-agendamentos .col-acoes {
     text-decoration: underline;
 }
 
-.mensagem-redirecionamento {
-    color: var(--text-muted);
-    font-size: 0.88rem;
-    margin-top: 16px;
+/* Chamada comercial para teste gratuito no rodapé público */
+.rodape-comercial {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
 }
+
+.rodape-comercial-marca {
+    color: var(--navy-profundo);
+    font-weight: 600;
+}
+
+.rodape-comercial-sep {
+    color: var(--champagne-dourado);
+    font-size: 0.85rem;
+}
+
+.link-experimente {
+    color: #8C6D2B;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.link-experimente:hover {
+    color: var(--navy-profundo);
+    text-decoration: underline;
+}
+
+.link-experimente:focus-visible {
+    outline: 2px solid var(--champagne-dourado);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+/* Página Informativa — Experimente Grátis */
+.container-experimente {
+    max-width: 620px;
+    margin: 32px auto 48px;
+    padding: 0 16px;
+}
+
+.experimente-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(229, 199, 139, 0.25);
+    border: 1px solid rgba(184, 151, 72, 0.4);
+    color: #8C6D2B;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+}
+
+.experimente-topo {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.experimente-topo h1 {
+    font-size: 1.55rem;
+    color: var(--navy-profundo);
+    margin: 0 0 10px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.experimente-intro-bloco {
+    max-width: 540px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+}
+
+.experimente-subtitulo {
+    font-size: 0.95rem;
+    color: var(--text-title);
+    line-height: 1.55;
+    margin: 0;
+    font-weight: 500;
+}
+
+.experimente-publico-alvo {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.card-beneficios {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 22px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 22px;
+}
+
+.beneficio-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.beneficio-icone {
+    width: 26px;
+    height: 26px;
+    background: rgba(229, 199, 139, 0.25);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8C6D2B;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.82rem;
+    margin-top: 1px;
+}
+
+.beneficio-conteudo strong {
+    display: block;
+    color: var(--navy-profundo);
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+}
+
+.beneficio-conteudo p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.83rem;
+    line-height: 1.45;
+}
+
+.experimente-cta-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 16px;
+    text-align: center;
+}
+
+.btn-iniciar-teste {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 380px;
+    padding: 14px 24px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-iniciar-teste:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-iniciar-teste:focus-visible {
+    outline: 2px solid var(--champagne-dourado);
+    outline-offset: 2px;
+}
+
+.experimente-selo-sem-cartao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #FDFBF7;
+    border: 1px solid rgba(184, 151, 72, 0.35);
+    color: #8C6D2B;
+    font-size: 0.80rem;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 999px;
+    letter-spacing: 0.01em;
+}
+
+.experimente-selo-sem-cartao svg {
+    flex-shrink: 0;
+    color: #8C6D2B;
+}
+
+.experimente-contatos-canais {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.experimente-contato-label {
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.experimente-link-canal {
+    color: var(--text-title);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.15s ease-in-out;
+}
+
+.experimente-link-canal:hover {
+    color: #8C6D2B;
+    text-decoration: underline;
+}
+
+.experimente-link-canal:focus-visible {
+    outline: 2px solid var(--champagne-dourado);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.experimente-contato-sep {
+    color: var(--border-subtle);
+}
+
+.experimente-acoes-retorno {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.btn-voltar-agendamento {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 280px;
+    text-decoration: none;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+}
+
+.experimente-rodape {
+    margin-top: 36px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--border-subtle);
+    text-align: center;
+}
+
+.rodape-slogan {
+    font-style: italic;
+    font-size: 0.8rem;
+    margin: 4px 0 6px;
+    color: var(--text-muted);
+}
+
+.rodape-copy {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
 
 /* Seção de disponibilidade do profissional */
 .secao-disponibilidade {
@@ -831,6 +1101,9 @@ table.tabela-agendamentos .col-acoes {
     color: var(--text-muted);
     margin: 0;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.4;
 }
 
 .form-filtro-prof select {
@@ -840,6 +1113,9 @@ table.tabela-agendamentos .col-acoes {
     padding: 6px 12px;
     border-radius: var(--radius-sm);
     font-size: 0.85rem;
+    margin: 0;
+    line-height: 1.4;
+    vertical-align: middle;
 }
 
 /* Contato do cliente: telefone e WhatsApp */
@@ -1176,6 +1452,9 @@ table.tabela-agendamentos .col-acoes {
     display: flex;
     min-height: 100vh;
     background-color: var(--bg-app);
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
 }
 
 /* Sidebar Lateral Desktop */
@@ -1430,6 +1709,10 @@ table.tabela-agendamentos .col-acoes {
 .admin-main {
     flex: 1;
     min-width: 0;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
 }
@@ -1566,6 +1849,132 @@ table.tabela-agendamentos .col-acoes {
     max-width: 1200px;
     width: 100%;
     box-sizing: border-box;
+    flex: 1;
+}
+
+/* ==========================================================================
+   Rodapé Institucional do Painel Administrativo (AllLogic Online)
+   ========================================================================== */
+.admin-footer {
+    width: 100%;
+    background-color: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    margin-top: auto;
+    padding: 24px 28px 20px;
+    box-sizing: border-box;
+}
+
+.admin-footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.admin-footer-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.admin-footer-brand-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 3px;
+}
+
+.admin-footer-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--navy-profundo);
+}
+
+.admin-footer-product {
+    color: var(--navy-profundo);
+    letter-spacing: -0.01em;
+}
+
+.admin-footer-sep {
+    color: var(--champagne-dourado);
+    font-weight: 400;
+}
+
+.admin-footer-company {
+    color: var(--champagne-dourado);
+    font-weight: 600;
+    text-align: center;
+}
+
+.admin-footer-slogan {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+}
+
+.admin-footer-contacts {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.admin-footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+}
+
+.admin-footer-link svg {
+    color: var(--champagne-dourado);
+    flex-shrink: 0;
+    transition: color 0.15s ease-in-out;
+}
+
+.admin-footer-link:hover {
+    color: var(--navy-profundo);
+    text-decoration: underline;
+}
+
+.admin-footer-link:hover svg {
+    color: var(--navy-profundo);
+}
+
+.admin-footer-link:focus-visible {
+    outline: 2px solid var(--champagne-dourado);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.admin-footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 12px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.admin-footer-copyright {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
 }
 
 /* Overlay da Gaveta Mobile */
@@ -1629,5 +2038,184 @@ table.tabela-agendamentos .col-acoes {
 
     .btn-topbar-publico span {
         display: none;
+    }
+}
+
+/* Responsividade Mobile para Dashboard, Abas e Controles (<= 768px) */
+@media (max-width: 768px) {
+    .admin-topbar {
+        padding: 10px 14px;
+        gap: 10px;
+    }
+
+    .topbar-left {
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .topbar-titles {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .topbar-page-title {
+        font-size: 1.12rem;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topbar-establishment-name {
+        font-size: 0.76rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .btn-topbar-logout {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        gap: 5px;
+        flex-shrink: 0;
+    }
+
+    /* Painel de Filtros e Abas do Dashboard */
+    .painel-filtros-card {
+        padding: 12px;
+    }
+
+    .tabs-e-filtro {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .tabs-e-filtro .tabs {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        padding: 3px;
+        box-sizing: border-box;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs-e-filtro .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tabs-e-filtro .tab-link {
+        padding: 8px 4px;
+        font-size: 0.82rem;
+        min-width: 0;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .filtro-profissionais-container {
+        width: 100%;
+    }
+
+    .form-filtro-prof {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .form-filtro-prof label {
+        font-size: 0.82rem;
+        flex-shrink: 0;
+    }
+
+    .form-filtro-prof select {
+        flex: 1;
+        min-width: 0;
+        width: 100%;
+        font-size: 0.82rem;
+        padding: 6px 10px;
+        margin: 0;
+    }
+
+    /* Navegação semanal responsiva */
+    .navegacao-semana {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .periodo-semana-rotulo {
+        order: -1;
+        width: 100%;
+        text-align: center;
+        margin-bottom: 2px;
+        font-size: 0.9rem;
+    }
+
+    .btn-navegacao-semana {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+    }
+
+    /* Rodapé Administrativo no Mobile (<= 768px) */
+    .admin-footer {
+        padding: 20px 14px 22px;
+    }
+
+    .admin-footer-main {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+    }
+
+    .admin-footer-brand-section {
+        align-items: center;
+    }
+
+    .admin-footer-contacts {
+        justify-content: center;
+        gap: 10px 16px;
+    }
+
+    .admin-footer-bottom {
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* Telas ultra-compactas (<= 360px) */
+@media (max-width: 360px) {
+    .admin-content-body {
+        padding: 14px 10px 36px;
+    }
+
+    .painel-filtros-card {
+        padding: 10px 8px;
+    }
+
+    .tabs-e-filtro .tab-link {
+        padding: 7px 2px;
+        font-size: 0.78rem;
+    }
+
+    .topbar-page-title {
+        font-size: 1.05rem;
+    }
+
+    .admin-footer-contacts {
+        flex-direction: column;
+        gap: 8px;
     }
 }
