@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block titulo %}Período de Teste Encerrado — Agillex Agenda{% endblock %}
+
+{% block conteudo %}
+<div class="container container-experimente" style="max-width: 600px; margin: 40px auto; padding: 0 16px;">
+    <div class="card" style="padding: 32px 24px; text-align: center; border-top: 4px solid var(--laranja-aviso, #f59e0b);">
+        <div style="width: 56px; height: 56px; margin: 0 auto 16px; background: #fffbeb; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </div>
+
+        <span style="display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; margin-bottom: 12px;">
+            14 Dias de Teste Concluídos
+        </span>
+
+        <h1 style="font-size: 1.5rem; color: var(--navy-900, #0f172a); margin: 0 0 12px 0;">
+            Seu período de avaliação gratuita encerrou
+        </h1>
+
+        <p style="color: var(--texto-secundario, #475569); font-size: 0.95rem; line-height: 1.5; margin: 0 0 20px 0;">
+            Esperamos que o <strong>Agillex Agenda</strong> tenha facilitado a rotina do seu negócio! Todos os seus dados, cadastros de serviços, clientes e histórico de agendamentos permanecem <strong>100% preservados e seguros</strong> em nossos servidores.
+        </p>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left;">
+            <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 0.9rem; color: var(--navy-900, #0f172a);">
+                Para continuar utilizando o sistema:
+            </p>
+            <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: #475569; line-height: 1.6;">
+                <li>Entre em contato com nossa equipe comercial para ativar seu plano.</li>
+                <li>Sua conta e link de agendamento serão reativados imediatamente.</li>
+                <li>Nenhum dado cadastrado durante o teste será perdido.</li>
+            </ul>
+        </div>
+
+        <a href="https://wa.me/5511966381915?text=Ol%C3%A1!%20Meu%20per%C3%ADodo%20de%20teste%20do%20Agillex%20Agenda%20encerrou%20e%20gostaria%20de%20ativar%20meu%20plano."
+           target="_blank" rel="noopener noreferrer"
+           class="btn-primario"
+           style="background-color: #25D366; border-color: #25D366; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; font-size: 1rem; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.155.57 4.175 1.564 5.922l-1.564 5.906 6.082-1.595c1.706.924 3.659 1.467 5.748 1.467 6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            <span>Falar no WhatsApp para Ativar Plano</span>
+        </a>
+
+        <div style="margin-top: 20px; font-size: 0.85rem;">
+            <a href="{{ url_for('admin_logout') }}" style="color: var(--texto-secundario, #64748b); text-decoration: underline;">
+                Sair do painel
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

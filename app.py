@@ -26,6 +26,13 @@ from database import (
     criar_token_recuperacao,
     validar_token_recuperacao,
     redefinir_senha_com_token,
+    criar_estabelecimento_com_admin,
+    obter_estabelecimento_por_id,
+    obter_estabelecimento_por_email,
+    obter_estabelecimento_por_cnpj_cpf,
+    obter_estabelecimento_por_slug,
+    verificar_status_trial,
+    obter_admin_com_estabelecimento,
 )
 from email_service import enviar_email_recuperacao
 
@@ -203,7 +210,16 @@ def _carregar_config_template():
 
 @app.context_processor
 def inject_config_template():
-    return _carregar_config_template()
+    dados = _carregar_config_template()
+    if session.get("admin_logado") and session.get("estabelecimento_id"):
+        estab_id = session.get("estabelecimento_id")
+        if estab_id != 1:
+            try:
+                with db_session() as conn:
+                    dados["info_trial"] = verificar_status_trial(conn, estab_id)
+            except Exception:
+                pass
+    return dados
 
 
 # ---------------------------------------------------------------------------
@@ -238,11 +254,16 @@ def login_requerido(f):
     def decorada(*args, **kwargs):
         if not session.get("admin_logado"):
             return redirect(url_for("admin_login"))
-        if request.endpoint not in ("admin_configuracao_inicial", "admin_logout"):
+        if request.endpoint not in ("admin_configuracao_inicial", "admin_logout", "admin_trial_expirado"):
             usuario = session.get("admin_usuario")
+            estab_id = session.get("estabelecimento_id")
             with db_session() as conn:
                 if admin_precisa_alterar_senha(conn, usuario):
                     return redirect(url_for("admin_configuracao_inicial"))
+                if estab_id and estab_id != 1:
+                    info_trial = verificar_status_trial(conn, estab_id)
+                    if info_trial.get("expirado"):
+                        return redirect(url_for("admin_trial_expirado"))
         return f(*args, **kwargs)
 
     return decorada
@@ -375,9 +396,101 @@ def experimente():
     return render_template("experimente.html", **_carregar_config_template())
 
 
-@app.route("/agillex")
+@app.route("/agillex", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def agillex():
-    return render_template("experimente.html", **_carregar_config_template())
+    erro = None
+    valores = {}
+    config = _carregar_config_template()
+
+    if request.method == "POST":
+        nome_responsavel = request.form.get("nome_responsavel", "").strip()
+        nome_estabelecimento = request.form.get("nome_estabelecimento", "").strip()
+        cnpj_cpf = request.form.get("cnpj_cpf", "").strip()
+        telefone = request.form.get("telefone", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        senha = request.form.get("senha", "")
+        confirmar_senha = request.form.get("confirmar_senha", "")
+        termos = request.form.get("termos") == "1"
+
+        valores = {
+            "nome_responsavel": nome_responsavel,
+            "nome_estabelecimento": nome_estabelecimento,
+            "cnpj_cpf": cnpj_cpf,
+            "telefone": telefone,
+            "email": email,
+            "termos": termos,
+        }
+
+        digitos_doc = re.sub(r"\D", "", cnpj_cpf)
+        digitos_tel = re.sub(r"\D", "", telefone)
+
+        if not (nome_responsavel and nome_estabelecimento and cnpj_cpf and telefone and email and senha and confirmar_senha):
+            erro = "Por favor, preencha todos os campos obrigatórios."
+        elif not termos:
+            erro = "Você precisa concordar com os termos de uso para ativar o período de teste de 14 dias."
+        elif not _validar_email(email):
+            erro = "Por favor, informe um endereço de e-mail válido."
+        elif len(digitos_doc) not in (11, 14):
+            erro = "O documento informado deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos) válido."
+        elif len(digitos_tel) < 10:
+            erro = "O telefone informado deve conter DDD e pelo menos 10 dígitos numéricos."
+        elif len(senha) < 8:
+            erro = "A senha deve ter no mínimo 8 caracteres."
+        elif senha != confirmar_senha:
+            erro = "A confirmação de senha não confere com a senha informada."
+        else:
+            with db_session() as conn:
+                admin_existente = conn.execute(
+                    "SELECT id FROM admin WHERE LOWER(usuario) = %s OR (email IS NOT NULL AND LOWER(email) = %s)",
+                    (email, email),
+                ).fetchone()
+                estab_email = obter_estabelecimento_por_email(conn, email)
+                if admin_existente or estab_email:
+                    erro = "Este endereço de e-mail já está cadastrado. Se já possui uma conta, faça login no painel."
+                else:
+                    estab_doc = obter_estabelecimento_por_cnpj_cpf(conn, cnpj_cpf)
+                    if estab_doc and estab_doc["status"] == "ativo":
+                        erro = "Já existe uma avaliação de 14 dias ativa para este CNPJ/CPF."
+                    else:
+                        from werkzeug.security import generate_password_hash
+                        senha_hash = generate_password_hash(senha)
+                        novo_estab = criar_estabelecimento_com_admin(
+                            conn,
+                            nome_estabelecimento=nome_estabelecimento,
+                            nome_responsavel=nome_responsavel,
+                            cnpj_cpf=cnpj_cpf,
+                            email=email,
+                            telefone=telefone,
+                            usuario=email,
+                            senha_hash=senha_hash,
+                        )
+                        session["admin_logado"] = True
+                        session["admin_usuario"] = email
+                        session["estabelecimento_id"] = novo_estab["estabelecimento_id"]
+
+                        return redirect(url_for("admin_estabelecimento", boas_vindas="1"))
+
+    return render_template(
+        "agillex.html",
+        erro=erro,
+        valores=valores,
+        **config,
+    )
+
+
+@app.route("/admin/trial-expirado")
+def admin_trial_expirado():
+    if not session.get("admin_logado"):
+        return redirect(url_for("admin_login"))
+    estab_id = session.get("estabelecimento_id")
+    with db_session() as conn:
+        info_trial = verificar_status_trial(conn, estab_id)
+    return render_template(
+        "admin_trial_expirado.html",
+        info_trial=info_trial,
+        **_carregar_config_template(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -541,11 +654,20 @@ def admin_login():
     if request.method == "POST":
         usuario = request.form.get("usuario", "").strip()
         senha = request.form.get("senha", "")
-        if models.verificar_admin(usuario, senha):
+        admin_data = models.verificar_admin(usuario, senha)
+        if admin_data:
+            admin_usuario = admin_data["usuario"] if isinstance(admin_data, dict) else usuario
             session["admin_logado"] = True
-            session["admin_usuario"] = usuario
+            session["admin_usuario"] = admin_usuario
+            if isinstance(admin_data, dict) and admin_data.get("estabelecimento_id"):
+                session["estabelecimento_id"] = admin_data["estabelecimento_id"]
+            else:
+                with db_session() as conn:
+                    adm = conn.execute("SELECT estabelecimento_id FROM admin WHERE usuario = %s", (admin_usuario,)).fetchone()
+                    if adm and adm["estabelecimento_id"]:
+                        session["estabelecimento_id"] = adm["estabelecimento_id"]
             with db_session() as conn:
-                if admin_precisa_alterar_senha(conn, usuario):
+                if admin_precisa_alterar_senha(conn, admin_usuario):
                     return redirect(url_for("admin_configuracao_inicial"))
             return redirect(url_for("admin_dashboard"))
         erro = "Usuário ou senha inválidos."
@@ -884,30 +1006,67 @@ def admin_estabelecimento():
     sucesso = None
     usuario = session.get("admin_usuario")
 
+    if request.args.get("boas_vindas") == "1":
+        sucesso = "Bem-vindo ao Agillex Agenda! Seu período de 14 dias de teste gratuito está ativo. Confira e complete os dados do seu negócio abaixo para começar a receber agendamentos."
+
     with db_session() as conn:
         configuracoes = obter_todas_configuracoes(conn)
         admin_row = conn.execute(
-            "SELECT id, usuario, email, nome_responsavel FROM admin WHERE usuario = %s",
+            "SELECT id, usuario, email, nome_responsavel, estabelecimento_id FROM admin WHERE usuario = %s",
             (usuario,),
         ).fetchone()
+        estab_row = None
+        if admin_row and admin_row.get("estabelecimento_id"):
+            estab_row = obter_estabelecimento_por_id(conn, admin_row["estabelecimento_id"])
 
-    nome_responsavel_salvo = (
-        (admin_row["nome_responsavel"] or "").strip()
-        if admin_row and "nome_responsavel" in admin_row and admin_row["nome_responsavel"]
-        else ""
-    )
+    if estab_row and admin_row.get("estabelecimento_id") and admin_row["estabelecimento_id"] != 1:
+        nome_estabelecimento_padrao = estab_row["nome"] or configuracoes.get("nome_estabelecimento", "")
+        nome_responsavel_salvo = estab_row["nome_responsavel"] or (admin_row["nome_responsavel"] or "").strip()
+        cpf_cnpj_padrao = estab_row["cnpj_cpf"] or configuracoes.get("cpf_cnpj", "")
+        telefone_padrao = estab_row["telefone"] or configuracoes.get("telefone", "")
+        whatsapp_padrao = estab_row["telefone"] or configuracoes.get("whatsapp", "")
+        email_padrao = estab_row["email"] or admin_row["email"] or configuracoes.get("email_comercial", "")
+    else:
+        nome_responsavel_salvo = (
+            (admin_row["nome_responsavel"] or "").strip()
+            if admin_row and admin_row.get("nome_responsavel")
+            else (estab_row["nome_responsavel"] if estab_row else "")
+        )
 
-    telefone_padrao = configuracoes.get(
-        "telefone", configuracoes.get("telefone_estabelecimento", "")
-    )
+        nome_estabelecimento_padrao = (
+            configuracoes.get("nome_estabelecimento")
+            or (estab_row["nome"] if estab_row else "")
+        )
+
+        cpf_cnpj_padrao = (
+            configuracoes.get("cpf_cnpj")
+            or (estab_row["cnpj_cpf"] if estab_row else "")
+        )
+
+        telefone_padrao = (
+            configuracoes.get("telefone")
+            or configuracoes.get("telefone_estabelecimento")
+            or (estab_row["telefone"] if estab_row else "")
+        )
+
+        whatsapp_padrao = (
+            configuracoes.get("whatsapp")
+            or (estab_row["telefone"] if estab_row else "")
+        )
+
+        email_padrao = (
+            configuracoes.get("email_comercial")
+            or (estab_row["email"] if estab_row else "")
+            or (admin_row["email"] if admin_row else "")
+        )
 
     dados = {
         "logotipo": configuracoes.get("logotipo", ""),
-        "nome_estabelecimento": configuracoes.get("nome_estabelecimento", ""),
+        "nome_estabelecimento": nome_estabelecimento_padrao,
         "nome_responsavel": nome_responsavel_salvo,
-        "nome_fantasia": configuracoes.get("nome_fantasia", ""),
+        "nome_fantasia": configuracoes.get("nome_fantasia", nome_estabelecimento_padrao),
         "razao_social": configuracoes.get("razao_social", ""),
-        "cpf_cnpj": configuracoes.get("cpf_cnpj", ""),
+        "cpf_cnpj": cpf_cnpj_padrao,
         "cep": configuracoes.get("cep", ""),
         "logradouro": configuracoes.get("logradouro", ""),
         "numero": configuracoes.get("numero", ""),
@@ -916,8 +1075,8 @@ def admin_estabelecimento():
         "cidade": configuracoes.get("cidade", ""),
         "estado": configuracoes.get("estado", ""),
         "telefone": telefone_padrao,
-        "whatsapp": configuracoes.get("whatsapp", ""),
-        "email_comercial": configuracoes.get("email_comercial", ""),
+        "whatsapp": whatsapp_padrao,
+        "email_comercial": email_padrao,
     }
 
     if request.method == "POST":
@@ -1008,6 +1167,22 @@ def admin_estabelecimento():
                         "UPDATE admin SET nome_responsavel = %s WHERE id = %s",
                         (nome_responsavel, admin_row["id"]),
                     )
+                    if admin_row.get("estabelecimento_id"):
+                        conn.execute(
+                            """
+                            UPDATE estabelecimento
+                            SET nome = %s, nome_responsavel = %s, cnpj_cpf = %s, telefone = %s, email = %s
+                            WHERE id = %s
+                            """,
+                            (
+                                nome_estabelecimento,
+                                nome_responsavel,
+                                cpf_cnpj,
+                                telefone,
+                                email_comercial or admin_row["email"] or "",
+                                admin_row["estabelecimento_id"],
+                            ),
+                        )
 
             models._limpar_cache_config()
             if remover_logo_acao:

@@ -95,7 +95,13 @@
                     <span class="topbar-establishment-name">{% block subtitulo_topbar %}{{ nome_estabelecimento }}{% endblock %}</span>
                 </div>
             </div>
-            <div class="topbar-right">
+            <div class="topbar-right" style="display: flex; align-items: center; gap: 12px;">
+                {% if info_trial and not info_trial.get('expirado') %}
+                <span class="badge-trial-dias" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 14px; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>Teste: {{ info_trial.dias_restantes }} dia{{ 's' if info_trial.dias_restantes != 1 else '' }} restante{{ 's' if info_trial.dias_restantes != 1 else '' }}</span>
+                </span>
+                {% endif %}
                 <a href="{{ url_for('admin_logout') }}" class="btn-topbar-logout link-logout" title="Sair do painel administrativo">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     <span>Sair</span>

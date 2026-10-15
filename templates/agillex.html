@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block titulo %}Agillex Agenda — Cadastre-se e Experimente 14 Dias Grátis{% endblock %}
+
+{% block conteudo %}
+<div class="container container-experimente container-agillex">
+    <header class="topo experimente-topo">
+        <div class="experimente-badge">14 Dias de Teste Grátis</div>
+        <h1>Agillex Agenda para o seu Negócio</h1>
+        <div class="experimente-intro-bloco">
+            <p class="experimente-subtitulo">
+                A solução de agendamento online que centraliza os agendamentos, clientes e serviços do seu negócio em um só lugar.
+            </p>
+            <p class="experimente-publico-alvo">
+                Desenvolvido para barbearias, salões de beleza, clínicas, consultórios, estúdios e serviços com hora marcada.
+            </p>
+        </div>
+    </header>
+
+    <div class="card card-beneficios">
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Agendamento Online 24/7</strong>
+                <p>Seus clientes escolhem serviços e horários disponíveis com confirmação rápida pelo celular, tablet ou computador.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Equipe e Horários sob Controle</strong>
+                <p>Defina a disponibilidade individual de cada membro da equipe, jornadas personalizadas e intervalos entre atendimentos.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>Painel Administrativo Completo</strong>
+                <p>Visualize os agendamentos do dia, semana e mês, com cancelamento seguro, histórico de clientes e reorganização da agenda.</p>
+            </div>
+        </div>
+
+        <div class="beneficio-item">
+            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
+            <div class="beneficio-conteudo">
+                <strong>14 Dias de Avaliação Gratuita</strong>
+                <p>Experimente todos os recursos no dia a dia do seu negócio com ativação imediata, sem burocracia e sem cartão de crédito.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário de Cadastro Automatizado -->
+    <section class="card card-cadastro" id="cadastro" aria-labelledby="titulo-cadastro" style="margin-top: 24px;">
+        <div class="cadastro-cabecalho" style="margin-bottom: 20px; text-align: center;">
+            <span class="cadastro-tag" style="display: inline-block; background: var(--azul-suave, #e8f0fe); color: var(--navy-800, #1e3a8a); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px;">Ativação Imediata</span>
+            <h2 id="titulo-cadastro" style="font-size: 1.4rem; color: var(--navy-900, #0f172a); margin: 0 0 6px 0;">Cadastre seu Estabelecimento</h2>
+            <p style="color: var(--texto-secundario, #475569); font-size: 0.95rem; margin: 0;">Inicie seus 14 dias de teste gratuito agora. Sem cartão de crédito e sem burocracia.</p>
+        </div>
+
+        {% if erro %}
+        <div class="mensagem-erro" role="alert" style="margin-bottom: 18px;">
+            {{ erro }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('agillex') }}" class="form-cadastro" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="campo-grupo" style="grid-column: span 2;">
+                    <label for="nome_responsavel" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Nome completo do responsável *</label>
+                    <input type="text" id="nome_responsavel" name="nome_responsavel"
+                           value="{{ valores.get('nome_responsavel', '') }}"
+                           placeholder="Seu nome completo" required maxlength="100"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="nome_estabelecimento" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Nome da Empresa / Estabelecimento *</label>
+                    <input type="text" id="nome_estabelecimento" name="nome_estabelecimento"
+                           value="{{ valores.get('nome_estabelecimento', '') }}"
+                           placeholder="Ex.: Barbearia Top, Studio Bella" required maxlength="100"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="cnpj_cpf" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">CNPJ ou CPF *</label>
+                    <input type="text" id="cnpj_cpf" name="cnpj_cpf"
+                           value="{{ valores.get('cnpj_cpf', '') }}"
+                           placeholder="00.000.000/0000-00 ou 000.000.000-00" required maxlength="20"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="telefone" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Telefone / WhatsApp com DDD *</label>
+                    <input type="tel" id="telefone" name="telefone"
+                           value="{{ valores.get('telefone', '') }}"
+                           placeholder="(11) 98765-4321" required maxlength="20"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="email" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">E-mail comercial (será seu login) *</label>
+                    <input type="email" id="email" name="email"
+                           value="{{ valores.get('email', '') }}"
+                           placeholder="seu.email@empresa.com.br" required maxlength="120" autocomplete="username"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="senha" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Senha de acesso ao painel *</label>
+                    <input type="password" id="senha" name="senha"
+                           placeholder="Mínimo de 8 caracteres" required minlength="8" autocomplete="new-password"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="confirmar_senha" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Confirmar senha *</label>
+                    <input type="password" id="confirmar_senha" name="confirmar_senha"
+                           placeholder="Repita sua senha" required minlength="8" autocomplete="new-password"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
+                </div>
+            </div>
+
+            <div class="cadastro-termos" style="margin-top: 18px;">
+                <label class="checkbox-label" for="input-termos" style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: var(--texto-secundario, #475569); cursor: pointer;">
+                    <input type="checkbox" id="input-termos" name="termos" value="1" {% if valores.get('termos') %}checked{% endif %} required style="margin-top: 3px;">
+                    <span>Concordo com os termos de uso e política de privacidade da AllLogic para ativação dos 14 dias de teste gratuito.</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-primario btn-submit-cadastro" id="btn-criar-conta" style="width: 100%; padding: 12px; font-size: 1rem; margin-top: 18px; justify-content: center;">
+                Criar conta e iniciar 14 dias grátis
+            </button>
+
+            <div class="cadastro-rodape-info" style="display: flex; justify-content: center; gap: 12px; margin-top: 14px; font-size: 0.85rem; color: var(--texto-secundario, #64748b);">
+                <span>✓ Ativação imediata</span>
+                <span class="sep">·</span>
+                <span>✓ Sem cartão de crédito</span>
+                <span class="sep">·</span>
+                <span>✓ 14 dias completos</span>
+            </div>
+        </form>
+    </section>
+
+    <div class="experimente-acoes-retorno" style="margin-top: 24px; text-align: center;">
+        <a href="{{ url_for('admin_login') }}" class="experimente-link-secundario" style="margin-right: 18px; font-size: 0.9rem; color: var(--navy-800, #1e3a8a); text-decoration: underline;">
+            Já possui uma conta? Acesse o painel
+        </a>
+        <a href="{{ url_for('index') }}" class="btn-secundario btn-voltar-agendamento" style="display: inline-block; padding: 8px 16px; font-size: 0.85rem; text-decoration: none;">
+            Voltar ao agendamento
+        </a>
+    </div>
+
+    <div class="experimente-contatos-canais" style="margin-top: 20px; text-align: center; font-size: 0.85rem; color: var(--texto-secundario, #64748b);">
+        <span class="experimente-contato-label">Atendimento e suporte comercial:</span>
+        <a href="https://wa.me/5511966381915" target="_blank" rel="noopener noreferrer" style="color: #25D366; font-weight: 600; text-decoration: none; margin-left: 6px;">
+            WhatsApp (11) 96638-1915
+        </a>
+        <span class="experimente-contato-sep" aria-hidden="true" style="margin: 0 6px;">·</span>
+        <a href="mailto:contato@alllogiconline.com.br" style="color: var(--navy-800, #1e3a8a); text-decoration: underline;">
+            contato@alllogiconline.com.br
+        </a>
+    </div>
+
+    <footer class="rodape-publico experimente-rodape" style="margin-top: 32px; text-align: center; font-size: 0.8rem; color: var(--texto-secundario, #94a3b8); border-top: 1px solid var(--borda-discreta, #e2e8f0); padding-top: 16px;">
+        <p class="rodape-comercial-marca" style="font-weight: 600; color: var(--navy-900, #0f172a); margin: 0 0 4px 0;">AllLogic Online — Engenharia de Soluções Digitais</p>
+        <p class="rodape-slogan" style="margin: 0 0 4px 0;">Tecnologia que trabalha para as pessoas.</p>
+        <p class="rodape-copy" style="margin: 0;">&copy; 2026 AllLogic Online. Todos os direitos reservados.</p>
+    </footer>
+</div>
+
+<script>
+    // Máscara flexível para CPF ou CNPJ
+    var inputDoc = document.getElementById('cnpj_cpf');
+    if (inputDoc) {
+        inputDoc.addEventListener('input', function (e) {
+            var v = e.target.value.replace(/\D/g, '');
+            if (v.length <= 11) {
+                // CPF: 000.000.000-00
+                v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            } else {
+                // CNPJ: 00.000.000/0000-00
+                v = v.substring(0, 14);
+                v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+                v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                v = v.replace(/(\d{4})(\d)/, '$1-$2');
+            }
+            e.target.value = v;
+        });
+    }
+
+    // Máscara para Telefone: (00) 00000-0000 ou (00) 0000-0000
+    var inputTel = document.getElementById('telefone');
+    if (inputTel) {
+        inputTel.addEventListener('input', function (e) {
+            var v = e.target.value.replace(/\D/g, '').substring(0, 11);
+            if (v.length > 10) {
+                v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+            } else if (v.length > 5) {
+                v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+            } else if (v.length > 2) {
+                v = v.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+            } else if (v.length > 0) {
+                v = v.replace(/^(\d{0,2})$/, '($1');
+            }
+            e.target.value = v;
+        });
+    }
+</script>
+{% endblock %}
