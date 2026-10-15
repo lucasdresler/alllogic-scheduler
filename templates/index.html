@@ -113,6 +113,8 @@
 <script>
     window.DIAS_ANTECEDENCIA = {{ dias_antecedencia }};
     window.DIAS_FUNCIONAMENTO = {{ dias_funcionamento|tojson }};
+    window.ESTABELECIMENTO_ID = {{ estabelecimento_id|default(1)|tojson }};
+    window.ESTABELECIMENTO_SLUG = {{ slug|default('')|tojson }};
 </script>
 <script src="{{ url_for('static', filename='js/agendamento.js') }}"></script>
 {% endblock %}

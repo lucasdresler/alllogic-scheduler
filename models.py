@@ -3,7 +3,7 @@ from functools import lru_cache
 import re
 import uuid
 
-from database import db_session, obter_todas_configuracoes
+from database import db_session, obter_todas_configuracoes, obter_configuracoes_estabelecimento
 
 
 def _carregar_configuracoes():
@@ -58,15 +58,26 @@ def _obter_config_lista_int(chave, padrao=None):
         return padrao
 
 
-def listar_servicos_admin():
+def listar_servicos_admin(estabelecimento_id=None):
     with db_session() as conn:
-        rows = conn.execute(
-            "SELECT * FROM servico ORDER BY ativo DESC, nome ASC"
-        ).fetchall()
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                rows = conn.execute(
+                    "SELECT * FROM servico WHERE estabelecimento_id = 1 OR estabelecimento_id IS NULL ORDER BY ativo DESC, nome ASC"
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM servico WHERE estabelecimento_id = %s ORDER BY ativo DESC, nome ASC",
+                    (estabelecimento_id,)
+                ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM servico ORDER BY ativo DESC, nome ASC"
+            ).fetchall()
         return [dict(row) for row in rows]
 
 
-def criar_servico(nome, preco, duracao_minutos, ativo=True, descricao=""):
+def criar_servico(nome, preco, duracao_minutos, ativo=True, descricao="", estabelecimento_id=None):
     nome = (nome or "").strip()
     descricao = (descricao or "").strip()
     if not nome:
@@ -88,14 +99,15 @@ def criar_servico(nome, preco, duracao_minutos, ativo=True, descricao=""):
     if duracao <= 0:
         return None, "Duração deve ser maior que zero."
 
+    estab_id = estabelecimento_id or 1
     with db_session() as conn:
         cursor = conn.execute(
             """
-            INSERT INTO servico (nome, descricao, preco, duracao_minutos, ativo)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO servico (nome, descricao, preco, duracao_minutos, ativo, estabelecimento_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (nome, descricao, preco_valor, duracao, bool(ativo)),
+            (nome, descricao, preco_valor, duracao, bool(ativo), estab_id),
         )
         servico_id = cursor.fetchone()["id"]
         return servico_id, None
@@ -158,11 +170,22 @@ def alterar_status_servico(servico_id, ativo):
         return True, None
 
 
-def listar_profissionais_admin():
+def listar_profissionais_admin(estabelecimento_id=None):
     with db_session() as conn:
-        rows = conn.execute(
-            "SELECT * FROM profissional ORDER BY ativo DESC, nome ASC"
-        ).fetchall()
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                rows = conn.execute(
+                    "SELECT * FROM profissional WHERE estabelecimento_id = 1 OR estabelecimento_id IS NULL ORDER BY ativo DESC, nome ASC"
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM profissional WHERE estabelecimento_id = %s ORDER BY ativo DESC, nome ASC",
+                    (estabelecimento_id,)
+                ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM profissional ORDER BY ativo DESC, nome ASC"
+            ).fetchall()
 
         profissionais = []
         for row in rows:
@@ -185,7 +208,7 @@ def listar_profissionais_admin():
         return profissionais
 
 
-def criar_profissional(nome, ativo=True, servico_ids=None):
+def criar_profissional(nome, ativo=True, servico_ids=None, estabelecimento_id=None):
     nome = (nome or "").strip()
     if not nome:
         return None, "Nome do profissional é obrigatório."
@@ -194,14 +217,15 @@ def criar_profissional(nome, ativo=True, servico_ids=None):
     if bool(ativo) and not servico_ids:
         return None, "Selecione pelo menos um serviço para o profissional ativo."
 
+    estab_id = estabelecimento_id or 1
     with db_session() as conn:
         cursor = conn.execute(
             """
-            INSERT INTO profissional (nome, ativo)
-            VALUES (%s, %s)
+            INSERT INTO profissional (nome, ativo, estabelecimento_id)
+            VALUES (%s, %s, %s)
             RETURNING id
             """,
-            (nome, bool(ativo)),
+            (nome, bool(ativo), estab_id),
         )
         profissional_id = cursor.fetchone()["id"]
 
@@ -478,12 +502,20 @@ ENDERECO_ESTABELECIMENTO = endereco_estabelecimento()
 NOME_PUBLICO = nome_publico()
 
 
-def listar_servicos(apenas_ativos=True):
+def listar_servicos(apenas_ativos=True, estabelecimento_id=None):
     with db_session() as conn:
+        conds = []
+        params = []
         if apenas_ativos:
-            rows = conn.execute("SELECT * FROM servico WHERE ativo = TRUE ORDER BY id").fetchall()
-        else:
-            rows = conn.execute("SELECT * FROM servico ORDER BY id").fetchall()
+            conds.append("ativo = TRUE")
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                conds.append("(estabelecimento_id = 1 OR estabelecimento_id IS NULL)")
+            else:
+                conds.append("estabelecimento_id = %s")
+                params.append(estabelecimento_id)
+        where = f"WHERE {' AND '.join(conds)}" if conds else ""
+        rows = conn.execute(f"SELECT * FROM servico {where} ORDER BY id", tuple(params)).fetchall()
         return [dict(r) for r in rows]
 
 
@@ -493,35 +525,53 @@ def obter_servico(servico_id):
         return dict(row) if row else None
 
 
-def listar_profissionais(apenas_ativos=True):
+def listar_profissionais(apenas_ativos=True, estabelecimento_id=None):
     with db_session() as conn:
+        conds = []
+        params = []
         if apenas_ativos:
-            rows = conn.execute("SELECT * FROM profissional WHERE ativo = TRUE ORDER BY nome").fetchall()
-        else:
-            rows = conn.execute("SELECT * FROM profissional ORDER BY nome").fetchall()
+            conds.append("ativo = TRUE")
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                conds.append("(estabelecimento_id = 1 OR estabelecimento_id IS NULL)")
+            else:
+                conds.append("estabelecimento_id = %s")
+                params.append(estabelecimento_id)
+        where = f"WHERE {' AND '.join(conds)}" if conds else ""
+        rows = conn.execute(f"SELECT * FROM profissional {where} ORDER BY nome", tuple(params)).fetchall()
         return [dict(r) for r in rows]
 
 
-def listar_profissionais_para_servicos(servico_ids):
+def listar_profissionais_para_servicos(servico_ids, estabelecimento_id=None):
     servico_ids = list(dict.fromkeys(servico_ids or []))
     if not servico_ids:
-        return listar_profissionais(apenas_ativos=True)
+        return listar_profissionais(apenas_ativos=True, estabelecimento_id=estabelecimento_id)
 
     with db_session() as conn:
+        cond_estab = ""
+        params = [servico_ids, len(servico_ids)]
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                cond_estab = "AND (p.estabelecimento_id = 1 OR p.estabelecimento_id IS NULL)"
+            else:
+                cond_estab = "AND p.estabelecimento_id = %s"
+                params.insert(1, estabelecimento_id)
+
         rows = conn.execute(
-            """
+            f"""
             SELECT p.id, p.nome, p.ativo
             FROM profissional AS p
             JOIN profissional_servico AS ps ON ps.profissional_id = p.id
             JOIN servico AS s ON s.id = ps.servico_id
             WHERE p.ativo = TRUE
               AND s.ativo = TRUE
+              {cond_estab}
               AND s.id = ANY(%s)
             GROUP BY p.id, p.nome, p.ativo
             HAVING COUNT(DISTINCT s.id) = %s
             ORDER BY p.nome ASC
             """,
-            (servico_ids, len(servico_ids)),
+            tuple(params),
         ).fetchall()
         return [dict(row) for row in rows]
 
@@ -546,17 +596,20 @@ def _gerar_slots_intervalo(inicio_dt, fim_dt, intervalo):
         return []
 
 
-def _gerar_slots_do_dia():
+def _gerar_slots_do_dia(estabelecimento_id=None):
     try:
-        inicio = datetime.strptime(horario_abertura(), "%H:%M")
-        fim = datetime.strptime(horario_fechamento(), "%H:%M")
-        return _gerar_slots_intervalo(inicio, fim, intervalo_slot_minutos())
+        with db_session() as conn:
+            cfg = obter_configuracoes_estabelecimento(conn, estabelecimento_id or 1)
+        inicio = datetime.strptime(cfg.get("horario_abertura", "09:00"), "%H:%M")
+        fim = datetime.strptime(cfg.get("horario_fechamento", "19:00"), "%H:%M")
+        intervalo = int(cfg.get("intervalo_slot_minutos", 30))
+        return _gerar_slots_intervalo(inicio, fim, intervalo)
     except (TypeError, ValueError):
         return []
 
 
-def data_permitida(data_str):
-    """Valida se a data está dentro do funcionamento (dia da semana permitido, não é passado e respeita antecedência máxima)."""
+def data_permitida(data_str, estabelecimento_id=None):
+    """Valida se a data está dentro do funcionamento do estabelecimento (dia permitido, futuro e limite de antecedência)."""
     try:
         data = datetime.strptime(data_str, "%Y-%m-%d").date()
     except (TypeError, ValueError):
@@ -564,22 +617,41 @@ def data_permitida(data_str):
     hoje = datetime.now().date()
     if data < hoje:
         return False
-    if (data.weekday() + 1) % 7 not in dias_funcionamento():
+
+    with db_session() as conn:
+        cfg = obter_configuracoes_estabelecimento(conn, estabelecimento_id or 1)
+
+    dias_func_raw = cfg.get("dias_funcionamento", "1,2,3,4,5,6")
+    if isinstance(dias_func_raw, str):
+        dias_permitidos = [int(x.strip()) for x in dias_func_raw.split(",") if x.strip()]
+    elif isinstance(dias_func_raw, (list, tuple)):
+        dias_permitidos = [int(x) for x in dias_func_raw]
+    else:
+        dias_permitidos = [0, 1, 2, 3, 4, 5]
+
+    if (data.weekday() + 1) % 7 not in dias_permitidos:
         return False
-    # Valida antecedência máxima configurada no banco
-    max_dias = dias_antecedencia_agendamento()
-    if max_dias is not None and (data - hoje).days > max_dias:
-        return False
+
+    max_dias = cfg.get("dias_antecedencia_agendamento", 14)
+    if max_dias is not None:
+        try:
+            if (data - hoje).days > int(max_dias):
+                return False
+        except (ValueError, TypeError):
+            pass
     return True
 
 
 def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids, ignorar_agendamento_id=None):
     profissional = conn.execute(
-        "SELECT ativo FROM profissional WHERE id = %s",
+        "SELECT ativo, estabelecimento_id FROM profissional WHERE id = %s",
         (profissional_id,),
     ).fetchone()
     if not profissional or not profissional["ativo"]:
         return []
+
+    p_estab_id = profissional.get("estabelecimento_id") or 1
+    cfg_estab = obter_configuracoes_estabelecimento(conn, p_estab_id)
 
     servicos = conn.execute(
         """
@@ -617,6 +689,10 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids, ign
         (profissional_id,),
     ).fetchall()
 
+    abertura_estab_str = cfg_estab.get("horario_abertura", "09:00")
+    fechamento_estab_str = cfg_estab.get("horario_fechamento", "19:00")
+    intervalo_minutos = int(cfg_estab.get("intervalo_slot_minutos", 30))
+
     if disp_rows:
         disp_dia = next((r for r in disp_rows if r["dia_semana"] == dia_semana), None)
         if not disp_dia or not disp_dia["ativo"] or not disp_dia["horario_entrada"] or not disp_dia["horario_saida"]:
@@ -625,8 +701,8 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids, ign
         try:
             prof_entrada = datetime.strptime(disp_dia["horario_entrada"], "%H:%M")
             prof_saida = datetime.strptime(disp_dia["horario_saida"], "%H:%M")
-            estab_abertura = datetime.strptime(horario_abertura(), "%H:%M")
-            estab_fechamento = datetime.strptime(horario_fechamento(), "%H:%M")
+            estab_abertura = datetime.strptime(abertura_estab_str, "%H:%M")
+            estab_fechamento = datetime.strptime(fechamento_estab_str, "%H:%M")
         except (ValueError, TypeError):
             return []
 
@@ -636,8 +712,8 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids, ign
             return []
     else:
         # Fallback para profissionais sem jornada individual cadastrada
-        inicio_jornada = datetime.strptime(horario_abertura(), "%H:%M")
-        fim_jornada = datetime.strptime(horario_fechamento(), "%H:%M")
+        inicio_jornada = datetime.strptime(abertura_estab_str, "%H:%M")
+        fim_jornada = datetime.strptime(fechamento_estab_str, "%H:%M")
 
     limite_saida = datetime.combine(data, fim_jornada.time())
 
@@ -662,7 +738,7 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids, ign
 
     agora = datetime.now()
     disponiveis = []
-    slots_dia = _gerar_slots_intervalo(inicio_jornada, fim_jornada, intervalo_slot_minutos())
+    slots_dia = _gerar_slots_intervalo(inicio_jornada, fim_jornada, intervalo_minutos)
     for slot in slots_dia:
         inicio = datetime.combine(data, datetime.strptime(slot, "%H:%M").time())
         fim = inicio + timedelta(minutes=duracao_total)
@@ -690,7 +766,11 @@ def _horarios_disponiveis_conn(conn, profissional_id, data_str, servico_ids, ign
 
 def horarios_disponiveis(profissional_id, data_str, servico_ids, ignorar_agendamento_id=None):
     """Retorna horários livres considerando os serviços e estados atuais."""
-    if not data_permitida(data_str):
+    with db_session() as conn:
+        row_p = conn.execute("SELECT estabelecimento_id FROM profissional WHERE id = %s", (profissional_id,)).fetchone()
+        estab_id = row_p.get("estabelecimento_id") if row_p else 1
+
+    if not data_permitida(data_str, estabelecimento_id=estab_id):
         return []
     if isinstance(servico_ids, int):
         servico_ids = [servico_ids]
@@ -708,7 +788,7 @@ def horarios_disponiveis(profissional_id, data_str, servico_ids, ignorar_agendam
         )
 
 
-def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_id, data_str, hora_str):
+def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_id, data_str, hora_str, estabelecimento_id=None):
     """Cria o agendamento e seus serviços, revalidando a disponibilidade com lock de concorrência."""
     if isinstance(servico_ids, int):
         servico_ids = [servico_ids]
@@ -717,13 +797,22 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
         return None, "Selecione pelo menos um serviço."
     if type(profissional_id) is not int or profissional_id <= 0:
         return None, "Profissional inválido."
-    if not data_permitida(data_str):
-        return None, "Data indisponível para agendamento."
 
     with db_session() as conn:
+        row_prof = conn.execute(
+            "SELECT nome, estabelecimento_id FROM profissional WHERE id = %s AND ativo = TRUE",
+            (profissional_id,),
+        ).fetchone()
+        if not row_prof:
+            return None, "Profissional inválido."
+
+        estab_id = estabelecimento_id or row_prof.get("estabelecimento_id") or 1
+        if not data_permitida(data_str, estabelecimento_id=estab_id):
+            return None, "Data indisponível para agendamento."
+
         lock_key = (profissional_id * 1000000) + int(data_str.replace("-", ""))
         conn.execute("SELECT pg_advisory_xact_lock(%s)", (lock_key,))
-        if not data_permitida(data_str):
+        if not data_permitida(data_str, estabelecimento_id=estab_id):
             return None, "Data indisponível para agendamento."
 
         disponiveis = _horarios_disponiveis_conn(
@@ -735,10 +824,6 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
         if hora_str not in disponiveis:
             return None, "Horário não disponível. Escolha outro horário."
 
-        profissional = conn.execute(
-            "SELECT nome FROM profissional WHERE id = %s AND ativo = TRUE",
-            (profissional_id,),
-        ).fetchone()
         servicos = conn.execute(
             """
             SELECT id, nome, preco, duracao_minutos
@@ -748,11 +833,11 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
             """,
             (servico_ids,),
         ).fetchall()
-        if not profissional or len(servicos) != len(servico_ids):
+        if len(servicos) != len(servico_ids):
             return None, "Serviço inválido."
 
         primeiro_servico_id = servico_ids[0]
-        cliente_id = _obter_ou_criar_cliente_conn(conn, cliente_nome, cliente_telefone)
+        cliente_id = _obter_ou_criar_cliente_conn(conn, cliente_nome, cliente_telefone, estabelecimento_id=estab_id)
         token_acesso = uuid.uuid4().hex
 
         cursor = conn.execute(
@@ -766,9 +851,10 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
                 data,
                 hora,
                 profissional_nome_snapshot,
-                token_acesso
+                token_acesso,
+                estabelecimento_id
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
@@ -779,8 +865,9 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
                 profissional_id,
                 data_str,
                 hora_str,
-                profissional["nome"],
+                row_prof["nome"],
                 token_acesso,
+                estab_id,
             ),
         )
         agendamento_id = cursor.fetchone()["id"]
@@ -858,7 +945,7 @@ def obter_agendamento_completo(agendamento_id):
         return resultado
 
 
-def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str, profissional_id=None):
+def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str, profissional_id=None, estabelecimento_id=None):
     with db_session() as conn:
         query = """
             SELECT a.*,
@@ -885,6 +972,13 @@ def listar_agendamentos_por_periodo(data_inicio_str, data_fim_str, profissional_
         if profissional_id is not None:
             query += " AND a.profissional_id = %s"
             params.append(profissional_id)
+
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                query += " AND (a.estabelecimento_id = 1 OR a.estabelecimento_id IS NULL)"
+            else:
+                query += " AND a.estabelecimento_id = %s"
+                params.append(estabelecimento_id)
 
         query += """
             GROUP BY a.id, p.nome
@@ -942,6 +1036,7 @@ def pesquisar_agendamentos(
     status=None,
     data_inicio=None,
     data_fim=None,
+    estabelecimento_id=None,
 ):
     """
     Pesquisa agendamentos com filtros combináveis:
@@ -950,7 +1045,8 @@ def pesquisar_agendamentos(
     - profissional_id: ID do profissional (ou None para todos);
     - status: status específico (ou None/vazio para todos);
     - data_inicio: limite inferior de data (YYYY-MM-DD);
-    - data_fim: limite superior de data (YYYY-MM-DD).
+    - data_fim: limite superior de data (YYYY-MM-DD);
+    - estabelecimento_id: filtro por tenant.
     """
     with db_session() as conn:
         query = """
@@ -975,6 +1071,13 @@ def pesquisar_agendamentos(
             WHERE 1=1
         """
         params = []
+
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                query += " AND (a.estabelecimento_id = 1 OR a.estabelecimento_id IS NULL)"
+            else:
+                query += " AND a.estabelecimento_id = %s"
+                params.append(estabelecimento_id)
 
         if cliente and cliente.strip():
             query += " AND a.cliente_nome ILIKE %s"
@@ -1185,16 +1288,17 @@ def reagendar_agendamento(agendamento_id, nova_data, novo_horario, usuario=None)
         except (ValueError, TypeError):
             return False, "Data inválida. Use o formato YYYY-MM-DD."
 
-        if not data_permitida(nova_data):
-            return False, "Data selecionada indisponível para agendamento."
-
         # Validar profissional ativo
         prof = conn.execute(
-            "SELECT id, ativo FROM profissional WHERE id = %s",
+            "SELECT id, ativo, estabelecimento_id FROM profissional WHERE id = %s",
             (ag["profissional_id"],),
         ).fetchone()
         if not prof or not prof["ativo"]:
             return False, "Profissional inativo ou não encontrado."
+
+        p_estab_id = prof.get("estabelecimento_id") or 1
+        if not data_permitida(nova_data, estabelecimento_id=p_estab_id):
+            return False, "Data selecionada indisponível para agendamento."
 
         # Validar serviços ativos
         servicos_ativos = conn.execute(
@@ -1297,7 +1401,7 @@ def verificar_admin(usuario, senha):
 # MÓDULO DE CLIENTES
 # ==============================================================================
 
-def _obter_ou_criar_cliente_conn(conn, nome, telefone, email=None):
+def _obter_ou_criar_cliente_conn(conn, nome, telefone, email=None, estabelecimento_id=None):
     """Localiza ou cria cliente na mesma transação."""
     nome = (nome or "").strip()
     telefone = (telefone or "").strip()
@@ -1305,10 +1409,18 @@ def _obter_ou_criar_cliente_conn(conn, nome, telefone, email=None):
     if not nome or not telefone:
         return None
 
-    row = conn.execute(
-        "SELECT id, nome, email FROM cliente WHERE TRIM(telefone) = %s",
-        (telefone,),
-    ).fetchone()
+    estab_id = estabelecimento_id or 1
+    if estab_id == 1:
+        row = conn.execute(
+            "SELECT id, nome, email FROM cliente WHERE TRIM(telefone) = %s AND (estabelecimento_id = 1 OR estabelecimento_id IS NULL)",
+            (telefone,),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT id, nome, email FROM cliente WHERE TRIM(telefone) = %s AND estabelecimento_id = %s",
+            (telefone, estab_id),
+        ).fetchone()
+
     if row:
         if email and not row["email"]:
             conn.execute(
@@ -1319,28 +1431,29 @@ def _obter_ou_criar_cliente_conn(conn, nome, telefone, email=None):
 
     cursor = conn.execute(
         """
-        INSERT INTO cliente (nome, telefone, email)
-        VALUES (%s, %s, %s)
+        INSERT INTO cliente (nome, telefone, email, estabelecimento_id)
+        VALUES (%s, %s, %s, %s)
         RETURNING id
         """,
-        (nome, telefone, email),
+        (nome, telefone, email, estab_id),
     )
     return cursor.fetchone()["id"]
 
 
-def obter_ou_criar_cliente(nome, telefone, email=None):
+def obter_ou_criar_cliente(nome, telefone, email=None, estabelecimento_id=None):
     """Retorna ID do cliente existente ou cria novo."""
     with db_session() as conn:
-        return _obter_ou_criar_cliente_conn(conn, nome, telefone, email)
+        return _obter_ou_criar_cliente_conn(conn, nome, telefone, email, estabelecimento_id=estabelecimento_id)
 
 
-def listar_clientes(termo_busca=None):
+def listar_clientes(termo_busca=None, estabelecimento_id=None):
     """
     Retorna lista de clientes com métricas agregadas:
     - total de agendamentos
     - agendamentos realizados, cancelados e faltas
     - data do último agendamento
     """
+    estab_id = estabelecimento_id or 1
     with db_session() as conn:
         query = """
             SELECT
@@ -1360,19 +1473,29 @@ def listar_clientes(termo_busca=None):
             LEFT JOIN agendamento a ON a.cliente_id = c.id
         """
         params = []
+        where_clauses = []
+        if estab_id == 1:
+            where_clauses.append("(c.estabelecimento_id = 1 OR c.estabelecimento_id IS NULL)")
+        else:
+            where_clauses.append("c.estabelecimento_id = %s")
+            params.append(estab_id)
+
         if termo_busca and termo_busca.strip():
             termo = termo_busca.strip()
             digitos = re.sub(r"\D", "", termo)
             if digitos:
-                query += """
-                    WHERE c.nome ILIKE %s
-                       OR c.telefone ILIKE %s
-                       OR REGEXP_REPLACE(c.telefone, '\\D', '', 'g') LIKE %s
-                """
+                where_clauses.append("""
+                    (c.nome ILIKE %s
+                     OR c.telefone ILIKE %s
+                     OR REGEXP_REPLACE(c.telefone, '\\D', '', 'g') LIKE %s)
+                """)
                 params.extend([f"%{termo}%", f"%{termo}%", f"%{digitos}%"])
             else:
-                query += " WHERE c.nome ILIKE %s OR c.telefone ILIKE %s"
+                where_clauses.append("(c.nome ILIKE %s OR c.telefone ILIKE %s)")
                 params.extend([f"%{termo}%", f"%{termo}%"])
+
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
 
         query += """
             GROUP BY c.id, c.nome, c.telefone, c.email, c.observacoes, c.criado_em
@@ -1448,37 +1571,44 @@ def obter_historico_cliente(cliente_id):
         return resultados
 
 
-def criar_cliente(nome, telefone, email=None, observacoes=""):
+def criar_cliente(nome, telefone, email=None, observacoes="", estabelecimento_id=None):
     """Cria um novo cliente no sistema com validações."""
     nome = (nome or "").strip()
     telefone = (telefone or "").strip()
     email = (email or "").strip() or None
     observacoes = (observacoes or "").strip()
+    estab_id = estabelecimento_id or 1
     if not nome:
         return None, "Nome do cliente é obrigatório."
     if not telefone:
         return None, "Telefone do cliente é obrigatório."
 
     with db_session() as conn:
-        existente = conn.execute(
-            "SELECT id FROM cliente WHERE TRIM(telefone) = %s",
-            (telefone,),
-        ).fetchone()
+        if estab_id == 1:
+            existente = conn.execute(
+                "SELECT id FROM cliente WHERE TRIM(telefone) = %s AND (estabelecimento_id = 1 OR estabelecimento_id IS NULL)",
+                (telefone,),
+            ).fetchone()
+        else:
+            existente = conn.execute(
+                "SELECT id FROM cliente WHERE TRIM(telefone) = %s AND estabelecimento_id = %s",
+                (telefone, estab_id),
+            ).fetchone()
         if existente:
             return None, "Já existe um cliente cadastrado com este telefone."
 
         cursor = conn.execute(
             """
-            INSERT INTO cliente (nome, telefone, email, observacoes)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO cliente (nome, telefone, email, observacoes, estabelecimento_id)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (nome, telefone, email, observacoes),
+            (nome, telefone, email, observacoes, estab_id),
         )
         return cursor.fetchone()["id"], None
 
 
-def atualizar_cliente(cliente_id, nome, telefone, email=None, observacoes=""):
+def atualizar_cliente(cliente_id, nome, telefone, email=None, observacoes="", estabelecimento_id=None):
     """Atualiza dados cadastrais e observações de um cliente."""
     nome = (nome or "").strip()
     telefone = (telefone or "").strip()
@@ -1490,10 +1620,19 @@ def atualizar_cliente(cliente_id, nome, telefone, email=None, observacoes=""):
         return False, "Telefone do cliente é obrigatório."
 
     with db_session() as conn:
-        duplicado = conn.execute(
-            "SELECT id FROM cliente WHERE TRIM(telefone) = %s AND id != %s",
-            (telefone, cliente_id),
-        ).fetchone()
+        row_c = conn.execute("SELECT estabelecimento_id FROM cliente WHERE id = %s", (cliente_id,)).fetchone()
+        estab_id = estabelecimento_id or (row_c.get("estabelecimento_id") if row_c else 1) or 1
+
+        if estab_id == 1:
+            duplicado = conn.execute(
+                "SELECT id FROM cliente WHERE TRIM(telefone) = %s AND id != %s AND (estabelecimento_id = 1 OR estabelecimento_id IS NULL)",
+                (telefone, cliente_id),
+            ).fetchone()
+        else:
+            duplicado = conn.execute(
+                "SELECT id FROM cliente WHERE TRIM(telefone) = %s AND id != %s AND estabelecimento_id = %s",
+                (telefone, cliente_id, estab_id),
+            ).fetchone()
         if duplicado:
             return False, "Outro cliente já utiliza este telefone."
 

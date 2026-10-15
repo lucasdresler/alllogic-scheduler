@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, abort, g, jsonify, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -19,6 +19,8 @@ from database import (
     obter_configuracao,
     atualizar_configuracao,
     atualizar_configuracoes,
+    obter_configuracoes_estabelecimento,
+    atualizar_configuracoes_estabelecimento,
     admin_precisa_alterar_senha,
     admin_alterar_senha as db_admin_alterar_senha,
     admin_concluir_primeiro_acesso as db_admin_concluir_primeiro_acesso,
@@ -185,10 +187,12 @@ def _validar_e_salvar_logotipo(arquivo_storage, logo_atual=""):
     return f"uploads/{nome_arquivo}", None
 
 
-def _carregar_config_template():
+def _carregar_config_template(estabelecimento_id=None):
     """Carrega configurações do banco para uso nos templates."""
+    estab_id = estabelecimento_id or session.get("estabelecimento_id") or getattr(g, "estabelecimento_id", 1) or 1
     with db_session() as conn:
-        config = obter_todas_configuracoes(conn)
+        config = obter_configuracoes_estabelecimento(conn, estab_id)
+        est = obter_estabelecimento_por_id(conn, estab_id)
 
     logotipo = config.get("logotipo", "")
     if logotipo:
@@ -199,6 +203,21 @@ def _carregar_config_template():
     telefone = config.get("telefone_estabelecimento", "")
     telefone_limpo = re.sub(r"[^\d+]", "", telefone) if telefone else ""
 
+    url_base = _obter_url_base_whatsapp()
+    slug = (est.get("slug") if est else "") or ""
+    if slug:
+        url_publica_agendamento = f"{url_base}/agendar/{slug}"
+    else:
+        url_publica_agendamento = f"{url_base}/"
+
+    dias_func = config.get("dias_funcionamento", "1,2,3,4,5,6")
+    if isinstance(dias_func, str):
+        dias_funcionamento_lista = [int(x.strip()) for x in dias_func.split(",") if x.strip()]
+    elif isinstance(dias_func, (list, tuple)):
+        dias_funcionamento_lista = [int(x) for x in dias_func]
+    else:
+        dias_funcionamento_lista = [0, 1, 2, 3, 4, 5]
+
     return {
         "nome_estabelecimento": config.get("nome_estabelecimento", "AllLogic Scheduler"),
         "telefone_estabelecimento": telefone,
@@ -206,16 +225,22 @@ def _carregar_config_template():
         "endereco_estabelecimento": config.get("endereco_estabelecimento", ""),
         "nome_publico": config.get("nome_publico", "AllLogic Scheduler"),
         "logotipo": logotipo,
-        "dias_antecedencia": models.dias_antecedencia_agendamento(),
-        "dias_funcionamento": models.dias_funcionamento(),
+        "dias_antecedencia": int(config.get("dias_antecedencia_agendamento", 14)),
+        "dias_funcionamento": dias_funcionamento_lista,
+        "estabelecimento_id": estab_id,
+        "estabelecimento_slug": slug,
+        "url_publica_agendamento": url_publica_agendamento,
     }
 
 
 @app.context_processor
 def inject_config_template():
-    dados = _carregar_config_template()
+    estab_id = session.get("estabelecimento_id") or getattr(g, "estabelecimento_id", 1) or 1
+    try:
+        dados = _carregar_config_template(estab_id)
+    except TypeError:
+        dados = _carregar_config_template()
     if session.get("admin_logado") and session.get("estabelecimento_id"):
-        estab_id = session.get("estabelecimento_id")
         try:
             with db_session() as conn:
                 if estab_id != 1:
@@ -312,17 +337,59 @@ def _validar_configuracoes_operacionais(dados):
 # Páginas públicas
 # ---------------------------------------------------------------------------
 
+ROTAS_RESERVADAS = {
+    "admin", "api", "agillex", "experimente", "reserva", "agendamento",
+    "static", "favicon.ico", "robots.txt", "sitemap.xml", "health", "healthz"
+}
+
+
 @app.route("/")
 def index():
-    servicos = models.listar_servicos()
-    profissionais = models.listar_profissionais()
-    config = _carregar_config_template()
+    servicos = models.listar_servicos(apenas_ativos=True, estabelecimento_id=1)
+    profissionais = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=1)
+    config = _carregar_config_template(1)
     return render_template(
         "index.html",
         servicos=servicos,
         profissionais=profissionais,
+        slug="",
         **config,
     )
+
+
+@app.route("/agendar/<slug>")
+def agendar_por_slug(slug):
+    slug_limpo = slug.strip().lower()
+    with db_session() as conn:
+        est = obter_estabelecimento_por_slug(conn, slug_limpo)
+    if not est:
+        abort(404)
+
+    estab_id = est["id"]
+    servicos = models.listar_servicos(apenas_ativos=True, estabelecimento_id=estab_id)
+    profissionais = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=estab_id)
+    config = _carregar_config_template(estab_id)
+
+    return render_template(
+        "index.html",
+        servicos=servicos,
+        profissionais=profissionais,
+        estabelecimento=est,
+        slug=slug_limpo,
+        **config,
+    )
+
+
+@app.route("/<slug>")
+def rota_slug_estabelecimento(slug):
+    slug_limpo = slug.strip().lower()
+    if slug_limpo in ROTAS_RESERVADAS:
+        abort(404)
+    with db_session() as conn:
+        est = obter_estabelecimento_por_slug(conn, slug_limpo)
+    if not est:
+        abort(404)
+    return agendar_por_slug(slug_limpo)
 
 
 @app.route("/agendamento/sucesso/<int:agendamento_id>")
@@ -331,7 +398,11 @@ def agendamento_sucesso(agendamento_id):
     if not agendamento:
         return redirect(url_for("index"))
 
-    config_template = _carregar_config_template()
+    estab_id = agendamento.get("estabelecimento_id") or 1
+    try:
+        config_template = _carregar_config_template(estab_id)
+    except TypeError:
+        config_template = _carregar_config_template()
     url_base_local = request.host_url.rstrip("/")
     url_base_zap = _obter_url_base_whatsapp()
 
@@ -585,14 +656,29 @@ def admin_upgrade():
 
 @app.route("/api/services")
 def api_services():
-    return jsonify(models.listar_servicos(apenas_ativos=True))
+    estab_id = request.args.get("estabelecimento_id", type=int)
+    slug = request.args.get("slug")
+    if not estab_id and slug:
+        with db_session() as conn:
+            est = obter_estabelecimento_por_slug(conn, slug)
+            if est:
+                estab_id = est["id"]
+    return jsonify(models.listar_servicos(apenas_ativos=True, estabelecimento_id=estab_id))
 
 
 @app.route("/api/professionals")
 def api_professionals():
+    estab_id = request.args.get("estabelecimento_id", type=int)
+    slug = request.args.get("slug")
+    if not estab_id and slug:
+        with db_session() as conn:
+            est = obter_estabelecimento_por_slug(conn, slug)
+            if est:
+                estab_id = est["id"]
+
     servico_ids = request.args.getlist("servico_id", type=int)
     if not servico_ids:
-        return jsonify(models.listar_profissionais(apenas_ativos=True))
+        return jsonify(models.listar_profissionais(apenas_ativos=True, estabelecimento_id=estab_id))
 
     servico_ids = list(dict.fromkeys(servico_ids))
     if any(
@@ -600,7 +686,7 @@ def api_professionals():
         for servico_id in servico_ids
     ):
         return jsonify({"erro": "Serviço inválido."}), 400
-    return jsonify(models.listar_profissionais_para_servicos(servico_ids))
+    return jsonify(models.listar_profissionais_para_servicos(servico_ids, estabelecimento_id=estab_id))
 
 
 @app.route("/api/horarios-disponiveis")
@@ -665,6 +751,13 @@ def api_appointments():
     profissional_id = dados.get("profissional_id")
     data_str = dados.get("data")
     hora_str = dados.get("hora")
+    estabelecimento_id = dados.get("estabelecimento_id")
+    slug = dados.get("slug")
+    if not estabelecimento_id and slug:
+        with db_session() as conn:
+            est = obter_estabelecimento_por_slug(conn, slug)
+            if est:
+                estabelecimento_id = est["id"]
 
     erros = []
     if not cliente_nome:
@@ -680,6 +773,7 @@ def api_appointments():
     if not hora_str:
         erros.append("Horário é obrigatório.")
 
+    estab_final = estabelecimento_id or 1
     if not erros:
         servico_ids = list(dict.fromkeys(servico_ids))
 
@@ -697,7 +791,10 @@ def api_appointments():
         if not profissional or not profissional["ativo"]:
             erros.append("Profissional inválido.")
 
-        if not erros and not models.data_permitida(data_str):
+        if profissional and profissional.get("estabelecimento_id"):
+            estab_final = profissional["estabelecimento_id"]
+
+        if not erros and not models.data_permitida(data_str, estabelecimento_id=estab_final):
             erros.append("Data indisponível para agendamento.")
 
     if erros:
@@ -710,6 +807,7 @@ def api_appointments():
         profissional_id,
         data_str,
         hora_str,
+        estabelecimento_id=estab_final,
     )
 
     if erro:
@@ -769,17 +867,19 @@ def admin_logout():
 @app.route("/admin/servicos")
 @login_requerido
 def admin_servicos():
-    servicos = models.listar_servicos_admin()
+    estab_id = session.get("estabelecimento_id") or 1
+    servicos = models.listar_servicos_admin(estabelecimento_id=estab_id)
     return render_template(
         "admin_servicos.html",
         servicos=servicos,
-        **_carregar_config_template(),
+        **_carregar_config_template(estab_id),
     )
 
 
 @app.route("/admin/servicos/novo", methods=["GET", "POST"])
 @login_requerido
 def admin_servico_novo():
+    estab_id = session.get("estabelecimento_id") or 1
     erro = None
     if request.method == "POST":
         nome = request.form.get("nome", "").strip()
@@ -794,6 +894,7 @@ def admin_servico_novo():
             duracao_minutos,
             ativo,
             descricao,
+            estabelecimento_id=estab_id,
         )
         if servico_id:
             return redirect(url_for("admin_servicos"))
@@ -803,7 +904,7 @@ def admin_servico_novo():
         erro=erro,
         servico=None,
         titulo="Novo serviço",
-        **_carregar_config_template(),
+        **_carregar_config_template(estab_id),
     )
 
 
@@ -854,10 +955,10 @@ def admin_servico_toggle(servico_id):
 @app.route("/admin/profissionais")
 @login_requerido
 def admin_profissionais():
-    profissionais = models.listar_profissionais_admin()
-    servicos = models.listar_servicos_admin()
+    estab_id = session.get("estabelecimento_id") or 1
+    profissionais = models.listar_profissionais_admin(estabelecimento_id=estab_id)
+    servicos = models.listar_servicos_admin(estabelecimento_id=estab_id)
     total_ativos = sum(1 for p in profissionais if p.get("ativo"))
-    estab_id = session.get("estabelecimento_id")
     with db_session() as conn:
         estab = obter_estabelecimento_por_id(conn, estab_id)
     plano = estab.get("plano", "intermediario") if estab else "intermediario"
@@ -872,28 +973,29 @@ def admin_profissionais():
         limite_profissionais=limite,
         atingiu_limite=(total_ativos >= limite),
         plano_config=cfg_plano,
-        **_carregar_config_template(),
+        **_carregar_config_template(estab_id),
     )
 
 
 @app.route("/admin/profissionais/novo", methods=["GET", "POST"])
 @login_requerido
 def admin_profissional_novo():
+    estab_id = session.get("estabelecimento_id") or 1
     erro = None
-    servicos = models.listar_servicos_admin()
+    servicos = models.listar_servicos_admin(estabelecimento_id=estab_id)
     if request.method == "POST":
         nome = request.form.get("nome", "").strip()
         ativo = request.form.get("ativo") == "on"
         servico_ids = request.form.getlist("servicos", type=int)
 
         with db_session() as conn:
-            estab_id = session.get("estabelecimento_id")
             if estab_id and estab_id != 1:
                 estab = obter_estabelecimento_por_id(conn, estab_id)
                 plano = estab.get("plano", "intermediario") if estab else "intermediario"
                 limite = obter_limite_profissionais(plano)
                 total_ativos = conn.execute(
-                    "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
+                    "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE AND estabelecimento_id = %s",
+                    (estab_id,)
                 ).fetchone()["c"]
                 if ativo and total_ativos >= limite:
                     cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
@@ -903,7 +1005,7 @@ def admin_profissional_novo():
                     )
 
         if not erro:
-            profissional_id, erro = models.criar_profissional(nome, ativo, servico_ids)
+            profissional_id, erro = models.criar_profissional(nome, ativo, servico_ids, estabelecimento_id=estab_id)
             if profissional_id:
                 return redirect(url_for("admin_profissionais"))
 
@@ -913,19 +1015,20 @@ def admin_profissional_novo():
         profissional=None,
         servicos=servicos,
         titulo="Novo profissional",
-        **_carregar_config_template(),
+        **_carregar_config_template(estab_id),
     )
 
 
 @app.route("/admin/profissionais/<int:profissional_id>/editar", methods=["GET", "POST"])
 @login_requerido
 def admin_profissional_editar(profissional_id):
+    estab_id = session.get("estabelecimento_id") or 1
     profissional = models.obter_profissional(profissional_id)
     if not profissional:
         return redirect(url_for("admin_profissionais"))
 
-    servicos = models.listar_servicos_admin()
-    lista_profissionais = models.listar_profissionais_admin()
+    servicos = models.listar_servicos_admin(estabelecimento_id=estab_id)
+    lista_profissionais = models.listar_profissionais_admin(estabelecimento_id=estab_id)
     profissional_com_servicos = next(
         (item for item in lista_profissionais if item["id"] == profissional_id),
         None,
@@ -960,13 +1063,13 @@ def admin_profissional_editar(profissional_id):
             erro = erro_disp
         elif ativo and not profissional["ativo"]:
             with db_session() as conn:
-                estab_id = session.get("estabelecimento_id")
                 if estab_id and estab_id != 1:
                     estab = obter_estabelecimento_por_id(conn, estab_id)
                     plano = estab.get("plano", "intermediario") if estab else "intermediario"
                     limite = obter_limite_profissionais(plano)
                     total_ativos = conn.execute(
-                        "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
+                        "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE AND estabelecimento_id = %s",
+                        (estab_id,)
                     ).fetchone()["c"]
                     if total_ativos >= limite:
                         cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
@@ -987,7 +1090,7 @@ def admin_profissional_editar(profissional_id):
         servicos=servicos,
         disponibilidade=disponibilidade,
         titulo="Editar profissional",
-        **_carregar_config_template(),
+        **_carregar_config_template(estab_id),
     )
 
 
@@ -1016,8 +1119,9 @@ def admin_profissional_toggle(profissional_id):
 @app.route("/admin/clientes")
 @login_requerido
 def admin_clientes():
+    estab_id = session.get("estabelecimento_id") or 1
     busca = request.args.get("busca", "").strip()
-    clientes = models.listar_clientes(termo_busca=busca)
+    clientes = models.listar_clientes(termo_busca=busca, estabelecimento_id=estab_id)
     sucesso = request.args.get("sucesso")
     erro = request.args.get("erro")
     return render_template(
@@ -1027,12 +1131,14 @@ def admin_clientes():
         total_clientes=len(clientes),
         sucesso=sucesso,
         erro=erro,
+        **_carregar_config_template(estab_id),
     )
 
 
 @app.route("/admin/clientes/novo", methods=["GET", "POST"])
 @login_requerido
 def admin_cliente_novo():
+    estab_id = session.get("estabelecimento_id") or 1
     erro = None
     if request.method == "POST":
         nome = request.form.get("nome", "").strip()
@@ -1040,7 +1146,7 @@ def admin_cliente_novo():
         email = request.form.get("email", "").strip()
         observacoes = request.form.get("observacoes", "").strip()
 
-        cliente_id, erro = models.criar_cliente(nome, telefone, email, observacoes)
+        cliente_id, erro = models.criar_cliente(nome, telefone, email, observacoes, estabelecimento_id=estab_id)
         if not erro and cliente_id:
             return redirect(url_for("admin_cliente_detalhes", cliente_id=cliente_id, sucesso="Cliente cadastrado com sucesso."))
 
@@ -1049,12 +1155,14 @@ def admin_cliente_novo():
         titulo="Novo Cliente",
         cliente=None,
         erro=erro,
+        **_carregar_config_template(estab_id),
     )
 
 
 @app.route("/admin/clientes/<int:cliente_id>")
 @login_requerido
 def admin_cliente_detalhes(cliente_id):
+    estab_id = session.get("estabelecimento_id") or 1
     cliente = models.obter_cliente(cliente_id)
     if not cliente:
         return redirect(url_for("admin_clientes", erro="Cliente não encontrado."))
@@ -1069,12 +1177,14 @@ def admin_cliente_detalhes(cliente_id):
         historico=historico,
         sucesso=sucesso,
         erro=erro,
+        **_carregar_config_template(estab_id),
     )
 
 
 @app.route("/admin/clientes/<int:cliente_id>/editar", methods=["GET", "POST"])
 @login_requerido
 def admin_cliente_editar(cliente_id):
+    estab_id = session.get("estabelecimento_id") or 1
     cliente = models.obter_cliente(cliente_id)
     if not cliente:
         return redirect(url_for("admin_clientes", erro="Cliente não encontrado."))
@@ -1086,7 +1196,7 @@ def admin_cliente_editar(cliente_id):
         email = request.form.get("email", "").strip()
         observacoes = request.form.get("observacoes", "").strip()
 
-        ok, erro = models.atualizar_cliente(cliente_id, nome, telefone, email, observacoes)
+        ok, erro = models.atualizar_cliente(cliente_id, nome, telefone, email, observacoes, estabelecimento_id=estab_id)
         if ok:
             return redirect(url_for("admin_cliente_detalhes", cliente_id=cliente_id, sucesso="Dados do cliente atualizados com sucesso."))
 
@@ -1095,17 +1205,19 @@ def admin_cliente_editar(cliente_id):
         titulo=f"Editar {cliente['nome']}",
         cliente=cliente,
         erro=erro,
+        **_carregar_config_template(estab_id),
     )
 
 
 @app.route("/admin/configuracoes", methods=["GET", "POST"])
 @login_requerido
 def admin_configuracoes():
+    estab_id = session.get("estabelecimento_id") or 1
     erro = None
     sucesso = None
 
     with db_session() as conn:
-        valores = obter_todas_configuracoes(conn)
+        valores = obter_configuracoes_estabelecimento(conn, estab_id)
 
     if request.method == "POST":
         dias_list = request.form.getlist("dias_funcionamento")
@@ -1127,7 +1239,7 @@ def admin_configuracoes():
         erro = _validar_configuracoes_operacionais(dados)
         if not erro:
             with db_session() as conn:
-                atualizar_configuracoes(conn, dados)
+                atualizar_configuracoes_estabelecimento(conn, estab_id, dados)
             models._limpar_cache_config()
             sucesso = "Configurações da agenda atualizadas com sucesso."
             valores.update(dados)
@@ -1139,7 +1251,7 @@ def admin_configuracoes():
         erro=erro,
         sucesso=sucesso,
         configuracoes=valores,
-        **_carregar_config_template(),
+        **_carregar_config_template(estab_id),
     )
 
 
@@ -1793,6 +1905,8 @@ def admin_dashboard():
     semana_anterior = None
     proxima_semana = None
 
+    estab_id = session.get("estabelecimento_id") or 1
+
     if aba == "pesquisa":
         agendamentos = models.pesquisar_agendamentos(
             cliente=cliente_filtro or None,
@@ -1801,6 +1915,7 @@ def admin_dashboard():
             status=status_filtro or None,
             data_inicio=data_inicio_filtro or None,
             data_fim=data_fim_filtro or None,
+            estabelecimento_id=estab_id,
         )
     elif aba == "mes":
         inicio_mes = hoje.replace(day=1)
@@ -1810,7 +1925,7 @@ def admin_dashboard():
             inicio_proximo_mes = hoje.replace(month=hoje.month + 1, day=1)
         fim_mes = inicio_proximo_mes - timedelta(days=1)
         agendamentos = models.listar_agendamentos_por_periodo(
-            inicio_mes.isoformat(), fim_mes.isoformat(), profissional_id=profissional_id
+            inicio_mes.isoformat(), fim_mes.isoformat(), profissional_id=profissional_id, estabelecimento_id=estab_id
         )
     elif aba == "semana":
         dias_desde_domingo = (hoje.weekday() + 1) % 7
@@ -1819,12 +1934,12 @@ def admin_dashboard():
         semana_anterior = (inicio_semana - timedelta(days=7)).isoformat()
         proxima_semana = (inicio_semana + timedelta(days=7)).isoformat()
         agendamentos = models.listar_agendamentos_por_periodo(
-            inicio_semana.isoformat(), fim_semana.isoformat(), profissional_id=profissional_id
+            inicio_semana.isoformat(), fim_semana.isoformat(), profissional_id=profissional_id, estabelecimento_id=estab_id
         )
     else:
         aba = "hoje"
         agendamentos = models.listar_agendamentos_por_periodo(
-            hoje.isoformat(), hoje.isoformat(), profissional_id=profissional_id
+            hoje.isoformat(), hoje.isoformat(), profissional_id=profissional_id, estabelecimento_id=estab_id
         )
 
     total_agendamentos = len(agendamentos)
@@ -1847,7 +1962,7 @@ def admin_dashboard():
             for ag in agendamentos:
                 agrupados.setdefault(ag["data"], []).append(ag)
 
-    profissionais_filtro = models.listar_profissionais(apenas_ativos=True)
+    profissionais_filtro = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=estab_id)
     sucesso = request.args.get("sucesso")
     erro = request.args.get("erro")
 
@@ -1873,7 +1988,7 @@ def admin_dashboard():
         filtro_data_fim=data_fim_filtro,
         sucesso=sucesso,
         erro=erro,
-        **_carregar_config_template(),
+        **_carregar_config_template(estab_id),
     )
 
 

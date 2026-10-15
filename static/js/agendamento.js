@@ -118,6 +118,9 @@
         estado.servicos.forEach(function (servico) {
             params.append("servico_id", servico.id);
         });
+        if (window.ESTABELECIMENTO_ID) {
+            params.append("estabelecimento_id", window.ESTABELECIMENTO_ID);
+        }
 
         fetch("/api/professionals?" + params.toString())
             .then(function (resp) {
@@ -227,6 +230,9 @@
         estado.servicos.forEach(function (servico) {
             params.append("servico_id", servico.id);
         });
+        if (window.ESTABELECIMENTO_ID) {
+            params.append("estabelecimento_id", window.ESTABELECIMENTO_ID);
+        }
 
         var url = "/api/availability?" + params.toString();
 
@@ -355,7 +361,8 @@
             }),
             profissional_id: estado.profissional.id,
             data: estado.data,
-            hora: estado.hora
+            hora: estado.hora,
+            estabelecimento_id: window.ESTABELECIMENTO_ID || 1
         };
 
         fetch("/api/appointments", {

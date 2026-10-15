@@ -359,7 +359,59 @@ def init_db():
 
         conn.execute("""
             ALTER TABLE estabelecimento
-            ADD COLUMN IF NOT EXISTS plano TEXT NOT NULL DEFAULT 'intermediario'
+            ADD COLUMN IF NOT EXISTS plano TEXT NOT NULL DEFAULT 'intermediario',
+            ADD COLUMN IF NOT EXISTS nome_fantasia TEXT,
+            ADD COLUMN IF NOT EXISTS razao_social TEXT,
+            ADD COLUMN IF NOT EXISTS logotipo TEXT,
+            ADD COLUMN IF NOT EXISTS cep TEXT,
+            ADD COLUMN IF NOT EXISTS logradouro TEXT,
+            ADD COLUMN IF NOT EXISTS numero TEXT,
+            ADD COLUMN IF NOT EXISTS complemento TEXT,
+            ADD COLUMN IF NOT EXISTS bairro TEXT,
+            ADD COLUMN IF NOT EXISTS cidade TEXT,
+            ADD COLUMN IF NOT EXISTS estado TEXT,
+            ADD COLUMN IF NOT EXISTS endereco_estabelecimento TEXT,
+            ADD COLUMN IF NOT EXISTS whatsapp TEXT,
+            ADD COLUMN IF NOT EXISTS email_comercial TEXT,
+            ADD COLUMN IF NOT EXISTS horario_abertura TEXT DEFAULT '09:00',
+            ADD COLUMN IF NOT EXISTS horario_fechamento TEXT DEFAULT '19:00',
+            ADD COLUMN IF NOT EXISTS intervalo_slot_minutos INTEGER DEFAULT 30,
+            ADD COLUMN IF NOT EXISTS dias_funcionamento TEXT DEFAULT '1,2,3,4,5,6',
+            ADD COLUMN IF NOT EXISTS dias_antecedencia_agendamento INTEGER DEFAULT 14,
+            ADD COLUMN IF NOT EXISTS nome_publico TEXT
+        """)
+
+        # Isolamento multi-tenant: vincula servico, profissional, agendamento e cliente ao estabelecimento
+        conn.execute("""
+            ALTER TABLE servico
+            ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER REFERENCES estabelecimento(id) ON DELETE CASCADE
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_servico_estabelecimento_id ON servico (estabelecimento_id)
+        """)
+
+        conn.execute("""
+            ALTER TABLE profissional
+            ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER REFERENCES estabelecimento(id) ON DELETE CASCADE
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_profissional_estabelecimento_id ON profissional (estabelecimento_id)
+        """)
+
+        conn.execute("""
+            ALTER TABLE agendamento
+            ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER REFERENCES estabelecimento(id) ON DELETE CASCADE
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_agendamento_estabelecimento_id ON agendamento (estabelecimento_id)
+        """)
+
+        conn.execute("""
+            ALTER TABLE cliente
+            ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER REFERENCES estabelecimento(id) ON DELETE CASCADE
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_cliente_estabelecimento_id ON cliente (estabelecimento_id)
         """)
 
         conn.execute("""
@@ -392,6 +444,12 @@ def init_db():
         conn.execute("""
             UPDATE admin SET estabelecimento_id = 1 WHERE estabelecimento_id IS NULL
         """)
+
+        # Retrocompatibilidade: assegura que todos os registros existentes estejam vinculados ao estabelecimento 1
+        conn.execute("UPDATE servico SET estabelecimento_id = 1 WHERE estabelecimento_id IS NULL")
+        conn.execute("UPDATE profissional SET estabelecimento_id = 1 WHERE estabelecimento_id IS NULL")
+        conn.execute("UPDATE agendamento SET estabelecimento_id = 1 WHERE estabelecimento_id IS NULL")
+        conn.execute("UPDATE cliente SET estabelecimento_id = 1 WHERE estabelecimento_id IS NULL")
 
         seed_configuracao_padrao(conn)
         conn.execute(
@@ -830,6 +888,20 @@ def criar_estabelecimento_com_admin(
         (usuario.strip(), senha_hash, email.strip().lower(), nome_responsavel.strip(), estabelecimento_id),
     ).fetchone()
 
+    # Criação dos serviços iniciais de exemplo para o novo estabelecimento
+    servicos_seed = [
+        ("Atendimento Especial", "Serviço inicial padrão para início rápido dos atendimentos", 50.00, 30),
+        ("Serviço Completo", "Atendimento completo personalizado para seus clientes", 90.00, 60),
+    ]
+    for s_nome, s_desc, s_preco, s_dur in servicos_seed:
+        conn.execute(
+            """
+            INSERT INTO servico (nome, descricao, preco, duracao_minutos, ativo, estabelecimento_id)
+            VALUES (%s, %s, %s, %s, TRUE, %s)
+            """,
+            (s_nome, s_desc, s_preco, s_dur, estabelecimento_id),
+        )
+
     return {
         "estabelecimento_id": estabelecimento_id,
         "admin_id": row_admin["id"],
@@ -841,6 +913,123 @@ def criar_estabelecimento_com_admin(
         "status": row_est["status"],
         "plano": row_est["plano"],
     }
+
+
+def obter_configuracoes_estabelecimento(conn, estabelecimento_id=1):
+    """
+    Retorna dicionário de configurações completo para um estabelecimento específico.
+    Se o estabelecimento for o piloto (ID 1) ou se for None, mescla com a tabela configuracao global
+    para garantir 100% de compatibilidade retroativa com testes legados.
+    """
+    estab_id = estabelecimento_id or 1
+    est = obter_estabelecimento_por_id(conn, estab_id)
+    configs_globais = obter_todas_configuracoes(conn) if (estab_id == 1 or not est) else {}
+
+    if not est:
+        return configs_globais
+
+    if estab_id == 1:
+        # Para o estabelecimento 1 (piloto/default), configurações da tabela configuracao global
+        # têm prioridade absoluta sobre os padrões de estabelecimento para preservar retrocompatibilidade
+        nome_estab = configs_globais.get("nome_estabelecimento") or est.get("nome", "AllLogic Scheduler")
+        nome_pub = configs_globais.get("nome_publico") or est.get("nome_publico") or nome_estab
+        telefone = configs_globais.get("telefone_estabelecimento") or configs_globais.get("telefone") or est.get("telefone", "")
+        endereco = configs_globais.get("endereco_estabelecimento") or est.get("endereco_estabelecimento", "")
+        logotipo = configs_globais.get("logotipo") or est.get("logotipo", "")
+
+        return {
+            "nome_estabelecimento": nome_estab,
+            "nome_publico": nome_pub,
+            "nome_fantasia": configs_globais.get("nome_fantasia") or est.get("nome_fantasia") or nome_estab,
+            "razao_social": configs_globais.get("razao_social") or est.get("razao_social") or "",
+            "cnpj_cpf": configs_globais.get("cpf_cnpj") or est.get("cnpj_cpf") or "",
+            "cpf_cnpj": configs_globais.get("cpf_cnpj") or est.get("cnpj_cpf") or "",
+            "telefone_estabelecimento": telefone,
+            "telefone": telefone,
+            "telefone_limpo": re.sub(r"[^\d+]", "", telefone) if telefone else "",
+            "whatsapp": configs_globais.get("whatsapp") or est.get("whatsapp") or telefone,
+            "email_comercial": configs_globais.get("email_comercial") or est.get("email_comercial") or est.get("email") or "",
+            "endereco_estabelecimento": endereco,
+            "cep": configs_globais.get("cep") or est.get("cep") or "",
+            "logradouro": configs_globais.get("logradouro") or est.get("logradouro") or "",
+            "numero": configs_globais.get("numero") or est.get("numero") or "",
+            "complemento": configs_globais.get("complemento") or est.get("complemento") or "",
+            "bairro": configs_globais.get("bairro") or est.get("bairro") or "",
+            "cidade": configs_globais.get("cidade") or est.get("cidade") or "",
+            "estado": configs_globais.get("estado") or est.get("estado") or "",
+            "logotipo": logotipo,
+            "horario_abertura": configs_globais.get("horario_abertura") or est.get("horario_abertura", "09:00"),
+            "horario_fechamento": configs_globais.get("horario_fechamento") or est.get("horario_fechamento", "19:00"),
+            "intervalo_slot_minutos": int(configs_globais.get("intervalo_slot_minutos") or est.get("intervalo_slot_minutos", 30)),
+            "dias_funcionamento": configs_globais.get("dias_funcionamento") or est.get("dias_funcionamento", "1,2,3,4,5,6"),
+            "dias_antecedencia_agendamento": int(configs_globais.get("dias_antecedencia_agendamento") or est.get("dias_antecedencia_agendamento", 14)),
+            "dias_antecedencia": int(configs_globais.get("dias_antecedencia_agendamento") or est.get("dias_antecedencia_agendamento", 14)),
+        }
+
+    # Para estabelecimentos específicos (ID > 1)
+    nome_estab = est.get("nome") or "AllLogic Scheduler"
+    nome_pub = est.get("nome_publico") or est.get("nome_fantasia") or nome_estab
+    telefone = est.get("telefone", "")
+    endereco = est.get("endereco_estabelecimento", "")
+    logotipo = est.get("logotipo", "")
+
+    return {
+        "nome_estabelecimento": nome_estab,
+        "nome_publico": nome_pub,
+        "nome_fantasia": est.get("nome_fantasia") or nome_estab,
+        "razao_social": est.get("razao_social") or "",
+        "cnpj_cpf": est.get("cnpj_cpf") or "",
+        "cpf_cnpj": est.get("cnpj_cpf") or "",
+        "telefone_estabelecimento": telefone,
+        "telefone": telefone,
+        "telefone_limpo": re.sub(r"[^\d+]", "", telefone) if telefone else "",
+        "whatsapp": est.get("whatsapp") or telefone,
+        "email_comercial": est.get("email_comercial") or est.get("email") or "",
+        "endereco_estabelecimento": endereco,
+        "cep": est.get("cep") or "",
+        "logradouro": est.get("logradouro") or "",
+        "numero": est.get("numero") or "",
+        "complemento": est.get("complemento") or "",
+        "bairro": est.get("bairro") or "",
+        "cidade": est.get("cidade") or "",
+        "estado": est.get("estado") or "",
+        "logotipo": logotipo,
+        "horario_abertura": est.get("horario_abertura") or "09:00",
+        "horario_fechamento": est.get("horario_fechamento") or "19:00",
+        "intervalo_slot_minutos": int(est.get("intervalo_slot_minutos") or 30),
+        "dias_funcionamento": est.get("dias_funcionamento") or "1,2,3,4,5,6",
+        "dias_antecedencia_agendamento": int(est.get("dias_antecedencia_agendamento") or 14),
+        "dias_antecedencia": int(est.get("dias_antecedencia_agendamento") or 14),
+    }
+
+
+def atualizar_configuracoes_estabelecimento(conn, estabelecimento_id, dados):
+    """Atualiza configurações específicas do estabelecimento no registro correspondente."""
+    campos = [
+        "nome", "nome_fantasia", "razao_social", "cnpj_cpf", "email_comercial", "telefone",
+        "whatsapp", "cep", "logradouro", "numero", "complemento", "bairro", "cidade", "estado",
+        "endereco_estabelecimento", "logotipo", "horario_abertura", "horario_fechamento",
+        "intervalo_slot_minutos", "dias_funcionamento", "dias_antecedencia_agendamento", "nome_publico"
+    ]
+    updates = []
+    valores = []
+    for c in campos:
+        if c in dados:
+            updates.append(f"{c} = %s")
+            valores.append(dados[c])
+
+    if updates:
+        valores.append(estabelecimento_id)
+        conn.execute(
+            f"UPDATE estabelecimento SET {', '.join(updates)} WHERE id = %s",
+            tuple(valores)
+        )
+
+    # Se for o estabelecimento 1, também atualiza a tabela configuracao para retrocompatibilidade
+    if estabelecimento_id == 1:
+        for k, v in dados.items():
+            if v is not None:
+                atualizar_configuracao(conn, k, str(v))
 
 
 def obter_estabelecimento_por_id(conn, estabelecimento_id):
