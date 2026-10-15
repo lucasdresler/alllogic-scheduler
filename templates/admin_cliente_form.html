@@ -1,0 +1,50 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "clientes" %}
+
+{% block titulo %}{{ titulo }} — {{ nome_estabelecimento }}{% endblock %}
+
+{% block titulo_pagina %}{{ titulo }}{% endblock %}
+{% block subtitulo_topbar %}Cadastro e dados do cliente{% endblock %}
+
+{% block conteudo_admin %}
+    <div class="card" style="max-width: 680px;">
+        <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span class="subtitulo-admin" style="font-size: 0.875rem; color: var(--text-muted);">
+                    {% if cliente %}Atualize os dados e anotações do cliente{% else %}Preencha os dados do novo cliente{% endif %}
+                </span>
+            </div>
+            <a href="{{ url_for('admin_cliente_detalhes', cliente_id=cliente.id) if cliente else url_for('admin_clientes') }}" class="btn-secundario btn-compacto">
+                ← Voltar
+            </a>
+        </div>
+
+        {% if erro %}
+        <div class="mensagem-erro">{{ erro }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label for="nome" style="font-weight: 600; color: var(--navy-900);">Nome completo *</label>
+            <input type="text" id="nome" name="nome" value="{{ cliente.nome if cliente else '' }}" placeholder="Ex.: Maria Souza" required>
+
+            <label for="telefone" style="font-weight: 600; color: var(--navy-900);">Telefone / WhatsApp *</label>
+            <input type="tel" id="telefone" name="telefone" value="{{ cliente.telefone if cliente else '' }}" placeholder="(11) 99999-9999" required>
+
+            <label for="email" style="font-weight: 600; color: var(--navy-900);">E-mail (opcional)</label>
+            <input type="email" id="email" name="email" value="{{ cliente.email if cliente and cliente.email else '' }}" placeholder="cliente@exemplo.com">
+
+            <label for="observacoes" style="font-weight: 600; color: var(--navy-900);">Observações e Preferências</label>
+            <textarea id="observacoes" name="observacoes" rows="4" placeholder="Ex.: Preferência de corte na tesoura, alergia a produtos químicos, aniversariante de maio...">{{ cliente.observacoes if cliente else '' }}</textarea>
+
+            <div class="botoes-acoes" style="display: flex; gap: 12px; margin-top: 24px;">
+                <button type="submit" class="btn-primario">Salvar Cliente</button>
+                <a href="{{ url_for('admin_cliente_detalhes', cliente_id=cliente.id) if cliente else url_for('admin_clientes') }}" class="btn-secundario">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

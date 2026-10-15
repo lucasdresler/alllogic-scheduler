@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block titulo %}Minha Reserva — {{ nome_estabelecimento }}{% endblock %}
+
+{% block conteudo %}
+<div class="container" style="max-width: 580px; margin: 0 auto; padding: 20px 16px;">
+    <header class="topo" style="text-align: center; margin-bottom: 24px;">
+        <a href="{{ url_for('index') }}" style="text-decoration: none; color: inherit; display: inline-block;">
+            {% if logotipo %}
+            <div class="logo-topo" style="margin-bottom: 12px;">
+                <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" style="max-height: 70px; width: auto;">
+            </div>
+            {% endif %}
+            <h1 style="font-size: 1.5rem; color: var(--navy-900); font-weight: 700; margin: 0;">{{ nome_estabelecimento }}</h1>
+        </a>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Gerenciamento de Reserva</p>
+    </header>
+
+    {% if erro %}
+    <div class="mensagem-erro" style="margin-bottom: 16px;">{{ erro }}</div>
+    {% endif %}
+    {% if sucesso %}
+    <div class="mensagem-sucesso" style="margin-bottom: 16px;">{{ sucesso }}</div>
+    {% endif %}
+
+    <div class="card" style="background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-subtle); padding: 24px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 14px;">
+            <div>
+                <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Status da Reserva</span>
+                <div style="margin-top: 4px;">
+                    {% if agendamento.status == 'cancelado' %}
+                    <span class="badge-status badge-cancelado" style="font-size: 0.9rem; padding: 4px 10px;">Cancelado</span>
+                    {% elif agendamento.status == 'realizado' %}
+                    <span class="badge-status badge-realizado" style="font-size: 0.9rem; padding: 4px 10px;">Realizado</span>
+                    {% elif agendamento.status == 'nao_compareceu' %}
+                    <span class="badge-status badge-falta" style="font-size: 0.9rem; padding: 4px 10px;">Não Compareceu</span>
+                    {% else %}
+                    <span class="badge-status badge-agendado" style="font-size: 0.9rem; padding: 4px 10px;">Confirmado</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Horário</span>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--navy-900); margin-top: 2px;">
+                    {{ agendamento.hora }}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="resumo-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-subtle);">
+                <span style="color: var(--text-muted); font-size: 0.9rem;">Cliente</span>
+                <span style="font-weight: 600; color: var(--navy-900);">{{ agendamento.cliente_nome }}</span>
+            </div>
+
+            <div class="resumo-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-subtle);">
+                <span style="color: var(--text-muted); font-size: 0.9rem;">Data</span>
+                <span style="font-weight: 600; color: var(--navy-900);">
+                    {{ agendamento.data[8:10] }}/{{ agendamento.data[5:7] }}/{{ agendamento.data[0:4] }}
+                </span>
+            </div>
+
+            <div class="resumo-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-subtle);">
+                <span style="color: var(--text-muted); font-size: 0.9rem;">Serviço(s)</span>
+                <span style="font-weight: 600; color: var(--navy-900); text-align: right;">{{ agendamento.servico_nome }}</span>
+            </div>
+
+            <div class="resumo-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-subtle);">
+                <span style="color: var(--text-muted); font-size: 0.9rem;">Profissional</span>
+                <span style="font-weight: 600; color: var(--navy-900);">{{ agendamento.profissional_nome }}</span>
+            </div>
+
+            <div class="resumo-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-subtle);">
+                <span style="color: var(--text-muted); font-size: 0.9rem;">Valor Total</span>
+                <span style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900);">
+                    R$ {{ "%.2f"|format(agendamento.servico_preco)|replace(".", ",") }}
+                </span>
+            </div>
+
+            {% if endereco_estabelecimento %}
+            <div style="padding: 10px 0; border-bottom: 1px dashed var(--border-subtle);">
+                <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; display: block;">Local de Atendimento</span>
+                <span style="font-size: 0.9rem; color: var(--text-body); margin-top: 2px; display: block;">{{ endereco_estabelecimento }}</span>
+            </div>
+            {% endif %}
+
+            {% if telefone_estabelecimento %}
+            <div style="padding: 10px 0;">
+                <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; display: block;">Telefone do Salão</span>
+                <a href="tel:{{ telefone_limpo }}" style="font-size: 0.95rem; font-weight: 600; color: var(--navy-800); text-decoration: none;">
+                    {{ telefone_formatado or telefone_estabelecimento }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Ações do Cliente -->
+        <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 10px;">
+            {% if link_whatsapp %}
+            <a href="{{ link_whatsapp }}" target="_blank" rel="noopener noreferrer" class="btn-primario" style="background-color: #25D366; border-color: #25D366; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.155.57 4.175 1.564 5.922l-1.564 5.906 6.082-1.595c1.706.924 3.659 1.467 5.748 1.467 6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z"/></svg>
+                <span>Enviar Comprovante no WhatsApp</span>
+            </a>
+            {% endif %}
+
+            {% if agendamento.status == 'agendado' %}
+            <form method="POST" action="{{ url_for('public_cancelar_reserva', token=agendamento.token_acesso) }}" onsubmit="return confirm('Tem certeza de que deseja cancelar seu agendamento?');" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-secundario" style="width: 100%; color: var(--status-danger-text); border-color: var(--status-danger-border); background: var(--status-danger-bg);">
+                    Cancelar meu agendamento
+                </button>
+            </form>
+            <div style="text-align: center; margin-top: 8px;">
+                <a href="{{ url_for('index') }}" style="color: var(--navy-800); font-size: 0.9rem; text-decoration: underline; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                    ← Ir para a Página Inicial / Novo Agendamento
+                </a>
+            </div>
+            {% else %}
+            <a href="{{ url_for('index') }}" class="btn-primario" style="text-align: center; text-decoration: none;">
+                Fazer Novo Agendamento
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer class="rodape-publico" style="text-align: center; margin-top: 30px; font-size: 0.85rem; color: var(--text-muted);">
+        <p>&copy; {{ nome_estabelecimento }} · Agendamento Online</p>
+    </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var btnWa = document.querySelector(".btn-primario");
+    if (btnWa) {
+        var hrefAtual = btnWa.getAttribute("href") || "";
+        var isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile && hrefAtual.indexOf("api.whatsapp.com/send") !== -1) {
+            btnWa.setAttribute("href", hrefAtual.replace("api.whatsapp.com/send", "web.whatsapp.com/send"));
+        } else if (isMobile && hrefAtual.indexOf("api.whatsapp.com/send") !== -1) {
+            var params = hrefAtual.split("?")[1] || "";
+            btnWa.setAttribute("href", "whatsapp://send?" + params);
+        }
+    }
+</script>
+{% endblock %}

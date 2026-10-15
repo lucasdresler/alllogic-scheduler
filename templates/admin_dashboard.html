@@ -141,7 +141,15 @@
                         <tr>
                             <td class="col-data">{{ ag.data[8:10] }}/{{ ag.data[5:7] }}/{{ ag.data[0:4] }}</td>
                             <td class="col-hora">{{ ag.hora }}</td>
-                            <td class="col-cliente">{{ ag.cliente_nome }}</td>
+                            <td class="col-cliente">
+                                {% if ag.cliente_id %}
+                                <a href="{{ url_for('admin_cliente_detalhes', cliente_id=ag.cliente_id) }}" style="color: var(--navy-900); font-weight: 600; text-decoration: none;" title="Ver perfil e histórico de {{ ag.cliente_nome }}">
+                                    {{ ag.cliente_nome }}
+                                </a>
+                                {% else %}
+                                {{ ag.cliente_nome }}
+                                {% endif %}
+                            </td>
                             <td class="col-telefone">
                                 <div class="contato-cliente">
                                     <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
@@ -248,7 +256,15 @@
                         {% for ag in agendamentos %}
                         <tr>
                             <td class="col-hora">{{ ag.hora }}</td>
-                            <td class="col-cliente">{{ ag.cliente_nome }}</td>
+                            <td class="col-cliente">
+                                {% if ag.cliente_id %}
+                                <a href="{{ url_for('admin_cliente_detalhes', cliente_id=ag.cliente_id) }}" style="color: var(--navy-900); font-weight: 600; text-decoration: none;" title="Ver perfil e histórico de {{ ag.cliente_nome }}">
+                                    {{ ag.cliente_nome }}
+                                </a>
+                                {% else %}
+                                {{ ag.cliente_nome }}
+                                {% endif %}
+                            </td>
                             <td class="col-telefone">
                                 <div class="contato-cliente">
                                     <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>
@@ -344,7 +360,15 @@
                             {% for ag in agendamentos_do_dia %}
                             <tr>
                                 <td class="col-hora">{{ ag.hora }}</td>
-                                <td class="col-cliente">{{ ag.cliente_nome }}</td>
+                                <td class="col-cliente">
+                                    {% if ag.cliente_id %}
+                                    <a href="{{ url_for('admin_cliente_detalhes', cliente_id=ag.cliente_id) }}" style="color: var(--navy-900); font-weight: 600; text-decoration: none;" title="Ver perfil e histórico de {{ ag.cliente_nome }}">
+                                        {{ ag.cliente_nome }}
+                                    </a>
+                                    {% else %}
+                                    {{ ag.cliente_nome }}
+                                    {% endif %}
+                                </td>
                                 <td class="col-telefone">
                                     <div class="contato-cliente">
                                         <a href="tel:{{ ag.cliente_telefone|tel_link }}" class="link-tel" title="Ligar para {{ ag.cliente_nome }}">{{ ag.cliente_telefone }}</a>

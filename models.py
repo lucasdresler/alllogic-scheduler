@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from functools import lru_cache
+import re
+import uuid
 
 from database import db_session, obter_todas_configuracoes
 
@@ -750,22 +752,27 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
             return None, "Serviço inválido."
 
         primeiro_servico_id = servico_ids[0]
+        cliente_id = _obter_ou_criar_cliente_conn(conn, cliente_nome, cliente_telefone)
+        token_acesso = uuid.uuid4().hex
 
         cursor = conn.execute(
             """
             INSERT INTO agendamento (
+                cliente_id,
                 cliente_nome,
                 cliente_telefone,
                 servico_id,
                 profissional_id,
                 data,
                 hora,
-                profissional_nome_snapshot
+                profissional_nome_snapshot,
+                token_acesso
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
+                cliente_id,
                 cliente_nome,
                 cliente_telefone,
                 primeiro_servico_id,
@@ -773,6 +780,7 @@ def criar_agendamento(cliente_nome, cliente_telefone, servico_ids, profissional_
                 data_str,
                 hora_str,
                 profissional["nome"],
+                token_acesso,
             ),
         )
         agendamento_id = cursor.fetchone()["id"]
@@ -1271,3 +1279,268 @@ def verificar_admin(usuario, senha):
         if not row:
             return False
         return check_password_hash(row["senha_hash"], senha)
+
+
+# ==============================================================================
+# MÓDULO DE CLIENTES
+# ==============================================================================
+
+def _obter_ou_criar_cliente_conn(conn, nome, telefone, email=None):
+    """Localiza ou cria cliente na mesma transação."""
+    nome = (nome or "").strip()
+    telefone = (telefone or "").strip()
+    email = (email or "").strip() or None
+    if not nome or not telefone:
+        return None
+
+    row = conn.execute(
+        "SELECT id, nome, email FROM cliente WHERE TRIM(telefone) = %s",
+        (telefone,),
+    ).fetchone()
+    if row:
+        if email and not row["email"]:
+            conn.execute(
+                "UPDATE cliente SET email = %s WHERE id = %s",
+                (email, row["id"]),
+            )
+        return row["id"]
+
+    cursor = conn.execute(
+        """
+        INSERT INTO cliente (nome, telefone, email)
+        VALUES (%s, %s, %s)
+        RETURNING id
+        """,
+        (nome, telefone, email),
+    )
+    return cursor.fetchone()["id"]
+
+
+def obter_ou_criar_cliente(nome, telefone, email=None):
+    """Retorna ID do cliente existente ou cria novo."""
+    with db_session() as conn:
+        return _obter_ou_criar_cliente_conn(conn, nome, telefone, email)
+
+
+def listar_clientes(termo_busca=None):
+    """
+    Retorna lista de clientes com métricas agregadas:
+    - total de agendamentos
+    - agendamentos realizados, cancelados e faltas
+    - data do último agendamento
+    """
+    with db_session() as conn:
+        query = """
+            SELECT
+                c.id,
+                c.nome,
+                c.telefone,
+                c.email,
+                c.observacoes,
+                c.criado_em,
+                COUNT(a.id) AS total_agendamentos,
+                COUNT(a.id) FILTER (WHERE a.status = 'realizado') AS total_realizados,
+                COUNT(a.id) FILTER (WHERE a.status = 'cancelado') AS total_cancelados,
+                COUNT(a.id) FILTER (WHERE a.status = 'nao_compareceu') AS total_faltas,
+                COUNT(a.id) FILTER (WHERE a.status = 'agendado') AS total_pendentes,
+                MAX(a.data) AS ultimo_agendamento_data
+            FROM cliente c
+            LEFT JOIN agendamento a ON a.cliente_id = c.id
+        """
+        params = []
+        if termo_busca and termo_busca.strip():
+            termo = termo_busca.strip()
+            digitos = re.sub(r"\D", "", termo)
+            if digitos:
+                query += """
+                    WHERE c.nome ILIKE %s
+                       OR c.telefone ILIKE %s
+                       OR REGEXP_REPLACE(c.telefone, '\\D', '', 'g') LIKE %s
+                """
+                params.extend([f"%{termo}%", f"%{termo}%", f"%{digitos}%"])
+            else:
+                query += " WHERE c.nome ILIKE %s OR c.telefone ILIKE %s"
+                params.extend([f"%{termo}%", f"%{termo}%"])
+
+        query += """
+            GROUP BY c.id, c.nome, c.telefone, c.email, c.observacoes, c.criado_em
+            ORDER BY COALESCE(MAX(a.data), '1970-01-01') DESC, c.nome ASC
+        """
+        rows = conn.execute(query, tuple(params)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def obter_cliente(cliente_id):
+    """Retorna dados de um cliente pelo ID com estatísticas de atendimento."""
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT c.*,
+                   COUNT(a.id) AS total_agendamentos,
+                   COUNT(a.id) FILTER (WHERE a.status = 'realizado') AS total_realizados,
+                   COUNT(a.id) FILTER (WHERE a.status = 'cancelado') AS total_cancelados,
+                   COUNT(a.id) FILTER (WHERE a.status = 'nao_compareceu') AS total_faltas,
+                   COUNT(a.id) FILTER (WHERE a.status = 'agendado') AS total_pendentes,
+                   COALESCE(SUM(s.total_preco) FILTER (WHERE a.status IN ('agendado', 'realizado')), 0) AS valor_total_atendimentos
+            FROM cliente c
+            LEFT JOIN agendamento a ON a.cliente_id = c.id
+            LEFT JOIN (
+                SELECT agendamento_id, SUM(COALESCE(preco_unitario, 0)) AS total_preco
+                FROM agendamento_servico
+                GROUP BY agendamento_id
+            ) s ON s.agendamento_id = a.id
+            WHERE c.id = %s
+            GROUP BY c.id
+            """,
+            (cliente_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def obter_historico_cliente(cliente_id):
+    """Retorna o histórico cronológico de agendamentos de um cliente."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                a.id,
+                a.data,
+                a.hora,
+                a.status,
+                a.criado_em,
+                COALESCE(a.profissional_nome_snapshot, p.nome) AS profissional_nome,
+                COALESCE(string_agg(COALESCE(ags.nome_servico, s.nome), ', ' ORDER BY ags.servico_id), '') AS servico_nome,
+                COALESCE(SUM(COALESCE(ags.preco_unitario, s.preco)), 0) AS servico_preco,
+                COALESCE(SUM(COALESCE(ags.duracao_minutos, s.duracao_minutos)), 0) AS servico_duracao
+            FROM agendamento a
+            LEFT JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            LEFT JOIN servico s ON s.id = ags.servico_id
+            WHERE a.cliente_id = %s
+            GROUP BY a.id, a.data, a.hora, a.status, a.criado_em, a.profissional_nome_snapshot, p.nome
+            ORDER BY a.data DESC, a.hora DESC
+            """,
+            (cliente_id,),
+        ).fetchall()
+
+        agora = datetime.now()
+        resultados = []
+        for r in rows:
+            item = dict(r)
+            try:
+                dt_ag = datetime.strptime(f"{item['data']} {item['hora']}", "%Y-%m-%d %H:%M")
+                item["ja_passou"] = dt_ag <= agora
+            except Exception:
+                item["ja_passou"] = False
+            resultados.append(item)
+        return resultados
+
+
+def criar_cliente(nome, telefone, email=None, observacoes=""):
+    """Cria um novo cliente no sistema com validações."""
+    nome = (nome or "").strip()
+    telefone = (telefone or "").strip()
+    email = (email or "").strip() or None
+    observacoes = (observacoes or "").strip()
+    if not nome:
+        return None, "Nome do cliente é obrigatório."
+    if not telefone:
+        return None, "Telefone do cliente é obrigatório."
+
+    with db_session() as conn:
+        existente = conn.execute(
+            "SELECT id FROM cliente WHERE TRIM(telefone) = %s",
+            (telefone,),
+        ).fetchone()
+        if existente:
+            return None, "Já existe um cliente cadastrado com este telefone."
+
+        cursor = conn.execute(
+            """
+            INSERT INTO cliente (nome, telefone, email, observacoes)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
+            """,
+            (nome, telefone, email, observacoes),
+        )
+        return cursor.fetchone()["id"], None
+
+
+def atualizar_cliente(cliente_id, nome, telefone, email=None, observacoes=""):
+    """Atualiza dados cadastrais e observações de um cliente."""
+    nome = (nome or "").strip()
+    telefone = (telefone or "").strip()
+    email = (email or "").strip() or None
+    observacoes = (observacoes or "").strip()
+    if not nome:
+        return False, "Nome do cliente é obrigatório."
+    if not telefone:
+        return False, "Telefone do cliente é obrigatório."
+
+    with db_session() as conn:
+        duplicado = conn.execute(
+            "SELECT id FROM cliente WHERE TRIM(telefone) = %s AND id != %s",
+            (telefone, cliente_id),
+        ).fetchone()
+        if duplicado:
+            return False, "Outro cliente já utiliza este telefone."
+
+        conn.execute(
+            """
+            UPDATE cliente
+            SET nome = %s, telefone = %s, email = %s, observacoes = %s
+            WHERE id = %s
+            """,
+            (nome, telefone, email, observacoes, cliente_id),
+        )
+        # Atualiza também o snapshot nos agendamentos futuros não concluídos para manter coerência
+        conn.execute(
+            """
+            UPDATE agendamento
+            SET cliente_nome = %s, cliente_telefone = %s
+            WHERE cliente_id = %s AND status = 'agendado'
+            """,
+            (nome, telefone, cliente_id),
+        )
+        return True, None
+
+
+# ==============================================================================
+# ACESSO PÚBLICO À RESERVA (TOKEN DO CLIENTE)
+# ==============================================================================
+
+def obter_agendamento_por_token(token):
+    """Retorna os dados completos do agendamento a partir do token de acesso público."""
+    if not token or not str(token).strip():
+        return None
+    token = str(token).strip()
+
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id FROM agendamento WHERE token_acesso = %s",
+            (token,),
+        ).fetchone()
+        if not row:
+            return None
+        return obter_agendamento_completo(row["id"])
+
+
+def cancelar_agendamento_por_cliente(token):
+    """
+    Cancela o agendamento através do token público de acesso do cliente.
+    Apenas agendamentos com status 'agendado' podem ser cancelados.
+    """
+    if not token or not str(token).strip():
+        return False, "Token de acesso inválido."
+    token = str(token).strip()
+
+    ag = obter_agendamento_por_token(token)
+    if not ag:
+        return False, "Agendamento não encontrado."
+
+    if ag["status"] != "agendado":
+        if ag["status"] == "cancelado":
+            return False, "Este agendamento já foi cancelado anteriormente."
+        return False, "Este agendamento não pode mais ser cancelado."
+
+    return cancelar_agendamento(ag["id"], usuario="cliente")

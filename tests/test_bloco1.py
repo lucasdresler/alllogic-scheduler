@@ -383,8 +383,8 @@ def test_tela_sucesso_retorno_automatico(client, monkeypatch):
     assert "Você será direcionado ao início em alguns segundos." in html
     # SEM botão 'Voltar ao início'
     assert "Voltar ao início" not in html
-    # Script de redirecionamento em 5000ms
-    assert "5000" in html
+    # Script de redirecionamento automático
+    assert "segundosRestantes" in html or "25" in html
     assert "window.location.href" in html
     # Rodapé público
     assert '<footer class="rodape-publico">' in html

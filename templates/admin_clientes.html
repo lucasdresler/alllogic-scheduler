@@ -1,0 +1,126 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "clientes" %}
+
+{% block titulo %}Clientes — {{ nome_estabelecimento }}{% endblock %}
+
+{% block titulo_pagina %}Gerenciar clientes{% endblock %}
+{% block subtitulo_topbar %}Base de clientes e histórico{% endblock %}
+
+{% block conteudo_admin %}
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+    {% if sucesso %}
+    <div class="mensagem-sucesso">{{ sucesso }}</div>
+    {% endif %}
+
+    <div class="card painel-filtros-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <form method="GET" action="{{ url_for('admin_clientes') }}" style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 280px; margin: 0;">
+                <input type="text" id="campo-busca" name="busca" value="{{ busca }}" placeholder="Buscar por nome ou telefone..." style="flex: 1; height: 42px; margin: 0; box-sizing: border-box;">
+                <button type="submit" class="btn-primario btn-compacto" style="height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; margin: 0; box-sizing: border-box; white-space: nowrap;">Buscar</button>
+                {% if busca %}
+                <a href="{{ url_for('admin_clientes') }}" class="btn-secundario btn-compacto" style="height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; margin: 0; box-sizing: border-box; white-space: nowrap;">Limpar</a>
+                {% endif %}
+            </form>
+            <div>
+                <a href="{{ url_for('admin_cliente_novo') }}" class="btn-primario btn-compacto" style="height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; margin: 0; box-sizing: border-box; text-decoration: none; white-space: nowrap; background-color: var(--navy-800); border-color: var(--navy-700);">
+                    + Novo cliente
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 16px; padding: 14px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span style="font-size: 0.9rem; color: var(--text-muted);">
+                {% if busca %}
+                    Resultados encontrados para "<strong>{{ busca }}</strong>":
+                {% else %}
+                    Total de clientes cadastrados:
+                {% endif %}
+            </span>
+            <span style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900);">{{ total_clientes }}</span>
+        </div>
+    </div>
+
+    <div class="card">
+        {% if clientes %}
+        <div style="overflow-x:auto">
+            <table class="tabela-agendamentos">
+                <thead>
+                    <tr>
+                        <th class="col-cliente">Cliente</th>
+                        <th class="col-telefone">Contato</th>
+                        <th style="text-align: center;">Agendamentos</th>
+                        <th style="text-align: center;">Último Atendimento</th>
+                        <th class="col-acoes" style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in clientes %}
+                    <tr>
+                        <td class="col-cliente">
+                            <a href="{{ url_for('admin_cliente_detalhes', cliente_id=c.id) }}" style="font-weight: 600; color: var(--navy-900); text-decoration: none;">
+                                {{ c.nome }}
+                            </a>
+                            {% if c.observacoes %}
+                            <span title="Possui observações anotadas" style="display: inline-block; margin-left: 6px; font-size: 0.75rem; background: var(--gold-subtle); color: var(--navy-900); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--champagne-dourado);">Obs</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-telefone">
+                            <div class="contato-cliente">
+                                <a href="tel:{{ c.telefone|tel_link }}" class="link-tel" title="Ligar para {{ c.nome }}">{{ c.telefone }}</a>
+                                {% set zap_num = c.telefone|zap_link %}
+                                {% if zap_num %}
+                                <a href="https://wa.me/{{ zap_num }}" target="_blank" rel="noopener noreferrer" class="link-zap" title="WhatsApp com {{ c.nome }}">
+                                    <span class="badge-zap">WhatsApp</span>
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% if c.email %}
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">{{ c.email }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <span style="font-weight: 700; color: var(--navy-900); font-size: 0.95rem;">{{ c.total_agendamentos }}</span>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                <span style="color: var(--status-success-text);">{{ c.total_realizados }} real.</span>
+                                {% if c.total_faltas %}
+                                · <span style="color: var(--status-warning-text);">{{ c.total_faltas }} falta</span>
+                                {% endif %}
+                                {% if c.total_cancelados %}
+                                · <span style="color: var(--status-danger-text);">{{ c.total_cancelados }} canc.</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="text-align: center;">
+                            {% if c.ultimo_agendamento_data %}
+                                <span style="font-size: 0.88rem; font-weight: 500;">
+                                    {{ c.ultimo_agendamento_data[8:10] }}/{{ c.ultimo_agendamento_data[5:7] }}/{{ c.ultimo_agendamento_data[0:4] }}
+                                </span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-acoes" style="text-align: right;">
+                            <div class="acoes-agendamento" style="justify-content: flex-end;">
+                                <a href="{{ url_for('admin_cliente_detalhes', cliente_id=c.id) }}" class="btn-acao btn-acao-primario" title="Ver perfil e histórico completo">
+                                    Histórico
+                                </a>
+                                <a href="{{ url_for('admin_cliente_editar', cliente_id=c.id) }}" class="btn-acao" style="background: var(--bg-surface-subtle); color: var(--text-body); border: 1px solid var(--border-subtle);" title="Editar dados cadastrais">
+                                    Editar
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="vazio">Nenhum cliente encontrado{% if busca %} para a pesquisa atual{% endif %}.</p>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -219,6 +219,20 @@ def _validar_email(email):
     return bool(EMAIL_REGEX.match(email))
 
 
+def _obter_url_base_whatsapp():
+    """Retorna URL base com domínio público para garantir que o WhatsApp reconheça o link como clicável."""
+    url_env = os.environ.get("APP_URL_BASE", "").strip().rstrip("/")
+    if url_env:
+        return url_env
+    try:
+        host = request.host if request else ""
+        if not host or "127.0.0.1" in host or "localhost" in host:
+            return "https://agenda.alllogiconline.com.br"
+        return request.host_url.rstrip("/")
+    except Exception:
+        return "https://agenda.alllogiconline.com.br"
+
+
 def login_requerido(f):
     @wraps(f)
     def decorada(*args, **kwargs):
@@ -286,11 +300,74 @@ def agendamento_sucesso(agendamento_id):
     agendamento = models.obter_agendamento_completo(agendamento_id)
     if not agendamento:
         return redirect(url_for("index"))
+
+    config_template = _carregar_config_template()
+    url_base_local = request.host_url.rstrip("/")
+    url_base_zap = _obter_url_base_whatsapp()
+
+    from whatsapp_service import formatar_mensagem_cliente, gerar_link_wa_me
+    texto_zap = formatar_mensagem_cliente(agendamento, config_template, url_base_zap)
+    link_whatsapp = gerar_link_wa_me(agendamento.get("cliente_telefone"), texto_zap)
+
     return render_template(
         "sucesso.html",
         agendamento=agendamento,
-        **_carregar_config_template(),
+        link_whatsapp=link_whatsapp,
+        url_reserva=f"{url_base_local}/reserva/{agendamento.get('token_acesso')}" if agendamento.get("token_acesso") else "",
+        **config_template,
     )
+
+
+@app.route("/reserva/<token>")
+def public_ver_reserva(token):
+    agendamento = models.obter_agendamento_por_token(token)
+    config_template = _carregar_config_template()
+    if not agendamento:
+        return render_template(
+            "reserva.html",
+            agendamento=None,
+            erro="Reserva não encontrada. Verifique o link informado.",
+            **config_template,
+        )
+
+    url_base_zap = _obter_url_base_whatsapp()
+    from whatsapp_service import formatar_mensagem_cliente, gerar_link_wa_me, formatar_telefone_br
+    texto_zap = formatar_mensagem_cliente(agendamento, config_template, url_base_zap)
+    link_whatsapp = gerar_link_wa_me(agendamento.get("cliente_telefone"), texto_zap)
+    telefone_formatado = formatar_telefone_br(config_template.get("telefone_estabelecimento", ""))
+
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    return render_template(
+        "reserva.html",
+        agendamento=agendamento,
+        link_whatsapp=link_whatsapp,
+        telefone_formatado=telefone_formatado,
+        sucesso=sucesso,
+        erro=erro,
+        **config_template,
+    )
+
+
+@app.route("/reserva/<token>/cancelar", methods=["POST"])
+def public_cancelar_reserva(token):
+    agendamento = models.obter_agendamento_por_token(token)
+    if not agendamento:
+        return redirect(url_for("index"))
+
+    ok, erro = models.cancelar_agendamento_por_cliente(token)
+    if not ok:
+        return redirect(url_for("public_ver_reserva", token=token, erro=erro))
+
+    try:
+        from whatsapp_service import notificar_cancelamento_whatsapp
+        url_base = request.host_url.rstrip("/")
+        notificar_cancelamento_whatsapp(agendamento["id"], url_base=url_base)
+    except Exception as e:
+        app.logger.warning(f"Erro ao disparar cancelamento WhatsApp: {e}")
+
+    return redirect(url_for("public_ver_reserva", token=token, sucesso="Seu agendamento foi cancelado com sucesso."))
 
 
 @app.route("/experimente")
@@ -439,7 +516,18 @@ def api_appointments():
     if erro:
         return jsonify({"erro": erro}), 409
 
-    return jsonify({"agendamento_id": agendamento_id}), 201
+    ag = models.obter_agendamento_completo(agendamento_id)
+    token_acesso = ag["token_acesso"] if ag and "token_acesso" in ag else None
+
+    # Dispara notificações de WhatsApp via Evolution API em background
+    try:
+        from whatsapp_service import notificar_novo_agendamento_whatsapp
+        url_base_zap = _obter_url_base_whatsapp()
+        notificar_novo_agendamento_whatsapp(agendamento_id, url_base=url_base_zap)
+    except Exception as e:
+        app.logger.warning(f"Erro ao disparar notificações de WhatsApp: {e}")
+
+    return jsonify({"agendamento_id": agendamento_id, "token_acesso": token_acesso}), 201
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
@@ -657,6 +745,91 @@ def admin_profissional_toggle(profissional_id):
     if profissional:
         models.alterar_status_profissional(profissional_id, not profissional["ativo"])
     return redirect(url_for("admin_profissionais"))
+
+
+@app.route("/admin/clientes")
+@login_requerido
+def admin_clientes():
+    busca = request.args.get("busca", "").strip()
+    clientes = models.listar_clientes(termo_busca=busca)
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+    return render_template(
+        "admin_clientes.html",
+        clientes=clientes,
+        busca=busca,
+        total_clientes=len(clientes),
+        sucesso=sucesso,
+        erro=erro,
+    )
+
+
+@app.route("/admin/clientes/novo", methods=["GET", "POST"])
+@login_requerido
+def admin_cliente_novo():
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        telefone = request.form.get("telefone", "").strip()
+        email = request.form.get("email", "").strip()
+        observacoes = request.form.get("observacoes", "").strip()
+
+        cliente_id, erro = models.criar_cliente(nome, telefone, email, observacoes)
+        if not erro and cliente_id:
+            return redirect(url_for("admin_cliente_detalhes", cliente_id=cliente_id, sucesso="Cliente cadastrado com sucesso."))
+
+    return render_template(
+        "admin_cliente_form.html",
+        titulo="Novo Cliente",
+        cliente=None,
+        erro=erro,
+    )
+
+
+@app.route("/admin/clientes/<int:cliente_id>")
+@login_requerido
+def admin_cliente_detalhes(cliente_id):
+    cliente = models.obter_cliente(cliente_id)
+    if not cliente:
+        return redirect(url_for("admin_clientes", erro="Cliente não encontrado."))
+
+    historico = models.obter_historico_cliente(cliente_id)
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    return render_template(
+        "admin_cliente_detalhe.html",
+        cliente=cliente,
+        historico=historico,
+        sucesso=sucesso,
+        erro=erro,
+    )
+
+
+@app.route("/admin/clientes/<int:cliente_id>/editar", methods=["GET", "POST"])
+@login_requerido
+def admin_cliente_editar(cliente_id):
+    cliente = models.obter_cliente(cliente_id)
+    if not cliente:
+        return redirect(url_for("admin_clientes", erro="Cliente não encontrado."))
+
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        telefone = request.form.get("telefone", "").strip()
+        email = request.form.get("email", "").strip()
+        observacoes = request.form.get("observacoes", "").strip()
+
+        ok, erro = models.atualizar_cliente(cliente_id, nome, telefone, email, observacoes)
+        if ok:
+            return redirect(url_for("admin_cliente_detalhes", cliente_id=cliente_id, sucesso="Dados do cliente atualizados com sucesso."))
+
+    return render_template(
+        "admin_cliente_form.html",
+        titulo=f"Editar {cliente['nome']}",
+        cliente=cliente,
+        erro=erro,
+    )
 
 
 @app.route("/admin/configuracoes", methods=["GET", "POST"])

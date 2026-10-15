@@ -1,0 +1,185 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "clientes" %}
+
+{% block titulo %}{{ cliente.nome }} — Clientes — {{ nome_estabelecimento }}{% endblock %}
+
+{% block titulo_pagina %}{{ cliente.nome }}{% endblock %}
+{% block subtitulo_topbar %}Perfil do cliente e histórico de atendimentos{% endblock %}
+
+{% block conteudo_admin %}
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+    {% if sucesso %}
+    <div class="mensagem-sucesso">{{ sucesso }}</div>
+    {% endif %}
+
+    <!-- Barra de Ações do Topo -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <a href="{{ url_for('admin_clientes') }}" class="btn-secundario btn-compacto">
+            ← Voltar para todos os clientes
+        </a>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('admin_cliente_editar', cliente_id=cliente.id) }}" class="btn-primario btn-compacto">
+                Editar dados do cliente
+            </a>
+        </div>
+    </div>
+
+    <!-- Grid de Perfil e Estatísticas -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px;">
+        <!-- Card de Informações de Contato -->
+        <div class="card" style="margin: 0;">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900); margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                Dados de Contato
+            </h2>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); display: block;">Telefone</span>
+                    <div class="contato-cliente" style="margin-top: 4px;">
+                        <a href="tel:{{ cliente.telefone|tel_link }}" class="link-tel" style="font-size: 1rem; font-weight: 600;" title="Ligar para {{ cliente.nome }}">{{ cliente.telefone }}</a>
+                        {% set zap_num = cliente.telefone|zap_link %}
+                        {% if zap_num %}
+                        <a href="https://wa.me/{{ zap_num }}" target="_blank" rel="noopener noreferrer" class="link-zap" title="WhatsApp com {{ cliente.nome }}">
+                            <span class="badge-zap">WhatsApp</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if cliente.email %}
+                <div>
+                    <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); display: block;">E-mail</span>
+                    <a href="mailto:{{ cliente.email }}" style="color: var(--navy-700); text-decoration: underline; font-size: 0.95rem;">{{ cliente.email }}</a>
+                </div>
+                {% endif %}
+
+                <div>
+                    <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); display: block;">Cliente desde</span>
+                    <span style="font-size: 0.95rem; color: var(--text-body);">{{ cliente.criado_em.strftime('%d/%m/%Y') if cliente.criado_em else '—' }}</span>
+                </div>
+            </div>
+
+            {% if cliente.observacoes %}
+            <div style="margin-top: 16px; padding: 12px 14px; background: var(--bg-surface-hover); border-left: 3px solid var(--champagne-dourado); border-radius: 4px;">
+                <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--navy-900); display: block; margin-bottom: 4px;">Observações / Preferências</span>
+                <p style="font-size: 0.9rem; color: var(--text-body); margin: 0; white-space: pre-wrap;">{{ cliente.observacoes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Card de Resumo de Frequência -->
+        <div class="card" style="margin: 0;">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900); margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                Histórico Operacional
+            </h2>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 14px;">
+                <div style="background: var(--bg-surface-hover); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle); text-align: center;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Total de Agendamentos</span>
+                    <span style="font-size: 1.4rem; font-weight: 700; color: var(--navy-900);">{{ cliente.total_agendamentos }}</span>
+                </div>
+                <div style="background: var(--status-success-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--status-success-border); text-align: center;">
+                    <span style="font-size: 0.8rem; color: var(--status-success-text); display: block;">Realizados</span>
+                    <span style="font-size: 1.4rem; font-weight: 700; color: var(--status-success-text);">{{ cliente.total_realizados }}</span>
+                </div>
+                <div style="background: var(--status-warning-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--status-warning-border); text-align: center;">
+                    <span style="font-size: 0.8rem; color: var(--status-warning-text); display: block;">Faltas (Não Compareceu)</span>
+                    <span style="font-size: 1.4rem; font-weight: 700; color: var(--status-warning-text);">{{ cliente.total_faltas }}</span>
+                </div>
+                <div style="background: var(--status-danger-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--status-danger-border); text-align: center;">
+                    <span style="font-size: 0.8rem; color: var(--status-danger-text); display: block;">Cancelamentos</span>
+                    <span style="font-size: 1.4rem; font-weight: 700; color: var(--status-danger-text);">{{ cliente.total_cancelados }}</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--gold-subtle); border: 1px solid var(--champagne-dourado); border-radius: 6px;">
+                <span style="font-size: 0.9rem; font-weight: 600; color: var(--navy-900);">Total em Atendimentos:</span>
+                <span style="font-size: 1.15rem; font-weight: 700; color: var(--navy-900);">
+                    R$ {{ "%.2f"|format(cliente.valor_total_atendimentos)|replace(".", ",") }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Histórico de Agendamentos -->
+    <div class="card">
+        <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--navy-900); margin-bottom: 16px;">
+            Histórico de Agendamentos ({{ historico|length }})
+        </h2>
+
+        {% if historico %}
+        <div style="overflow-x:auto">
+            <table class="tabela-agendamentos">
+                <thead>
+                    <tr>
+                        <th class="col-data">Data</th>
+                        <th class="col-hora">Horário</th>
+                        <th class="col-servico">Serviços</th>
+                        <th class="col-profissional">Profissional</th>
+                        <th class="col-preco">Valor</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-acoes" style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ag in historico %}
+                    <tr>
+                        <td class="col-data">{{ ag.data[8:10] }}/{{ ag.data[5:7] }}/{{ ag.data[0:4] }}</td>
+                        <td class="col-hora">{{ ag.hora }}</td>
+                        <td class="col-servico" title="{{ ag.servico_nome }}">
+                            <span class="celula-texto-longo">{{ ag.servico_nome }}</span>
+                        </td>
+                        <td class="col-profissional" title="{{ ag.profissional_nome }}">
+                            <span class="celula-texto-longo">{{ ag.profissional_nome }}</span>
+                        </td>
+                        <td class="col-preco">R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
+                        <td class="col-status">
+                            {% if ag.status == "cancelado" %}
+                            <span class="badge-status badge-cancelado">Cancelado</span>
+                            {% elif ag.status == "realizado" %}
+                            <span class="badge-status badge-realizado">Realizado</span>
+                            {% elif ag.status == "nao_compareceu" %}
+                            <span class="badge-status badge-falta">Não compareceu</span>
+                            {% else %}
+                            <span class="badge-status badge-agendado">Agendado</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-acoes" style="text-align: right;">
+                            <div class="acoes-agendamento" style="justify-content: flex-end;">
+                                {% if ag.status == 'agendado' %}
+                                    {% if ag.ja_passou %}
+                                    <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="status" value="realizado">
+                                        <button type="submit" class="btn-acao btn-acao-sucesso" title="Marcar como atendimento realizado">Realizado</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('admin_atualizar_status_agendamento', agendamento_id=ag.id) }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="status" value="nao_compareceu">
+                                        <button type="submit" class="btn-acao btn-acao-alerta" title="Marcar que não compareceu">Faltou</button>
+                                    </form>
+                                    {% else %}
+                                    <a href="{{ url_for('admin_reagendar_agendamento', agendamento_id=ag.id) }}" class="btn-acao btn-acao-primario" title="Reagendar atendimento">Reagendar</a>
+                                    {% endif %}
+                                    <form method="POST" action="{{ url_for('admin_cancelar_agendamento', agendamento_id=ag.id) }}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja cancelar este agendamento?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-acao btn-acao-perigo" title="Cancelar agendamento">Cancelar</button>
+                                    </form>
+                                {% else %}
+                                    <span class="acao-concluida">—</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="vazio">Nenhum agendamento registrado para este cliente.</p>
+        {% endif %}
+    </div>
+{% endblock %}
