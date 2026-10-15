@@ -7,6 +7,13 @@
 {% block titulo_pagina %}Gerenciar profissionais{% endblock %}
 
 {% block conteudo_admin %}
+    {% if request.args.get('erro_limite') %}
+    <div class="mensagem-erro" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span><strong>Limite atingido:</strong> Você atingiu o limite de profissionais ativos do seu plano (Plano {{ plano_config.nome }} — máx. {{ limite_profissionais }}).</span>
+        <a href="{{ url_for('admin_upgrade') }}" style="background: #0a1f44; color: #ffffff; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">Fazer Upgrade</a>
+    </div>
+    {% endif %}
+
     {% if erro %}
     <div class="mensagem-erro">{{ erro }}</div>
     {% endif %}
@@ -15,11 +22,21 @@
     {% endif %}
 
     <div class="card">
-        <div class="acoes-topo acoes-tabela" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div>
+        <div class="acoes-topo acoes-tabela" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
                 <span class="subtitulo-admin" style="font-size: 0.875rem; color: var(--cor-mutada);">Equipe de atendimento</span>
+                <span style="background: rgba(31, 111, 255, 0.08); color: #1f6fff; border: 1px solid rgba(31, 111, 255, 0.25); font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 12px;">
+                    {{ total_ativos }} de {{ limite_profissionais }} ativo{{ 's' if limite_profissionais > 1 else '' }} (Plano {{ plano_config.nome }})
+                </span>
             </div>
-            <a href="{{ url_for('admin_profissional_novo') }}" class="btn-primario btn-compacto">+ Novo profissional</a>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                {% if atingiu_limite %}
+                <a href="{{ url_for('admin_upgrade') }}" style="background: #0a1f44; color: #ffffff; padding: 7px 14px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                    <span>Upgrade de Plano</span>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('admin_profissional_novo') }}" class="btn-primario btn-compacto">+ Novo profissional</a>
+            </div>
         </div>
 
         {% if profissionais %}

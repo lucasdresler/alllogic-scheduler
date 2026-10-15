@@ -352,8 +352,14 @@ def init_db():
                 trial_inicio TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 trial_fim TIMESTAMP WITH TIME ZONE NOT NULL,
                 status TEXT NOT NULL DEFAULT 'ativo',
+                plano TEXT NOT NULL DEFAULT 'intermediario',
                 criado_em TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
+        """)
+
+        conn.execute("""
+            ALTER TABLE estabelecimento
+            ADD COLUMN IF NOT EXISTS plano TEXT NOT NULL DEFAULT 'intermediario'
         """)
 
         conn.execute("""
@@ -372,10 +378,10 @@ def init_db():
         # Assegura que o estabelecimento piloto padrão (ID 1) exista para retrocompatibilidade
         conn.execute("""
             INSERT INTO estabelecimento (
-                id, slug, nome, nome_responsavel, cnpj_cpf, email, telefone, trial_inicio, trial_fim, status
+                id, slug, nome, nome_responsavel, cnpj_cpf, email, telefone, trial_inicio, trial_fim, status, plano
             ) VALUES (
                 1, 'default', 'Minha Empresa', 'Administrador', '', 'admin@alllogiconline.com.br', '',
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '3650 days', 'ativo'
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '3650 days', 'ativo', 'intermediario'
             ) ON CONFLICT (id) DO NOTHING
         """)
 
@@ -713,6 +719,56 @@ def gerar_slug(texto):
     return re.sub(r"[-\s]+", "-", texto) or "estabelecimento"
 
 
+PLANOS_CONFIG = {
+    "inicial": {
+        "id": "inicial",
+        "nome": "Inicial",
+        "limite_profissionais": 1,
+        "preco_mensal": "49,90",
+        "preco_anual_mensal": "39,90",
+        "capacidade_label": "1 Profissional",
+        "tagline": "Para profissionais autônomos e estúdios individuais com foco em simplicidade.",
+    },
+    "intermediario": {
+        "id": "intermediario",
+        "nome": "Intermediário",
+        "limite_profissionais": 5,
+        "preco_mensal": "99,90",
+        "preco_anual_mensal": "79,90",
+        "capacidade_label": "Até 5 Profissionais",
+        "tagline": "Para barbearias, clínicas e salões com equipe em crescimento.",
+        "popular": True,
+    },
+    "avancado": {
+        "id": "avancado",
+        "nome": "Avançado",
+        "limite_profissionais": 10,
+        "preco_mensal": "169,90",
+        "preco_anual_mensal": "139,90",
+        "capacidade_label": "Até 10 Profissionais",
+        "tagline": "Para estabelecimentos com grande fluxo e múltiplos profissionais.",
+    },
+}
+
+
+def obter_limite_profissionais(plano):
+    """Retorna o limite maximo de profissionais ativos para o plano."""
+    cfg = PLANOS_CONFIG.get(str(plano or "intermediario").lower())
+    return cfg["limite_profissionais"] if cfg else 5
+
+
+def atualizar_plano_estabelecimento(conn, estabelecimento_id, novo_plano):
+    """Atualiza o plano contratado do estabelecimento."""
+    plano_normalizado = str(novo_plano or "intermediario").strip().lower()
+    if plano_normalizado not in PLANOS_CONFIG:
+        plano_normalizado = "intermediario"
+    conn.execute(
+        "UPDATE estabelecimento SET plano = %s WHERE id = %s",
+        (plano_normalizado, estabelecimento_id),
+    )
+    return plano_normalizado
+
+
 def criar_estabelecimento_com_admin(
     conn,
     nome_estabelecimento,
@@ -722,6 +778,7 @@ def criar_estabelecimento_com_admin(
     telefone,
     usuario,
     senha_hash,
+    plano="intermediario",
 ):
     """
     Cria atomicamente um novo estabelecimento com 14 dias de teste e sua conta admin vinculada.
@@ -737,12 +794,16 @@ def criar_estabelecimento_com_admin(
     agora = datetime.now(timezone.utc)
     trial_fim = agora + timedelta(days=14)
 
+    plano_normalizado = str(plano or "intermediario").strip().lower()
+    if plano_normalizado not in PLANOS_CONFIG:
+        plano_normalizado = "intermediario"
+
     row_est = conn.execute(
         """
         INSERT INTO estabelecimento (
-            slug, nome, nome_responsavel, cnpj_cpf, email, telefone, trial_inicio, trial_fim, status
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'ativo')
-        RETURNING id, slug, nome, email, trial_inicio, trial_fim, status
+            slug, nome, nome_responsavel, cnpj_cpf, email, telefone, trial_inicio, trial_fim, status, plano
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'ativo', %s)
+        RETURNING id, slug, nome, email, trial_inicio, trial_fim, status, plano
         """,
         (
             slug,
@@ -753,6 +814,7 @@ def criar_estabelecimento_com_admin(
             telefone.strip(),
             agora,
             trial_fim,
+            plano_normalizado,
         ),
     ).fetchone()
 
@@ -777,6 +839,7 @@ def criar_estabelecimento_com_admin(
         "trial_inicio": row_est["trial_inicio"],
         "trial_fim": row_est["trial_fim"],
         "status": row_est["status"],
+        "plano": row_est["plano"],
     }
 
 
@@ -867,7 +930,7 @@ def obter_admin_com_estabelecimento(conn, usuario):
         SELECT a.*, e.nome AS estabelecimento_nome, e.slug AS estabelecimento_slug,
                e.cnpj_cpf AS estabelecimento_cnpj_cpf, e.telefone AS estabelecimento_telefone,
                e.email AS estabelecimento_email, e.trial_inicio, e.trial_fim,
-               e.status AS estabelecimento_status
+               e.status AS estabelecimento_status, e.plano AS estabelecimento_plano
         FROM admin a
         LEFT JOIN estabelecimento e ON e.id = a.estabelecimento_id
         WHERE a.usuario = %s

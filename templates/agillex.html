@@ -1,190 +1,763 @@
 {% extends "base.html" %}
 
-{% block titulo %}Agillex Agenda — Cadastre-se e Experimente 14 Dias Grátis{% endblock %}
+{% block titulo %}Agillex Agenda — Cadastre-se e Experimente 14 Dias Grátis | AllLogic Online{% endblock %}
 
 {% block conteudo %}
-<div class="container container-experimente container-agillex">
-    <header class="topo experimente-topo">
-        <div class="experimente-badge">14 Dias de Teste Grátis</div>
-        <h1>Agillex Agenda para o seu Negócio</h1>
-        <div class="experimente-intro-bloco">
-            <p class="experimente-subtitulo">
+<div class="agillex-cadastro-page">
+    <div class="agillex-cadastro-container">
+        <!-- Topo Institucional -->
+        <header class="agillex-topo">
+            <div class="agillex-brand-badge">
+                <span class="agillex-badge-dot"></span>
+                <span>14 Dias de Teste Grátis · Sem Cartão de Crédito</span>
+            </div>
+            <h1 class="agillex-titulo">Agillex Agenda para o seu Negócio</h1>
+            <p class="agillex-subtitulo">
                 A solução de agendamento online que centraliza os agendamentos, clientes e serviços do seu negócio em um só lugar.
             </p>
-            <p class="experimente-publico-alvo">
-                Desenvolvido para barbearias, salões de beleza, clínicas, consultórios, estúdios e serviços com hora marcada.
+            <p class="agillex-publico">
+                Desenvolvido para barbearias, salões de beleza, clínicas, consultórios, estúdios e empresas que atendem com hora marcada.
             </p>
-        </div>
-    </header>
+        </header>
 
-    <div class="card card-beneficios">
-        <div class="beneficio-item">
-            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
-            <div class="beneficio-conteudo">
-                <strong>Agendamento Online 24/7</strong>
-                <p>Seus clientes escolhem serviços e horários disponíveis com confirmação rápida pelo celular, tablet ou computador.</p>
+        <!-- Destaques da Plataforma -->
+        <div class="agillex-beneficios-grid">
+            <div class="agillex-beneficio-card">
+                <div class="agillex-beneficio-icon" aria-hidden="true">&#10003;</div>
+                <div class="agillex-beneficio-text">
+                    <strong>Agendamento Online 24/7</strong>
+                    <p>Seus clientes marcam horários pelo celular, tablet ou computador com facilidade.</p>
+                </div>
+            </div>
+
+            <div class="agillex-beneficio-card">
+                <div class="agillex-beneficio-icon" aria-hidden="true">&#10003;</div>
+                <div class="agillex-beneficio-text">
+                    <strong>Equipe sob Controle</strong>
+                    <p>Jornadas individuais, escalas e intervalos configuráveis para cada membro da equipe.</p>
+                </div>
+            </div>
+
+            <div class="agillex-beneficio-card">
+                <div class="agillex-beneficio-icon" aria-hidden="true">&#10003;</div>
+                <div class="agillex-beneficio-text">
+                    <strong>Painel Administrativo Completo</strong>
+                    <p>Visão diária, semanal e mensal dos atendimentos com histórico seguro de clientes.</p>
+                </div>
+            </div>
+
+            <div class="agillex-beneficio-card">
+                <div class="agillex-beneficio-icon" aria-hidden="true">&#10003;</div>
+                <div class="agillex-beneficio-text">
+                    <strong>100% dos Recursos Liberados</strong>
+                    <p>Todos os recursos avançados incluídos em qualquer plano escolhido.</p>
+                </div>
             </div>
         </div>
 
-        <div class="beneficio-item">
-            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
-            <div class="beneficio-conteudo">
-                <strong>Equipe e Horários sob Controle</strong>
-                <p>Defina a disponibilidade individual de cada membro da equipe, jornadas personalizadas e intervalos entre atendimentos.</p>
+        <!-- Formulário de Cadastro Automatizado -->
+        <section class="agillex-form-card" id="cadastro" aria-labelledby="titulo-cadastro">
+            <div class="agillex-form-header">
+                <span class="agillex-form-tag">Ativação Imediata</span>
+                <h2 id="titulo-cadastro" class="agillex-form-title">Escolha seu Plano e Cadastre seu Estabelecimento</h2>
+                <p class="agillex-form-desc">Inicie seus 14 dias de teste gratuito na opção desejada. Sem cartão de crédito e sem burocracia.</p>
             </div>
+
+            {% if erro %}
+            <div class="agillex-alerta-erro" role="alert">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>{{ erro }}</span>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('agillex') }}" class="agillex-form" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                <!-- 1. Seletor de Planos com Radio Buttons Visuais -->
+                <div class="agillex-plano-section">
+                    <label class="agillex-label-bloco">Selecione o plano desejado para iniciar a avaliação gratuita *</label>
+                    <div class="agillex-planos-grid">
+                        <!-- Plano Inicial -->
+                        <label class="agillex-plano-card {% if plano_selecionado == 'inicial' %}selecionado{% endif %}" for="plano-inicial">
+                            <input type="radio" name="plano" id="plano-inicial" value="inicial" {% if plano_selecionado == 'inicial' %}checked{% endif %} class="agillex-radio-hidden">
+                            <div class="agillex-plano-radio-indicador"></div>
+                            <div class="agillex-plano-conteudo">
+                                <div class="agillex-plano-nome">Inicial</div>
+                                <div class="agillex-plano-capacidade">1 Profissional</div>
+                                <div class="agillex-plano-preco">
+                                    <span class="cifrao">R$</span>
+                                    <span class="valor">49,90</span>
+                                    <span class="periodo">/mês</span>
+                                </div>
+                                <div class="agillex-plano-trial-tag">14 dias grátis</div>
+                            </div>
+                        </label>
+
+                        <!-- Plano Intermediário (Destaque) -->
+                        <label class="agillex-plano-card agillex-plano-card--popular {% if plano_selecionado == 'intermediario' %}selecionado{% endif %}" for="plano-intermediario">
+                            <span class="agillex-plano-destaque-badge">Mais Escolhido</span>
+                            <input type="radio" name="plano" id="plano-intermediario" value="intermediario" {% if plano_selecionado == 'intermediario' %}checked{% endif %} class="agillex-radio-hidden">
+                            <div class="agillex-plano-radio-indicador"></div>
+                            <div class="agillex-plano-conteudo">
+                                <div class="agillex-plano-nome">Intermediário</div>
+                                <div class="agillex-plano-capacidade">Até 5 Profissionais</div>
+                                <div class="agillex-plano-preco">
+                                    <span class="cifrao">R$</span>
+                                    <span class="valor">99,90</span>
+                                    <span class="periodo">/mês</span>
+                                </div>
+                                <div class="agillex-plano-trial-tag">14 dias grátis</div>
+                            </div>
+                        </label>
+
+                        <!-- Plano Avançado -->
+                        <label class="agillex-plano-card {% if plano_selecionado == 'avancado' %}selecionado{% endif %}" for="plano-avancado">
+                            <input type="radio" name="plano" id="plano-avancado" value="avancado" {% if plano_selecionado == 'avancado' %}checked{% endif %} class="agillex-radio-hidden">
+                            <div class="agillex-plano-radio-indicador"></div>
+                            <div class="agillex-plano-conteudo">
+                                <div class="agillex-plano-nome">Avançado</div>
+                                <div class="agillex-plano-capacidade">Até 10 Profissionais</div>
+                                <div class="agillex-plano-preco">
+                                    <span class="cifrao">R$</span>
+                                    <span class="valor">169,90</span>
+                                    <span class="periodo">/mês</span>
+                                </div>
+                                <div class="agillex-plano-trial-tag">14 dias grátis</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="agillex-plano-nota-comum">
+                        <span>✨ Todos os planos contam com a plataforma completa, clientes ilimitados e 14 dias de teste sem compromisso.</span>
+                    </div>
+                </div>
+
+                <!-- 2. Dados do Responsável e Estabelecimento -->
+                <div class="agillex-campos-grid">
+                    <div class="campo-grupo campo-span-2">
+                        <label for="nome_responsavel">Nome completo do responsável *</label>
+                        <input type="text" id="nome_responsavel" name="nome_responsavel"
+                               value="{{ valores.get('nome_responsavel', '') }}"
+                               placeholder="Ex.: Carlos da Silva" required maxlength="100">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="nome_estabelecimento">Nome da Empresa / Estabelecimento *</label>
+                        <input type="text" id="nome_estabelecimento" name="nome_estabelecimento"
+                               value="{{ valores.get('nome_estabelecimento', '') }}"
+                               placeholder="Ex.: Barbearia Silva, Studio Bella" required maxlength="100">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="cnpj_cpf">CNPJ ou CPF *</label>
+                        <input type="text" id="cnpj_cpf" name="cnpj_cpf"
+                               value="{{ valores.get('cnpj_cpf', '') }}"
+                               placeholder="00.000.000/0000-00 ou 000.000.000-00" required maxlength="20">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="telefone">Telefone / WhatsApp com DDD *</label>
+                        <input type="tel" id="telefone" name="telefone"
+                               value="{{ valores.get('telefone', '') }}"
+                               placeholder="(11) 98765-4321" required maxlength="20">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="email">E-mail comercial (será seu login) *</label>
+                        <input type="email" id="email" name="email"
+                               value="{{ valores.get('email', '') }}"
+                               placeholder="seu.email@empresa.com.br" required maxlength="120" autocomplete="username">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="senha">Senha de acesso ao painel *</label>
+                        <input type="password" id="senha" name="senha"
+                               placeholder="Mínimo de 8 caracteres" required minlength="8" autocomplete="new-password">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="confirmar_senha">Confirmar senha *</label>
+                        <input type="password" id="confirmar_senha" name="confirmar_senha"
+                               placeholder="Repita sua senha" required minlength="8" autocomplete="new-password">
+                    </div>
+                </div>
+
+                <div class="agillex-termos-wrapper">
+                    <label class="agillex-checkbox-label" for="input-termos">
+                        <input type="checkbox" id="input-termos" name="termos" value="1" {% if valores.get('termos') %}checked{% endif %} required>
+                        <span>Concordo com os termos de uso e política de privacidade da AllLogic para ativação dos 14 dias de teste gratuito no plano selecionado.</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="agillex-btn-submit" id="btn-criar-conta">
+                    Criar conta e iniciar 14 dias grátis
+                </button>
+
+                <div class="agillex-garantias-rodape">
+                    <span>✓ Ativação imediata</span>
+                    <span class="sep">·</span>
+                    <span>✓ Sem cartão de crédito</span>
+                    <span class="sep">·</span>
+                    <span>✓ Sem fidelidade</span>
+                </div>
+            </form>
+        </section>
+
+        <!-- Ações de Retorno (Sem o botão Voltar ao Agendamento, conforme solicitado) -->
+        <div class="agillex-acoes-retorno">
+            <a href="{{ url_for('admin_login') }}" class="agillex-link-login">
+                Já possui uma conta cadastrada? <strong>Acesse o painel administrativo</strong>
+            </a>
         </div>
 
-        <div class="beneficio-item">
-            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
-            <div class="beneficio-conteudo">
-                <strong>Painel Administrativo Completo</strong>
-                <p>Visualize os agendamentos do dia, semana e mês, com cancelamento seguro, histórico de clientes e reorganização da agenda.</p>
-            </div>
+        <!-- Canais de Atendimento Institucional -->
+        <div class="agillex-contatos-box">
+            <span class="agillex-contato-label">Atendimento e suporte comercial AllLogic:</span>
+            <a href="https://wa.me/5511966381915" target="_blank" rel="noopener noreferrer" class="agillex-link-whatsapp">
+                WhatsApp (11) 96638-1915
+            </a>
+            <span class="sep">·</span>
+            <a href="mailto:contato@alllogiconline.com.br" class="agillex-link-email">
+                contato@alllogiconline.com.br
+            </a>
         </div>
 
-        <div class="beneficio-item">
-            <div class="beneficio-icone" aria-hidden="true">&#10003;</div>
-            <div class="beneficio-conteudo">
-                <strong>14 Dias de Avaliação Gratuita</strong>
-                <p>Experimente todos os recursos no dia a dia do seu negócio com ativação imediata, sem burocracia e sem cartão de crédito.</p>
-            </div>
-        </div>
+        <!-- Rodapé Institucional -->
+        <footer class="agillex-rodape">
+            <p class="agillex-rodape-marca">AllLogic Online — Engenharia de Soluções Digitais</p>
+            <p class="agillex-rodape-slogan">Tecnologia que trabalha para as pessoas.</p>
+            <p class="agillex-rodape-copy">&copy; 2026 AllLogic Online. Todos os direitos reservados.</p>
+        </footer>
     </div>
-
-    <!-- Formulário de Cadastro Automatizado -->
-    <section class="card card-cadastro" id="cadastro" aria-labelledby="titulo-cadastro" style="margin-top: 24px;">
-        <div class="cadastro-cabecalho" style="margin-bottom: 20px; text-align: center;">
-            <span class="cadastro-tag" style="display: inline-block; background: var(--azul-suave, #e8f0fe); color: var(--navy-800, #1e3a8a); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px;">Ativação Imediata</span>
-            <h2 id="titulo-cadastro" style="font-size: 1.4rem; color: var(--navy-900, #0f172a); margin: 0 0 6px 0;">Cadastre seu Estabelecimento</h2>
-            <p style="color: var(--texto-secundario, #475569); font-size: 0.95rem; margin: 0;">Inicie seus 14 dias de teste gratuito agora. Sem cartão de crédito e sem burocracia.</p>
-        </div>
-
-        {% if erro %}
-        <div class="mensagem-erro" role="alert" style="margin-bottom: 18px;">
-            {{ erro }}
-        </div>
-        {% endif %}
-
-        <form method="POST" action="{{ url_for('agillex') }}" class="form-cadastro" novalidate>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="campo-grupo" style="grid-column: span 2;">
-                    <label for="nome_responsavel" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Nome completo do responsável *</label>
-                    <input type="text" id="nome_responsavel" name="nome_responsavel"
-                           value="{{ valores.get('nome_responsavel', '') }}"
-                           placeholder="Seu nome completo" required maxlength="100"
-                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
-                </div>
-
-                <div class="campo-grupo">
-                    <label for="nome_estabelecimento" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Nome da Empresa / Estabelecimento *</label>
-                    <input type="text" id="nome_estabelecimento" name="nome_estabelecimento"
-                           value="{{ valores.get('nome_estabelecimento', '') }}"
-                           placeholder="Ex.: Barbearia Top, Studio Bella" required maxlength="100"
-                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
-                </div>
-
-                <div class="campo-grupo">
-                    <label for="cnpj_cpf" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">CNPJ ou CPF *</label>
-                    <input type="text" id="cnpj_cpf" name="cnpj_cpf"
-                           value="{{ valores.get('cnpj_cpf', '') }}"
-                           placeholder="00.000.000/0000-00 ou 000.000.000-00" required maxlength="20"
-                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
-                </div>
-
-                <div class="campo-grupo">
-                    <label for="telefone" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Telefone / WhatsApp com DDD *</label>
-                    <input type="tel" id="telefone" name="telefone"
-                           value="{{ valores.get('telefone', '') }}"
-                           placeholder="(11) 98765-4321" required maxlength="20"
-                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
-                </div>
-
-                <div class="campo-grupo">
-                    <label for="email" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">E-mail comercial (será seu login) *</label>
-                    <input type="email" id="email" name="email"
-                           value="{{ valores.get('email', '') }}"
-                           placeholder="seu.email@empresa.com.br" required maxlength="120" autocomplete="username"
-                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
-                </div>
-
-                <div class="campo-grupo">
-                    <label for="senha" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Senha de acesso ao painel *</label>
-                    <input type="password" id="senha" name="senha"
-                           placeholder="Mínimo de 8 caracteres" required minlength="8" autocomplete="new-password"
-                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
-                </div>
-
-                <div class="campo-grupo">
-                    <label for="confirmar_senha" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; display: block;">Confirmar senha *</label>
-                    <input type="password" id="confirmar_senha" name="confirmar_senha"
-                           placeholder="Repita sua senha" required minlength="8" autocomplete="new-password"
-                           style="width: 100%; padding: 10px 12px; border: 1px solid var(--borda, #cbd5e1); border-radius: 6px; font-size: 0.95rem;">
-                </div>
-            </div>
-
-            <div class="cadastro-termos" style="margin-top: 18px;">
-                <label class="checkbox-label" for="input-termos" style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: var(--texto-secundario, #475569); cursor: pointer;">
-                    <input type="checkbox" id="input-termos" name="termos" value="1" {% if valores.get('termos') %}checked{% endif %} required style="margin-top: 3px;">
-                    <span>Concordo com os termos de uso e política de privacidade da AllLogic para ativação dos 14 dias de teste gratuito.</span>
-                </label>
-            </div>
-
-            <button type="submit" class="btn-primario btn-submit-cadastro" id="btn-criar-conta" style="width: 100%; padding: 12px; font-size: 1rem; margin-top: 18px; justify-content: center;">
-                Criar conta e iniciar 14 dias grátis
-            </button>
-
-            <div class="cadastro-rodape-info" style="display: flex; justify-content: center; gap: 12px; margin-top: 14px; font-size: 0.85rem; color: var(--texto-secundario, #64748b);">
-                <span>✓ Ativação imediata</span>
-                <span class="sep">·</span>
-                <span>✓ Sem cartão de crédito</span>
-                <span class="sep">·</span>
-                <span>✓ 14 dias completos</span>
-            </div>
-        </form>
-    </section>
-
-    <div class="experimente-acoes-retorno" style="margin-top: 24px; text-align: center;">
-        <a href="{{ url_for('admin_login') }}" class="experimente-link-secundario" style="margin-right: 18px; font-size: 0.9rem; color: var(--navy-800, #1e3a8a); text-decoration: underline;">
-            Já possui uma conta? Acesse o painel
-        </a>
-        <a href="{{ url_for('index') }}" class="btn-secundario btn-voltar-agendamento" style="display: inline-block; padding: 8px 16px; font-size: 0.85rem; text-decoration: none;">
-            Voltar ao agendamento
-        </a>
-    </div>
-
-    <div class="experimente-contatos-canais" style="margin-top: 20px; text-align: center; font-size: 0.85rem; color: var(--texto-secundario, #64748b);">
-        <span class="experimente-contato-label">Atendimento e suporte comercial:</span>
-        <a href="https://wa.me/5511966381915" target="_blank" rel="noopener noreferrer" style="color: #25D366; font-weight: 600; text-decoration: none; margin-left: 6px;">
-            WhatsApp (11) 96638-1915
-        </a>
-        <span class="experimente-contato-sep" aria-hidden="true" style="margin: 0 6px;">·</span>
-        <a href="mailto:contato@alllogiconline.com.br" style="color: var(--navy-800, #1e3a8a); text-decoration: underline;">
-            contato@alllogiconline.com.br
-        </a>
-    </div>
-
-    <footer class="rodape-publico experimente-rodape" style="margin-top: 32px; text-align: center; font-size: 0.8rem; color: var(--texto-secundario, #94a3b8); border-top: 1px solid var(--borda-discreta, #e2e8f0); padding-top: 16px;">
-        <p class="rodape-comercial-marca" style="font-weight: 600; color: var(--navy-900, #0f172a); margin: 0 0 4px 0;">AllLogic Online — Engenharia de Soluções Digitais</p>
-        <p class="rodape-slogan" style="margin: 0 0 4px 0;">Tecnologia que trabalha para as pessoas.</p>
-        <p class="rodape-copy" style="margin: 0;">&copy; 2026 AllLogic Online. Todos os direitos reservados.</p>
-    </footer>
 </div>
 
+<style>
+/* Design System AllLogic Online para /agillex */
+:root {
+    --alllogic-primary: #0a1f44;
+    --alllogic-primary-dark: #061530;
+    --alllogic-secondary: #1f6fff;
+    --alllogic-accent: #c9a227;
+    --alllogic-bg: #f4f6fa;
+    --alllogic-surface: #ffffff;
+    --alllogic-text: #0a1f44;
+    --alllogic-text-muted: #4a5568;
+    --alllogic-border: #dde3ee;
+    --alllogic-shadow-sm: 0 1px 3px rgba(10, 31, 68, 0.08);
+    --alllogic-shadow-md: 0 4px 16px rgba(10, 31, 68, 0.08);
+    --alllogic-radius-md: 8px;
+    --alllogic-radius-lg: 16px;
+}
+
+body {
+    background-color: var(--alllogic-bg) !important;
+    color: var(--alllogic-text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.agillex-cadastro-page {
+    min-height: 100vh;
+    padding: 32px 16px 48px;
+}
+
+.agillex-cadastro-container {
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+/* Header */
+.agillex-topo {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.agillex-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(201, 162, 39, 0.12);
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    color: var(--alllogic-accent);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 16px;
+    border-radius: 999px;
+    margin-bottom: 16px;
+}
+
+.agillex-badge-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--alllogic-accent);
+    border-radius: 50%;
+}
+
+.agillex-titulo {
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    color: var(--alllogic-primary);
+    line-height: 1.2;
+    margin: 0 0 12px;
+    font-weight: 700;
+}
+
+.agillex-subtitulo {
+    font-size: 1.15rem;
+    color: var(--alllogic-text-muted);
+    line-height: 1.55;
+    max-width: 680px;
+    margin: 0 auto 8px;
+}
+
+.agillex-publico {
+    font-size: 0.95rem;
+    color: var(--alllogic-text-muted);
+    margin: 0 auto;
+}
+
+/* Benefícios Grid */
+.agillex-beneficios-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+@media (max-width: 640px) {
+    .agillex-beneficios-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.agillex-beneficio-card {
+    background: var(--alllogic-surface);
+    border: 1px solid var(--alllogic-border);
+    border-radius: var(--alllogic-radius-md);
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    box-shadow: var(--alllogic-shadow-sm);
+}
+
+.agillex-beneficio-icon {
+    width: 28px;
+    height: 28px;
+    background-color: rgba(31, 111, 255, 0.1);
+    color: var(--alllogic-secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.agillex-beneficio-text strong {
+    font-size: 0.95rem;
+    color: var(--alllogic-primary);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.agillex-beneficio-text p {
+    font-size: 0.88rem;
+    color: var(--alllogic-text-muted);
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* Form Card */
+.agillex-form-card {
+    background: var(--alllogic-surface);
+    border: 1px solid var(--alllogic-border);
+    border-radius: var(--alllogic-radius-lg);
+    padding: 32px 28px;
+    box-shadow: var(--alllogic-shadow-md);
+}
+
+.agillex-form-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.agillex-form-tag {
+    display: inline-block;
+    background: rgba(31, 111, 255, 0.1);
+    color: var(--alllogic-secondary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+}
+
+.agillex-form-title {
+    font-size: 1.45rem;
+    color: var(--alllogic-primary);
+    margin: 0 0 8px;
+    font-weight: 700;
+}
+
+.agillex-form-desc {
+    color: var(--alllogic-text-muted);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* Alerta de erro */
+.agillex-alerta-erro {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: 12px 16px;
+    border-radius: var(--alllogic-radius-md);
+    margin-bottom: 20px;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Seletor de Planos */
+.agillex-plano-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--alllogic-border);
+}
+
+.agillex-label-bloco {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--alllogic-primary);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.agillex-planos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+@media (max-width: 720px) {
+    .agillex-planos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.agillex-plano-card {
+    border: 2px solid var(--alllogic-border);
+    border-radius: var(--alllogic-radius-md);
+    padding: 16px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+.agillex-plano-card:hover {
+    border-color: rgba(31, 111, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: var(--alllogic-shadow-sm);
+}
+
+.agillex-plano-card.selecionado {
+    border-color: var(--alllogic-secondary);
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+    box-shadow: 0 4px 12px rgba(31, 111, 255, 0.12);
+}
+
+.agillex-plano-card--popular {
+    border-color: rgba(31, 111, 255, 0.6);
+}
+
+.agillex-plano-destaque-badge {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    background: var(--alllogic-secondary);
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.agillex-radio-hidden {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.agillex-plano-radio-indicador {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--alllogic-border);
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.agillex-plano-card.selecionado .agillex-plano-radio-indicador {
+    border-color: var(--alllogic-secondary);
+    background-color: var(--alllogic-secondary);
+    box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.agillex-plano-nome {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--alllogic-primary);
+}
+
+.agillex-plano-capacidade {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--alllogic-secondary);
+    margin: 4px 0 8px;
+}
+
+.agillex-plano-preco {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--alllogic-primary);
+    margin-bottom: 8px;
+}
+
+.agillex-plano-preco .cifrao {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.agillex-plano-preco .periodo {
+    font-size: 0.8rem;
+    color: var(--alllogic-text-muted);
+    font-weight: 500;
+}
+
+.agillex-plano-trial-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #166534;
+    background: #dcfce7;
+    padding: 3px 8px;
+    border-radius: 12px;
+    display: inline-block;
+    align-self: flex-start;
+}
+
+.agillex-plano-nota-comum {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--alllogic-text-muted);
+    background: var(--alllogic-bg);
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+/* Campos Grid */
+.agillex-campos-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .agillex-campos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.campo-span-2 {
+    grid-column: span 2;
+}
+
+@media (max-width: 600px) {
+    .campo-span-2 {
+        grid-column: span 1;
+    }
+}
+
+.campo-grupo label {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--alllogic-primary);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.campo-grupo input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--alllogic-border);
+    border-radius: var(--alllogic-radius-md);
+    font-size: 0.95rem;
+    color: var(--alllogic-text);
+    background: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.campo-grupo input:focus {
+    outline: none;
+    border-color: var(--alllogic-secondary);
+    box-shadow: 0 0 0 3px rgba(31, 111, 255, 0.15);
+}
+
+/* Termos */
+.agillex-termos-wrapper {
+    margin-top: 20px;
+}
+
+.agillex-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--alllogic-text-muted);
+    cursor: pointer;
+    line-height: 1.45;
+}
+
+.agillex-checkbox-label input {
+    margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--alllogic-primary);
+    cursor: pointer;
+}
+
+/* Botão Submit */
+.agillex-btn-submit {
+    width: 100%;
+    background-color: var(--alllogic-primary);
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 14px 20px;
+    border: none;
+    border-radius: var(--alllogic-radius-md);
+    margin-top: 22px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--alllogic-shadow-sm);
+}
+
+.agillex-btn-submit:hover {
+    background-color: var(--alllogic-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--alllogic-shadow-md);
+}
+
+.agillex-garantias-rodape {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 14px;
+    font-size: 0.85rem;
+    color: var(--alllogic-text-muted);
+    font-weight: 500;
+}
+
+.agillex-garantias-rodape .sep {
+    color: var(--alllogic-border);
+}
+
+/* Retorno */
+.agillex-acoes-retorno {
+    margin-top: 24px;
+    text-align: center;
+}
+
+.agillex-link-login {
+    font-size: 0.95rem;
+    color: var(--alllogic-primary);
+    text-decoration: none;
+}
+
+.agillex-link-login strong {
+    text-decoration: underline;
+    color: var(--alllogic-secondary);
+}
+
+/* Contatos */
+.agillex-contatos-box {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--alllogic-text-muted);
+}
+
+.agillex-link-whatsapp {
+    color: #25D366;
+    font-weight: 700;
+    text-decoration: none;
+    margin: 0 4px;
+}
+
+.agillex-link-email {
+    color: var(--alllogic-primary);
+    text-decoration: underline;
+    margin-left: 4px;
+}
+
+/* Rodapé */
+.agillex-rodape {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    border-top: 1px solid var(--alllogic-border);
+    padding-top: 20px;
+}
+
+.agillex-rodape-marca {
+    font-weight: 700;
+    color: var(--alllogic-primary);
+    margin: 0 0 4px;
+}
+
+.agillex-rodape-slogan {
+    margin: 0 0 4px;
+}
+
+.agillex-rodape-copy {
+    margin: 0;
+}
+</style>
+
 <script>
+    // Interatividade do Seletor de Planos
+    var cardsPlanos = document.querySelectorAll('.agillex-plano-card');
+    cardsPlanos.forEach(function (card) {
+        card.addEventListener('click', function () {
+            cardsPlanos.forEach(function (c) { c.classList.remove('selecionado'); });
+            card.classList.add('selecionado');
+            var radio = card.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+            }
+        });
+    });
+
     // Máscara flexível para CPF ou CNPJ
     var inputDoc = document.getElementById('cnpj_cpf');
     if (inputDoc) {
         inputDoc.addEventListener('input', function (e) {
             var v = e.target.value.replace(/\D/g, '');
             if (v.length <= 11) {
-                // CPF: 000.000.000-00
                 v = v.replace(/(\d{3})(\d)/, '$1.$2');
                 v = v.replace(/(\d{3})(\d)/, '$1.$2');
                 v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
             } else {
-                // CNPJ: 00.000.000/0000-00
                 v = v.substring(0, 14);
                 v = v.replace(/^(\d{2})(\d)/, '$1.$2');
                 v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');

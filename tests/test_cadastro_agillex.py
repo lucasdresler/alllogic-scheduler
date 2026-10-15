@@ -284,3 +284,155 @@ def test_trial_expirado_redirecionamento(client):
     assert "100% preservados e seguros" in html
     assert "Falar no WhatsApp para Ativar Plano" in html
 
+
+def test_agillex_selecao_e_persistencia_de_plano(client):
+    """Verifica que o plano selecionado via query ou form é persistido no banco de dados."""
+    import random
+    suffix = uuid.uuid4().hex[:6]
+
+    # 1. GET com ?plano=inicial pré-marca o plano
+    resp_get = client.get("/agillex?plano=inicial")
+    assert resp_get.status_code == 200
+    html_get = resp_get.data.decode("utf-8")
+    assert 'value="inicial" checked' in html_get or 'id="plano-inicial" value="inicial" checked' in html_get
+
+    # 2. POST escolhendo o plano 'avancado'
+    email = f"plano_avancado_{suffix}@empresa.com"
+    cnpj = f"44433322{random.randint(100000, 999999)}"
+    resp_post = client.post(
+        "/agillex",
+        data={
+            "nome_responsavel": "Lucas Rocha",
+            "nome_estabelecimento": f"Estudio Rocha {suffix}",
+            "cnpj_cpf": cnpj,
+            "telefone": "(11) 94444-3333",
+            "email": email,
+            "senha": "senhaLucas123",
+            "confirmar_senha": "senhaLucas123",
+            "termos": "1",
+            "plano": "avancado",
+        },
+    )
+    assert resp_post.status_code == 302
+
+    with database.db_session() as conn:
+        est = database.obter_estabelecimento_por_email(conn, email)
+        assert est is not None
+        assert est["plano"] == "avancado"
+
+
+def test_admin_upgrade_visualizacao_e_alteracao(client):
+    """Verifica acesso à tela /admin/upgrade e alteração de plano."""
+    import random
+    suffix = uuid.uuid4().hex[:6]
+    email = f"upgrade_{suffix}@empresa.com"
+    cnpj = f"77788899{random.randint(100000, 999999)}"
+
+    # Cadastra estabelecimento no plano Inicial
+    client.post(
+        "/agillex",
+        data={
+            "nome_responsavel": "Marcos Teste",
+            "nome_estabelecimento": f"Salao Teste {suffix}",
+            "cnpj_cpf": cnpj,
+            "telefone": "(11) 97777-8888",
+            "email": email,
+            "senha": "senhaMarcos123",
+            "confirmar_senha": "senhaMarcos123",
+            "termos": "1",
+            "plano": "inicial",
+        },
+    )
+
+    # Acessa /admin/upgrade
+    resp_upgrade = client.get("/admin/upgrade")
+    assert resp_upgrade.status_code == 200
+    html = resp_upgrade.data.decode("utf-8")
+    assert "Plano Atual: Inicial" in html
+    assert "1 de 1 profissional" in html or "de 1 profissional" in html
+    assert "Falar no WhatsApp Comercial" in html
+
+    # Altera plano via POST para Intermediário
+    with client.session_transaction() as sess:
+        sess["csrf_token"] = "upgrade-test-token"
+    resp_post = client.post(
+        "/admin/upgrade",
+        data={
+            "csrf_token": "upgrade-test-token",
+            "novo_plano": "intermediario",
+        },
+    )
+    assert resp_post.status_code == 200
+    html_post = resp_post.data.decode("utf-8")
+    assert "Plano atualizado com sucesso" in html_post
+
+    with database.db_session() as conn:
+        est = database.obter_estabelecimento_por_email(conn, email)
+        assert est["plano"] == "intermediario"
+
+
+def test_limite_profissionais_plano_inicial(client):
+    """Verifica que o plano inicial (1 profissional) bloqueia o cadastro de um 2º profissional ativo."""
+    import random
+    suffix = uuid.uuid4().hex[:6]
+    email = f"quota_{suffix}@empresa.com"
+    cnpj = f"88899900{random.randint(100000, 999999)}"
+
+    # Limpa profissionais para iniciar contagem do zero neste teste isolado
+    with database.db_session() as conn:
+        conn.execute("DELETE FROM agendamento_reagendamento")
+        conn.execute("DELETE FROM agendamento_status_historico")
+        conn.execute("DELETE FROM agendamento_servico")
+        conn.execute("DELETE FROM agendamento")
+        conn.execute("DELETE FROM profissional_disponibilidade")
+        conn.execute("DELETE FROM profissional_servico")
+        conn.execute("DELETE FROM profissional")
+
+    client.post(
+        "/agillex",
+        data={
+            "nome_responsavel": "Renato Quota",
+            "nome_estabelecimento": f"Barbearia Quota {suffix}",
+            "cnpj_cpf": cnpj,
+            "telefone": "(11) 98888-9999",
+            "email": email,
+            "senha": "senhaRenato123",
+            "confirmar_senha": "senhaRenato123",
+            "termos": "1",
+            "plano": "inicial",
+        },
+    )
+
+    # Cria um serviço para associar aos profissionais
+    service_id, _ = models.criar_servico(f"Serviço {suffix}", "35.00", 30, True)
+
+    # 1. Primeiro profissional ativo é criado com sucesso
+    with client.session_transaction() as sess:
+        sess["csrf_token"] = "quota-token"
+    resp_p1 = client.post(
+        "/admin/profissionais/novo",
+        data={
+            "csrf_token": "quota-token",
+            "nome": f"Profissional 1 {suffix}",
+            "ativo": "on",
+            "servicos": str(service_id),
+        },
+    )
+    assert resp_p1.status_code == 302
+
+    # 2. Segundo profissional ativo é bloqueado pelo limite do plano Inicial (1 prof)
+    resp_p2 = client.post(
+        "/admin/profissionais/novo",
+        data={
+            "csrf_token": "quota-token",
+            "nome": f"Profissional 2 {suffix}",
+            "ativo": "on",
+            "servicos": str(service_id),
+        },
+    )
+    assert resp_p2.status_code == 200
+    html_p2 = resp_p2.data.decode("utf-8")
+    assert "Limite atingido" in html_p2
+    assert "Plano Inicial" in html_p2
+
+

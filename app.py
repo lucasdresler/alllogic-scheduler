@@ -33,6 +33,9 @@ from database import (
     obter_estabelecimento_por_slug,
     verificar_status_trial,
     obter_admin_com_estabelecimento,
+    PLANOS_CONFIG,
+    obter_limite_profissionais,
+    atualizar_plano_estabelecimento,
 )
 from email_service import enviar_email_recuperacao
 
@@ -213,12 +216,18 @@ def inject_config_template():
     dados = _carregar_config_template()
     if session.get("admin_logado") and session.get("estabelecimento_id"):
         estab_id = session.get("estabelecimento_id")
-        if estab_id != 1:
-            try:
-                with db_session() as conn:
+        try:
+            with db_session() as conn:
+                if estab_id != 1:
                     dados["info_trial"] = verificar_status_trial(conn, estab_id)
-            except Exception:
-                pass
+                est = obter_estabelecimento_por_id(conn, estab_id)
+                if est:
+                    dados["estabelecimento_atual"] = est
+                    plano_nome = est.get("plano", "intermediario")
+                    dados["plano_atual"] = plano_nome
+                    dados["plano_config"] = PLANOS_CONFIG.get(plano_nome, PLANOS_CONFIG["intermediario"])
+        except Exception:
+            pass
     return dados
 
 
@@ -403,6 +412,12 @@ def agillex():
     valores = {}
     config = _carregar_config_template()
 
+    # Leitura e sanitização do plano selecionado via query string ou padrão
+    plano_selecionado = request.args.get("plano", "intermediario").strip().lower()
+    if plano_selecionado not in PLANOS_CONFIG:
+        plano_selecionado = "intermediario"
+    valores["plano"] = plano_selecionado
+
     if request.method == "POST":
         nome_responsavel = request.form.get("nome_responsavel", "").strip()
         nome_estabelecimento = request.form.get("nome_estabelecimento", "").strip()
@@ -412,6 +427,9 @@ def agillex():
         senha = request.form.get("senha", "")
         confirmar_senha = request.form.get("confirmar_senha", "")
         termos = request.form.get("termos") == "1"
+        plano = request.form.get("plano", plano_selecionado).strip().lower()
+        if plano not in PLANOS_CONFIG:
+            plano = "intermediario"
 
         valores = {
             "nome_responsavel": nome_responsavel,
@@ -420,6 +438,7 @@ def agillex():
             "telefone": telefone,
             "email": email,
             "termos": termos,
+            "plano": plano,
         }
 
         digitos_doc = re.sub(r"\D", "", cnpj_cpf)
@@ -464,10 +483,12 @@ def agillex():
                             telefone=telefone,
                             usuario=email,
                             senha_hash=senha_hash,
+                            plano=plano,
                         )
                         session["admin_logado"] = True
                         session["admin_usuario"] = email
                         session["estabelecimento_id"] = novo_estab["estabelecimento_id"]
+                        session["estabelecimento_plano"] = novo_estab["plano"]
 
                         return redirect(url_for("admin_estabelecimento", boas_vindas="1"))
 
@@ -475,6 +496,8 @@ def agillex():
         "agillex.html",
         erro=erro,
         valores=valores,
+        planos_config=PLANOS_CONFIG,
+        plano_selecionado=valores.get("plano", "intermediario"),
         **config,
     )
 
@@ -491,6 +514,69 @@ def admin_trial_expirado():
         info_trial=info_trial,
         **_carregar_config_template(),
     )
+
+
+@app.route("/admin/upgrade", methods=["GET", "POST"])
+@login_requerido
+def admin_upgrade():
+    estab_id = session.get("estabelecimento_id")
+    with db_session() as conn:
+        estab = obter_estabelecimento_por_id(conn, estab_id)
+        if not estab:
+            return redirect(url_for("admin_dashboard"))
+
+        info_trial = (
+            verificar_status_trial(conn, estab_id)
+            if estab_id != 1
+            else {"status": "ativo", "expirado": False, "dias_restantes": 3650}
+        )
+        total_profissionais = conn.execute(
+            "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
+        ).fetchone()["c"]
+        plano_atual = estab.get("plano", "intermediario")
+        cfg_atual = PLANOS_CONFIG.get(plano_atual, PLANOS_CONFIG["intermediario"])
+        limite_atual = cfg_atual["limite_profissionais"]
+
+        msg_sucesso = None
+        erro = None
+        if request.method == "POST":
+            novo_plano = request.form.get("novo_plano", "").strip().lower()
+            if novo_plano in PLANOS_CONFIG:
+                atualizar_plano_estabelecimento(conn, estab_id, novo_plano)
+                plano_atual = novo_plano
+                cfg_atual = PLANOS_CONFIG[novo_plano]
+                limite_atual = cfg_atual["limite_profissionais"]
+                session["estabelecimento_plano"] = novo_plano
+                msg_sucesso = f"Plano atualizado com sucesso para '{cfg_atual['nome']}'!"
+            else:
+                erro = "Plano selecionado é inválido."
+
+        import urllib.parse
+
+        msg_whatsapp = (
+            f"Olá! Sou da empresa {estab['nome']} (responsável: {estab['nome_responsavel']}, "
+            f"email: {estab['email']}). "
+            f"Meu plano atual no Agillex Agenda é o '{cfg_atual['nome']}' e gostaria de solicitar informações de faturamento e upgrade."
+        )
+        link_whatsapp_upgrade = (
+            f"https://wa.me/5511966381915?text={urllib.parse.quote(msg_whatsapp)}"
+        )
+
+        return render_template(
+            "admin_upgrade.html",
+            estab=estab,
+            info_trial=info_trial,
+            plano_atual=plano_atual,
+            cfg_atual=cfg_atual,
+            total_profissionais=total_profissionais,
+            limite_atual=limite_atual,
+            planos_config=PLANOS_CONFIG,
+            link_whatsapp_upgrade=link_whatsapp_upgrade,
+            msg_sucesso=msg_sucesso,
+            erro=erro,
+            pagina_ativa="upgrade",
+            **_carregar_config_template(),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -770,10 +856,22 @@ def admin_servico_toggle(servico_id):
 def admin_profissionais():
     profissionais = models.listar_profissionais_admin()
     servicos = models.listar_servicos_admin()
+    total_ativos = sum(1 for p in profissionais if p.get("ativo"))
+    estab_id = session.get("estabelecimento_id")
+    with db_session() as conn:
+        estab = obter_estabelecimento_por_id(conn, estab_id)
+    plano = estab.get("plano", "intermediario") if estab else "intermediario"
+    limite = obter_limite_profissionais(plano)
+    cfg_plano = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
+
     return render_template(
         "admin_profissionais.html",
         profissionais=profissionais,
         servicos=servicos,
+        total_ativos=total_ativos,
+        limite_profissionais=limite,
+        atingiu_limite=(total_ativos >= limite),
+        plano_config=cfg_plano,
         **_carregar_config_template(),
     )
 
@@ -788,9 +886,26 @@ def admin_profissional_novo():
         ativo = request.form.get("ativo") == "on"
         servico_ids = request.form.getlist("servicos", type=int)
 
-        profissional_id, erro = models.criar_profissional(nome, ativo, servico_ids)
-        if profissional_id:
-            return redirect(url_for("admin_profissionais"))
+        with db_session() as conn:
+            estab_id = session.get("estabelecimento_id")
+            if estab_id and estab_id != 1:
+                estab = obter_estabelecimento_por_id(conn, estab_id)
+                plano = estab.get("plano", "intermediario") if estab else "intermediario"
+                limite = obter_limite_profissionais(plano)
+                total_ativos = conn.execute(
+                    "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
+                ).fetchone()["c"]
+                if ativo and total_ativos >= limite:
+                    cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
+                    erro = (
+                        f"Limite atingido: O seu plano atual ({cfg['nome']}) permite no máximo "
+                        f"{limite} profissional(is) ativo(s). Faça o upgrade do seu plano para cadastrar mais profissionais."
+                    )
+
+        if not erro:
+            profissional_id, erro = models.criar_profissional(nome, ativo, servico_ids)
+            if profissional_id:
+                return redirect(url_for("admin_profissionais"))
 
     return render_template(
         "admin_profissional_form.html",
@@ -843,7 +958,23 @@ def admin_profissional_editar(profissional_id):
         ok_disp, erro_disp = models.validar_disponibilidade_profissional(itens_disp)
         if not ok_disp:
             erro = erro_disp
-        else:
+        elif ativo and not profissional["ativo"]:
+            with db_session() as conn:
+                estab_id = session.get("estabelecimento_id")
+                if estab_id and estab_id != 1:
+                    estab = obter_estabelecimento_por_id(conn, estab_id)
+                    plano = estab.get("plano", "intermediario") if estab else "intermediario"
+                    limite = obter_limite_profissionais(plano)
+                    total_ativos = conn.execute(
+                        "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
+                    ).fetchone()["c"]
+                    if total_ativos >= limite:
+                        cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
+                        erro = (
+                            f"Limite atingido: O seu plano atual ({cfg['nome']}) permite no máximo "
+                            f"{limite} profissional(is) ativo(s). Faça o upgrade do seu plano para ativar este profissional."
+                        )
+        if not erro:
             ok, erro = models.atualizar_profissional(profissional_id, nome, ativo, servico_ids)
             if ok:
                 models.salvar_disponibilidade_profissional(profissional_id, itens_disp)
@@ -865,7 +996,20 @@ def admin_profissional_editar(profissional_id):
 def admin_profissional_toggle(profissional_id):
     profissional = models.obter_profissional(profissional_id)
     if profissional:
-        models.alterar_status_profissional(profissional_id, not profissional["ativo"])
+        novo_status = not profissional["ativo"]
+        if novo_status:
+            with db_session() as conn:
+                estab_id = session.get("estabelecimento_id")
+                if estab_id and estab_id != 1:
+                    estab = obter_estabelecimento_por_id(conn, estab_id)
+                    plano = estab.get("plano", "intermediario") if estab else "intermediario"
+                    limite = obter_limite_profissionais(plano)
+                    total_ativos = conn.execute(
+                        "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
+                    ).fetchone()["c"]
+                    if total_ativos >= limite:
+                        return redirect(url_for("admin_profissionais", erro_limite="1"))
+        models.alterar_status_profissional(profissional_id, novo_status)
     return redirect(url_for("admin_profissionais"))
 
 
