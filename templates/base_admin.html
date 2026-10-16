@@ -99,25 +99,25 @@
                     <span class="topbar-establishment-name">{% block subtitulo_topbar %}{{ nome_estabelecimento }}{% endblock %}</span>
                 </div>
             </div>
-            <div class="topbar-right" style="display: flex; align-items: center; gap: 10px;">
+            <div class="topbar-right">
                 {% if plano_config %}
-                <a href="{{ url_for('admin_upgrade') }}" class="badge-plano-ativo" title="Ver detalhes do plano ou solicitar upgrade" style="background: rgba(31, 111, 255, 0.08); color: #1f6fff; border: 1px solid rgba(31, 111, 255, 0.25); font-size: 0.8rem; font-weight: 700; padding: 4px 10px; border-radius: 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-                    <span style="width: 6px; height: 6px; background: #1f6fff; border-radius: 50%;"></span>
-                    <span>Plano {{ plano_config.nome }}</span>
+                <a href="{{ url_for('admin_upgrade') }}" class="badge-plano-ativo" title="Ver detalhes do plano ou solicitar upgrade">
+                    <span class="badge-dot"></span>
+                    <span class="badge-texto">Plano {{ plano_config.nome }}</span>
                 </a>
                 {% endif %}
                 {% if info_trial and not info_trial.get('expirado') %}
-                <span class="badge-trial-dias" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 14px; display: inline-flex; align-items: center; gap: 6px;">
+                <span class="badge-trial-dias">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     <span>Teste: {{ info_trial.dias_restantes }} dia{{ 's' if info_trial.dias_restantes != 1 else '' }}</span>
                 </span>
                 {% endif %}
-                <a href="{{ url_for('admin_upgrade') }}" class="btn-upgrade-topbar" style="background: #0a1f44; color: #ffffff; font-size: 0.78rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                <a href="{{ url_for('admin_upgrade') }}" class="btn-upgrade-topbar" title="Fazer upgrade do plano">
                     <span>Upgrade</span>
                 </a>
                 <a href="{{ url_for('admin_logout') }}" class="btn-topbar-logout link-logout" title="Sair do painel administrativo">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                    <span>Sair</span>
+                    <span class="btn-logout-texto">Sair</span>
                 </a>
             </div>
         </header>
@@ -172,7 +172,10 @@
     var overlay = document.getElementById('sidebar-overlay');
     var sidebar = document.getElementById('admin-sidebar');
 
-    function abrirSidebar() {
+    function abrirSidebar(e) {
+        if (e && e.type === 'touchstart') {
+            e.preventDefault();
+        }
         if (!sidebar) return;
         sidebar.classList.add('aberto');
         if (overlay) overlay.classList.add('ativo');
@@ -180,7 +183,10 @@
         document.body.style.overflow = 'hidden';
     }
 
-    function fecharSidebar() {
+    function fecharSidebar(e) {
+        if (e && e.type === 'touchstart') {
+            e.preventDefault();
+        }
         if (!sidebar) return;
         sidebar.classList.remove('aberto');
         if (overlay) overlay.classList.remove('ativo');
@@ -188,13 +194,22 @@
         document.body.style.overflow = '';
     }
 
-    if (btnToggle) btnToggle.addEventListener('click', abrirSidebar);
-    if (btnClose) btnClose.addEventListener('click', fecharSidebar);
-    if (overlay) overlay.addEventListener('click', fecharSidebar);
+    if (btnToggle) {
+        btnToggle.addEventListener('click', abrirSidebar);
+        btnToggle.addEventListener('touchstart', abrirSidebar, { passive: false });
+    }
+    if (btnClose) {
+        btnClose.addEventListener('click', fecharSidebar);
+        btnClose.addEventListener('touchstart', fecharSidebar, { passive: false });
+    }
+    if (overlay) {
+        overlay.addEventListener('click', fecharSidebar);
+        overlay.addEventListener('touchstart', fecharSidebar, { passive: false });
+    }
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && sidebar && sidebar.classList.contains('aberto')) {
-            fecharSidebar();
+            fecharSidebar(e);
         }
     });
 })();

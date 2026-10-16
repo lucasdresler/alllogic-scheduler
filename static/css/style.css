@@ -1750,6 +1750,11 @@ table.tabela-agendamentos .col-acoes {
     justify-content: center;
     min-width: 44px;
     min-height: 44px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     transition: all 0.15s ease-in-out;
 }
 
@@ -1842,6 +1847,66 @@ table.tabela-agendamentos .col-acoes {
 .btn-topbar-logout:focus-visible {
     outline: 2px solid var(--champagne-dourado);
     outline-offset: 2px;
+}
+
+.badge-plano-ativo {
+    background: rgba(31, 111, 255, 0.08);
+    color: var(--azul-vibrante, #1f6fff);
+    border: 1px solid rgba(31, 111, 255, 0.25);
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 14px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease-in-out;
+}
+
+.badge-plano-ativo:hover {
+    background: rgba(31, 111, 255, 0.15);
+    border-color: rgba(31, 111, 255, 0.4);
+}
+
+.badge-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--azul-vibrante, #1f6fff);
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.badge-trial-dias {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-upgrade-topbar {
+    background: var(--navy-profundo, #0a1f44);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-upgrade-topbar:hover {
+    background: var(--azul-vibrante, #1f6fff);
+    color: #ffffff;
 }
 
 .admin-content-body {
@@ -2052,15 +2117,29 @@ table.tabela-agendamentos .col-acoes {
         gap: 10px;
         min-width: 0;
         flex: 1;
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-menu-mobile {
+        min-width: 44px;
+        min-height: 44px;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 10;
+        touch-action: manipulation;
     }
 
     .topbar-titles {
         min-width: 0;
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     .topbar-page-title {
-        font-size: 1.12rem;
+        font-size: 1.05rem;
         line-height: 1.25;
         white-space: nowrap;
         overflow: hidden;
@@ -2068,17 +2147,44 @@ table.tabela-agendamentos .col-acoes {
     }
 
     .topbar-establishment-name {
-        font-size: 0.76rem;
+        font-size: 0.74rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .btn-topbar-logout {
-        padding: 6px 10px;
-        font-size: 0.8rem;
-        gap: 5px;
+    .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         flex-shrink: 0;
+    }
+
+    .badge-plano-ativo {
+        display: none !important;
+    }
+
+    .badge-trial-dias {
+        display: none !important;
+    }
+
+    .btn-upgrade-topbar {
+        font-size: 0.76rem;
+        padding: 6px 10px;
+    }
+
+    .btn-topbar-logout {
+        padding: 8px;
+        min-width: 40px;
+        min-height: 40px;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        background-color: var(--bg-surface-subtle);
+        flex-shrink: 0;
+    }
+
+    .btn-topbar-logout .btn-logout-texto {
+        display: none;
     }
 
     /* Painel de Filtros e Abas do Dashboard */

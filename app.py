@@ -278,7 +278,10 @@ def _obter_url_base_whatsapp():
         host = request.host if request else ""
         if not host or "127.0.0.1" in host or "localhost" in host:
             return "https://agenda.alllogiconline.com.br"
-        return request.host_url.rstrip("/")
+        scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+        if "alllogiconline.com.br" in host or request.headers.get("X-Forwarded-Ssl") == "on":
+            scheme = "https"
+        return f"{scheme}://{host}".rstrip("/")
     except Exception:
         return "https://agenda.alllogiconline.com.br"
 
