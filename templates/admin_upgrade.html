@@ -120,17 +120,17 @@
 
                 <div style="margin-top: auto;">
                     {% if p_id == plano_atual %}
-                    <button type="button" disabled style="width: 100%; padding: 10px; background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: not-allowed;">
+                    <button type="button" disabled style="width: 100%; padding: 11px; background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: not-allowed;">
                         Plano Atual Ativo
                     </button>
                     {% else %}
-                    <form method="POST" action="{{ url_for('admin_upgrade') }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <input type="hidden" name="novo_plano" value="{{ p_id }}"/>
-                        <button type="submit" style="width: 100%; padding: 10px; background: #0a1f44; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#061530'" onmouseout="this.style.background='#0a1f44'">
-                            Alterar para Plano {{ p_cfg.nome }}
-                        </button>
-                    </form>
+                    <a href="https://hub.alllogiconline.com.br/checkout?modulo=agenda&plano=agenda_{{ p_id }}&email={{ estab.email|urlencode }}&nome={{ (estab.nome_responsavel or estab.nome)|urlencode }}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px; background: #0a1f44; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem; text-decoration: none; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 6px rgba(10,31,68,0.15);" onmouseover="this.style.background='#1e3a8a'" onmouseout="this.style.background='#0a1f44'">
+                        <span>Fazer Upgrade para Plano {{ p_cfg.nome }}</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
+                    <small style="display: block; text-align: center; margin-top: 6px; color: #64748b; font-size: 0.74rem;">
+                        ⚡ Checkout seguro e ativação imediata via PIX ou Cartão
+                    </small>
                     {% endif %}
                 </div>
             </div>
@@ -138,17 +138,18 @@
         </div>
     </div>
 
-    <!-- Atendimento WhatsApp Comercial -->
+    <!-- Atendimento WhatsApp Comercial para Planos Personalizados / Enterprise -->
     <div style="background: linear-gradient(135deg, #0a1f44 0%, #1e3a8a 100%); color: #ffffff; border-radius: 12px; padding: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
         <div style="max-width: 580px;">
-            <h4 style="font-size: 1.2rem; margin: 0 0 6px; font-weight: 700;">Precisa de mais profissionais ou pagamento anual com desconto?</h4>
-            <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">
-                Fale diretamente com nossa equipe comercial AllLogic para migração de plano, faturamento anual ou soluções sob medida para mais de 10 profissionais.
+            <div style="font-size: 0.75rem; text-transform: uppercase; color: #93c5fd; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Soluções Corporativas & Grandes Redes</div>
+            <h4 style="font-size: 1.2rem; margin: 0 0 6px; font-weight: 700;">Precisa de mais de 10 profissionais ou faturamento corporativo sob medida?</h4>
+            <p style="color: #cbd5e1; font-size: 0.9rem; margin: 0; line-height: 1.5;">
+                Os upgrades entre os planos padrão (1 a 10 profissionais) são <strong>100% online e automáticos</strong> pelo checkout acima. Para redes de franquias, grandes clínicas ou faturamento faturado anual, fale com nossos consultores.
             </p>
         </div>
         <div>
-            <a href="{{ link_whatsapp_upgrade }}" target="_blank" rel="noopener noreferrer" style="background: #25D366; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.95rem; padding: 12px 20px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                <span>Falar no WhatsApp Comercial</span>
+            <a href="{{ link_whatsapp_upgrade }}" target="_blank" rel="noopener noreferrer" style="background: #25D366; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.95rem; padding: 12px 20px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                <span>Consultar Plano Enterprise (+10)</span>
             </a>
         </div>
     </div>

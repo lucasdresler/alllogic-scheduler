@@ -611,26 +611,26 @@ def admin_upgrade():
         cfg_atual = PLANOS_CONFIG.get(plano_atual, PLANOS_CONFIG["intermediario"])
         limite_atual = cfg_atual["limite_profissionais"]
 
+        import urllib.parse
+
         msg_sucesso = None
         erro = None
         if request.method == "POST":
             novo_plano = request.form.get("novo_plano", "").strip().lower()
             if novo_plano in PLANOS_CONFIG:
-                atualizar_plano_estabelecimento(conn, estab_id, novo_plano)
-                plano_atual = novo_plano
-                cfg_atual = PLANOS_CONFIG[novo_plano]
-                limite_atual = cfg_atual["limite_profissionais"]
-                session["estabelecimento_plano"] = novo_plano
-                msg_sucesso = f"Plano atualizado com sucesso para '{cfg_atual['nome']}'!"
+                checkout_url = (
+                    f"https://hub.alllogiconline.com.br/checkout?modulo=agenda&plano=agenda_{novo_plano}"
+                    f"&email={urllib.parse.quote(estab.get('email') or '')}"
+                    f"&nome={urllib.parse.quote(estab.get('nome_responsavel') or estab.get('nome') or '')}"
+                )
+                return redirect(checkout_url)
             else:
                 erro = "Plano selecionado é inválido."
 
-        import urllib.parse
-
         msg_whatsapp = (
-            f"Olá! Sou da empresa {estab['nome']} (responsável: {estab['nome_responsavel']}, "
-            f"email: {estab['email']}). "
-            f"Meu plano atual no Agillex Agenda é o '{cfg_atual['nome']}' e gostaria de solicitar informações de faturamento e upgrade."
+            f"Olá! Sou da empresa {estab['nome']} (responsável: {estab.get('nome_responsavel') or ''}, "
+            f"email: {estab.get('email') or ''}). "
+            f"Gostaria de solicitar uma proposta corporativa sob medida para mais de 10 profissionais no Agillex Agenda."
         )
         link_whatsapp_upgrade = (
             f"https://wa.me/5511966381915?text={urllib.parse.quote(msg_whatsapp)}"
