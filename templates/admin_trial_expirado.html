@@ -29,24 +29,29 @@
                 Para continuar utilizando o sistema:
             </p>
             <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: #475569; line-height: 1.6;">
-                <li>Entre em contato com nossa equipe comercial para ativar seu plano.</li>
-                <li>Sua conta e link de agendamento serão reativados imediatamente.</li>
-                <li>Nenhum dado cadastrado durante o teste será perdido.</li>
+                <li>Ative sua assinatura online de forma rápida e segura.</li>
+                <li>Sua conta e link de agendamento são reativados automaticamente.</li>
+                <li>Nenhum dado ou agendamento cadastrado durante o teste será perdido.</li>
             </ul>
         </div>
 
-        <a href="https://wa.me/5511966381915?text=Ol%C3%A1!%20Meu%20per%C3%ADodo%20de%20teste%20do%20Agillex%20Agenda%20encerrou%20e%20gostaria%20de%20ativar%20meu%20plano."
-           target="_blank" rel="noopener noreferrer"
+        <a href="https://hub.alllogiconline.com.br/checkout?modulo=agenda&plano=intermediario&email={{ info_trial.get('estabelecimento_email', '') }}"
            class="btn-primario"
-           style="background-color: #25D366; border-color: #25D366; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; font-size: 1rem; text-decoration: none; border-radius: 6px; font-weight: 600;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.155.57 4.175 1.564 5.922l-1.564 5.906 6.082-1.595c1.706.924 3.659 1.467 5.748 1.467 6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z"/>
+           style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; font-size: 1rem; text-decoration: none; border-radius: 8px; font-weight: 700; margin-bottom: 12px; background: #0f172a; color: #ffffff;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
             </svg>
-            <span>Falar no WhatsApp para Ativar Plano</span>
+            <span>Ativar Assinatura Online Agora</span>
         </a>
 
-        <div style="margin-top: 20px; font-size: 0.85rem;">
-            <a href="{{ url_for('admin_logout') }}" style="color: var(--texto-secundario, #64748b); text-decoration: underline;">
+        <div style="margin-top: 16px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
+            <a href="https://wa.me/5511966381915?text=Ol%C3%A1!%20Tenho%20d%C3%BAvidas%20sobre%20a%20assinatura%20do%20Agillex%20Agenda."
+               target="_blank" rel="noopener noreferrer"
+               style="color: var(--texto-secundario, #64748b); text-decoration: underline;">
+                Precisa de ajuda ou atendimento humano? Fale no WhatsApp
+            </a>
+            <a href="{{ url_for('admin_logout') }}" style="color: var(--texto-secundario, #94a3b8); text-decoration: underline; margin-top: 8px;">
                 Sair do painel
             </a>
         </div>
