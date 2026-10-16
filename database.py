@@ -378,7 +378,14 @@ def init_db():
             ADD COLUMN IF NOT EXISTS intervalo_slot_minutos INTEGER DEFAULT 30,
             ADD COLUMN IF NOT EXISTS dias_funcionamento TEXT DEFAULT '1,2,3,4,5,6',
             ADD COLUMN IF NOT EXISTS dias_antecedencia_agendamento INTEGER DEFAULT 14,
-            ADD COLUMN IF NOT EXISTS nome_publico TEXT
+            ADD COLUMN IF NOT EXISTS nome_publico TEXT,
+            ADD COLUMN IF NOT EXISTS pagamento_online_ativo BOOLEAN DEFAULT FALSE,
+            ADD COLUMN IF NOT EXISTS pagamento_tipo TEXT DEFAULT 'sinal',
+            ADD COLUMN IF NOT EXISTS pagamento_sinal_valor NUMERIC(10, 2) DEFAULT 30.00,
+            ADD COLUMN IF NOT EXISTS taxa_intermediacao_fixa NUMERIC(10, 2) DEFAULT 1.99,
+            ADD COLUMN IF NOT EXISTS chave_pix_estabelecimento TEXT,
+            ADD COLUMN IF NOT EXISTS tipo_chave_pix TEXT,
+            ADD COLUMN IF NOT EXISTS asaas_wallet_id TEXT
         """)
 
         # Isolamento multi-tenant: vincula servico, profissional, agendamento e cliente ao estabelecimento
@@ -400,10 +407,21 @@ def init_db():
 
         conn.execute("""
             ALTER TABLE agendamento
-            ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER REFERENCES estabelecimento(id) ON DELETE CASCADE
+            ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER REFERENCES estabelecimento(id) ON DELETE CASCADE,
+            ADD COLUMN IF NOT EXISTS pagamento_status TEXT DEFAULT 'nao_requerido',
+            ADD COLUMN IF NOT EXISTS pagamento_valor NUMERIC(10, 2) DEFAULT 0.00,
+            ADD COLUMN IF NOT EXISTS pagamento_taxa_alllogic NUMERIC(10, 2) DEFAULT 1.99,
+            ADD COLUMN IF NOT EXISTS pagamento_valor_liquido NUMERIC(10, 2) DEFAULT 0.00,
+            ADD COLUMN IF NOT EXISTS asaas_payment_id TEXT,
+            ADD COLUMN IF NOT EXISTS pix_copia_cola TEXT,
+            ADD COLUMN IF NOT EXISTS pix_qr_code TEXT,
+            ADD COLUMN IF NOT EXISTS pago_em TIMESTAMP WITH TIME ZONE
         """)
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_agendamento_estabelecimento_id ON agendamento (estabelecimento_id)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_agendamento_pagamento_status ON agendamento (pagamento_status)
         """)
 
         conn.execute("""
@@ -964,6 +982,13 @@ def obter_configuracoes_estabelecimento(conn, estabelecimento_id=1):
             "dias_funcionamento": configs_globais.get("dias_funcionamento") or est.get("dias_funcionamento", "1,2,3,4,5,6"),
             "dias_antecedencia_agendamento": int(configs_globais.get("dias_antecedencia_agendamento") or est.get("dias_antecedencia_agendamento", 14)),
             "dias_antecedencia": int(configs_globais.get("dias_antecedencia_agendamento") or est.get("dias_antecedencia_agendamento", 14)),
+            "pagamento_online_ativo": bool(est.get("pagamento_online_ativo", False)),
+            "pagamento_tipo": est.get("pagamento_tipo") or "sinal",
+            "pagamento_sinal_valor": float(est.get("pagamento_sinal_valor") or 30.00),
+            "taxa_intermediacao_fixa": float(est.get("taxa_intermediacao_fixa") or 1.99),
+            "chave_pix_estabelecimento": est.get("chave_pix_estabelecimento") or "",
+            "tipo_chave_pix": est.get("tipo_chave_pix") or "cpf_cnpj",
+            "asaas_wallet_id": est.get("asaas_wallet_id") or "",
         }
 
     # Para estabelecimentos específicos (ID > 1)
@@ -1000,6 +1025,13 @@ def obter_configuracoes_estabelecimento(conn, estabelecimento_id=1):
         "dias_funcionamento": est.get("dias_funcionamento") or "1,2,3,4,5,6",
         "dias_antecedencia_agendamento": int(est.get("dias_antecedencia_agendamento") or 14),
         "dias_antecedencia": int(est.get("dias_antecedencia_agendamento") or 14),
+        "pagamento_online_ativo": bool(est.get("pagamento_online_ativo", False)),
+        "pagamento_tipo": est.get("pagamento_tipo") or "sinal",
+        "pagamento_sinal_valor": float(est.get("pagamento_sinal_valor") or 30.00),
+        "taxa_intermediacao_fixa": float(est.get("taxa_intermediacao_fixa") or 1.99),
+        "chave_pix_estabelecimento": est.get("chave_pix_estabelecimento") or "",
+        "tipo_chave_pix": est.get("tipo_chave_pix") or "cpf_cnpj",
+        "asaas_wallet_id": est.get("asaas_wallet_id") or "",
     }
 
 
@@ -1009,7 +1041,9 @@ def atualizar_configuracoes_estabelecimento(conn, estabelecimento_id, dados):
         "nome", "nome_fantasia", "razao_social", "cnpj_cpf", "email_comercial", "telefone",
         "whatsapp", "cep", "logradouro", "numero", "complemento", "bairro", "cidade", "estado",
         "endereco_estabelecimento", "logotipo", "horario_abertura", "horario_fechamento",
-        "intervalo_slot_minutos", "dias_funcionamento", "dias_antecedencia_agendamento", "nome_publico"
+        "intervalo_slot_minutos", "dias_funcionamento", "dias_antecedencia_agendamento", "nome_publico",
+        "pagamento_online_ativo", "pagamento_tipo", "pagamento_sinal_valor", "taxa_intermediacao_fixa",
+        "chave_pix_estabelecimento", "tipo_chave_pix", "asaas_wallet_id"
     ]
     updates = []
     valores = []

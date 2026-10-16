@@ -819,6 +819,52 @@ def api_appointments():
     ag = models.obter_agendamento_completo(agendamento_id)
     token_acesso = ag["token_acesso"] if ag and "token_acesso" in ag else None
 
+    # Agillex Pay — Gestão de Pagamentos Online & Sinal
+    pagamento_requerido = False
+    pix_dados = None
+    try:
+        with db_session() as conn:
+            config_estab = obter_configuracoes_estabelecimento(conn, estab_final)
+
+        if config_estab.get("pagamento_online_ativo"):
+            tipo_pagamento = config_estab.get("pagamento_tipo") or "sinal"
+            if tipo_pagamento == "sinal":
+                valor_cobranca = float(config_estab.get("pagamento_sinal_valor") or 30.00)
+            else:
+                valor_cobranca = float(ag.get("servico_preco") or 0.0)
+
+            if valor_cobranca > 0:
+                taxa_alllogic = float(config_estab.get("taxa_intermediacao_fixa") or 1.99)
+                valor_liquido = max(0.0, round(valor_cobranca - taxa_alllogic, 2))
+                from asaas_service import gerar_pix_agendamento
+                pix_dados = gerar_pix_agendamento(
+                    nome_cliente=cliente_nome,
+                    telefone_cliente=cliente_telefone,
+                    valor=valor_cobranca,
+                    descricao=f"Agendamento #{agendamento_id} - {config_estab.get('nome_estabelecimento')}",
+                    wallet_id=config_estab.get("asaas_wallet_id"),
+                    taxa_alllogic=taxa_alllogic,
+                    external_reference=str(agendamento_id),
+                )
+                models.atualizar_pagamento_agendamento(
+                    agendamento_id=agendamento_id,
+                    status="pendente",
+                    asaas_payment_id=pix_dados.get("payment_id"),
+                    pix_copia_cola=pix_dados.get("copy_paste"),
+                    pix_qr_code=pix_dados.get("qr_code_base64"),
+                    valor=valor_cobranca,
+                    taxa=taxa_alllogic,
+                    valor_liquido=valor_liquido,
+                )
+                pagamento_requerido = True
+        else:
+            models.atualizar_pagamento_agendamento(
+                agendamento_id=agendamento_id,
+                status="isento",
+            )
+    except Exception as e:
+        app.logger.error(f"[Agillex Pay] Erro ao processar cobrança online do agendamento {agendamento_id}: {e}")
+
     # Dispara notificações de WhatsApp via Evolution API em background
     try:
         from whatsapp_service import notificar_novo_agendamento_whatsapp
@@ -827,7 +873,61 @@ def api_appointments():
     except Exception as e:
         app.logger.warning(f"Erro ao disparar notificações de WhatsApp: {e}")
 
-    return jsonify({"agendamento_id": agendamento_id, "token_acesso": token_acesso}), 201
+    resposta = {"agendamento_id": agendamento_id, "token_acesso": token_acesso, "pagamento_requerido": pagamento_requerido}
+    if pix_dados:
+        resposta["pix"] = pix_dados
+    return jsonify(resposta), 201
+
+
+@app.route("/api/agendamento/<int:agendamento_id>/pix-status", methods=["GET"])
+def api_agendamento_pix_status(agendamento_id):
+    ag = models.obter_agendamento_completo(agendamento_id)
+    if not ag:
+        return jsonify({"erro": "Agendamento não encontrado"}), 404
+
+    status_atual = ag.get("pagamento_status") or "isento"
+    if status_atual == "pago":
+        return jsonify({"pago": True, "status": "CONFIRMED", "pago_em": str(ag.get("pago_em"))})
+
+    if status_atual in ("isento", "nao_aplicavel"):
+        return jsonify({"pago": True, "status": "EXEMPT"})
+
+    payment_id = ag.get("asaas_payment_id")
+    if payment_id:
+        from asaas_service import consultar_status_pix
+        resultado = consultar_status_pix(payment_id)
+        if resultado.get("pago"):
+            models.atualizar_pagamento_agendamento(agendamento_id, status="pago")
+            return jsonify({"pago": True, "status": resultado.get("status", "CONFIRMED")})
+
+    return jsonify({"pago": False, "status": status_atual})
+
+
+@app.route("/api/webhooks/asaas-agendamento", methods=["POST"])
+def webhook_asaas_agendamento():
+    payload = request.get_json(silent=True) or {}
+    evento = payload.get("event")
+    payment = payload.get("payment") or {}
+
+    payment_id = payment.get("id")
+    external_ref = payment.get("externalReference")
+
+    app.logger.info(f"[Webhook Asaas Agendamento] Evento: {evento} | ID: {payment_id} | Ref: {external_ref}")
+
+    if evento in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"):
+        ag = None
+        if external_ref and external_ref.isdigit():
+            ag = models.obter_agendamento_completo(int(external_ref))
+        if not ag and payment_id:
+            ag = models.obter_agendamento_por_asaas_id(payment_id)
+
+        if ag:
+            ag_id = ag["id"]
+            models.atualizar_pagamento_agendamento(ag_id, status="pago")
+            app.logger.info(f"[Webhook Asaas Agendamento] Pagamento confirmado com sucesso para agendamento #{ag_id}")
+            return jsonify({"status": "success", "agendamento_id": ag_id}), 200
+
+    return jsonify({"status": "ignored"}), 200
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
@@ -1231,12 +1331,22 @@ def admin_configuracoes():
         else:
             dias_str = request.form.get("dias_funcionamento", "").strip()
 
+        try:
+            sinal_val = float(request.form.get("pagamento_sinal_valor", "30").replace(",", "."))
+        except (ValueError, TypeError):
+            sinal_val = 30.00
+
         dados = {
             "dias_antecedencia_agendamento": request.form.get("dias_antecedencia_agendamento", "14").strip(),
             "horario_abertura": request.form.get("horario_abertura", "09:00").strip(),
             "horario_fechamento": request.form.get("horario_fechamento", "19:00").strip(),
             "intervalo_slot_minutos": request.form.get("intervalo_slot_minutos", "30").strip(),
             "dias_funcionamento": dias_str,
+            "pagamento_online_ativo": bool(request.form.get("pagamento_online_ativo")),
+            "pagamento_tipo": request.form.get("pagamento_tipo", "sinal").strip(),
+            "pagamento_sinal_valor": sinal_val,
+            "chave_pix_estabelecimento": request.form.get("chave_pix_estabelecimento", "").strip(),
+            "tipo_chave_pix": request.form.get("tipo_chave_pix", "cpf_cnpj").strip(),
         }
 
         erro = _validar_configuracoes_operacionais(dados)
@@ -1244,7 +1354,7 @@ def admin_configuracoes():
             with db_session() as conn:
                 atualizar_configuracoes_estabelecimento(conn, estab_id, dados)
             models._limpar_cache_config()
-            sucesso = "Configurações da agenda atualizadas com sucesso."
+            sucesso = "Configurações da agenda e pagamentos atualizadas com sucesso."
             valores.update(dados)
         else:
             valores.update(dados)
@@ -2001,6 +2111,8 @@ csrf.exempt(api_services)
 csrf.exempt(api_professionals)
 csrf.exempt(api_availability)
 csrf.exempt(api_appointments)
+csrf.exempt(api_agendamento_pix_status)
+csrf.exempt(webhook_asaas_agendamento)
 
 
 if __name__ == "__main__":

@@ -1695,3 +1695,62 @@ def cancelar_agendamento_por_cliente(token):
         return False, "Este agendamento não pode mais ser cancelado."
 
     return cancelar_agendamento(ag["id"], usuario="cliente")
+
+
+# ==============================================================================
+# AGILLEX PAY — GESTÃO DE PAGAMENTOS E TRANSAÇÕES
+# ==============================================================================
+
+def atualizar_pagamento_agendamento(
+    agendamento_id,
+    status,
+    asaas_payment_id=None,
+    pix_copia_cola=None,
+    pix_qr_code=None,
+    valor=None,
+    taxa=1.99,
+    valor_liquido=None,
+):
+    """Atualiza o status e dados de liquidação financeira de um agendamento."""
+    with db_session() as conn:
+        updates = ["pagamento_status = %s"]
+        params = [status]
+        if asaas_payment_id:
+            updates.append("asaas_payment_id = %s")
+            params.append(asaas_payment_id)
+        if pix_copia_cola:
+            updates.append("pix_copia_cola = %s")
+            params.append(pix_copia_cola)
+        if pix_qr_code:
+            updates.append("pix_qr_code = %s")
+            params.append(pix_qr_code)
+        if valor is not None:
+            updates.append("pagamento_valor = %s")
+            params.append(valor)
+        if taxa is not None:
+            updates.append("pagamento_taxa_alllogic = %s")
+            params.append(taxa)
+        if valor_liquido is not None:
+            updates.append("pagamento_valor_liquido = %s")
+            params.append(valor_liquido)
+        if status == "pago":
+            updates.append("pago_em = CURRENT_TIMESTAMP")
+
+        params.append(agendamento_id)
+        conn.execute(
+            f"UPDATE agendamento SET {', '.join(updates)} WHERE id = %s",
+            params,
+        )
+
+
+def obter_agendamento_por_asaas_id(asaas_payment_id):
+    """Busca um agendamento pelo identificador da cobrança no Asaas."""
+    if not asaas_payment_id:
+        return None
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT * FROM agendamento WHERE asaas_payment_id = %s",
+            (asaas_payment_id.strip(),),
+        ).fetchone()
+        return dict(row) if row else None
+

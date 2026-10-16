@@ -69,9 +69,83 @@
                 </div>
             </fieldset>
 
+            <!-- Seção Agillex Pay -->
+            <fieldset style="border: 1px solid var(--borda); border-radius: var(--raio-medio); padding: 18px; margin: 24px 0; background: rgba(0, 48, 135, 0.02);">
+                <legend style="color: var(--cor-texto); font-size: 1rem; font-weight: 700; padding: 0 8px; display: flex; align-items: center; gap: 6px;">
+                    💳 Agillex Pay — Pagamentos Online & Sinal
+                </legend>
+                
+                <p style="color: var(--cor-mutada); font-size: 0.85rem; margin-top: 4px; margin-bottom: 16px;">
+                    Receba pagamentos ou cobre um sinal via PIX para garantir agendamentos e eliminar faltas de clientes.
+                </p>
+
+                <label class="checkbox-row" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 16px; cursor: pointer;">
+                    <input type="checkbox" name="pagamento_online_ativo" value="1" id="pagamento_online_ativo" {% if configuracoes.get('pagamento_online_ativo') %}checked{% endif %}>
+                    Habilitar cobrança online via PIX na página de agendamento
+                </label>
+
+                <div id="painel-agillex-pay" style="{% if not configuracoes.get('pagamento_online_ativo') %}display: none;{% endif %} border-top: 1px dashed var(--borda); padding-top: 16px; margin-top: 8px;">
+                    <label for="pagamento_tipo" style="font-weight: 600;">Modelo de cobrança</label>
+                    <select id="pagamento_tipo" name="pagamento_tipo" style="width: 100%; margin-bottom: 16px;">
+                        <option value="sinal" {% if configuracoes.get('pagamento_tipo') == 'sinal' %}selected{% endif %}>Sinal de Confirmação (valor fixo para segurar o horário)</option>
+                        <option value="integral" {% if configuracoes.get('pagamento_tipo') == 'integral' %}selected{% endif %}>Valor Integral (cobrar o total dos serviços agendados)</option>
+                    </select>
+
+                    <div id="campo-valor-sinal" style="margin-bottom: 16px; {% if configuracoes.get('pagamento_tipo') == 'integral' %}display: none;{% endif %}">
+                        <label for="pagamento_sinal_valor" style="font-weight: 600;">Valor do Sinal (R$)</label>
+                        <input type="number" id="pagamento_sinal_valor" name="pagamento_sinal_valor" min="5.00" step="0.50" value="{{ '%.2f'|format(configuracoes.get('pagamento_sinal_valor', 30.00)) }}">
+                        <small style="display: block; margin-top: 4px; color: var(--cor-mutada); font-size: 0.8rem;">
+                            Exemplo: R$ 30,00 cobrados via PIX no ato do agendamento. O saldo restante é acertado presencialmente.
+                        </small>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 16px;">
+                        <div>
+                            <label for="tipo_chave_pix" style="font-weight: 600;">Tipo da Chave</label>
+                            <select id="tipo_chave_pix" name="tipo_chave_pix" style="width: 100%;">
+                                <option value="cpf_cnpj" {% if configuracoes.get('tipo_chave_pix') == 'cpf_cnpj' %}selected{% endif %}>CPF / CNPJ</option>
+                                <option value="email" {% if configuracoes.get('tipo_chave_pix') == 'email' %}selected{% endif %}>E-mail</option>
+                                <option value="telefone" {% if configuracoes.get('tipo_chave_pix') == 'telefone' %}selected{% endif %}>Celular</option>
+                                <option value="aleatoria" {% if configuracoes.get('tipo_chave_pix') == 'aleatoria' %}selected{% endif %}>Chave Aleatória</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="chave_pix_estabelecimento" style="font-weight: 600;">Sua Chave PIX</label>
+                            <input type="text" id="chave_pix_estabelecimento" name="chave_pix_estabelecimento" value="{{ configuracoes.get('chave_pix_estabelecimento', '') }}" placeholder="Digite sua chave PIX de recebimento">
+                        </div>
+                    </div>
+
+                    <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #166534; line-height: 1.45;">
+                        <strong>Taxa de Intermediação Agillex Pay:</strong> R$ 1,99 por agendamento pago com sucesso.<br>
+                        Você recebe o valor líquido diretamente via PIX com conciliação instantânea. Sem custo fixo mensal.
+                    </div>
+                </div>
+            </fieldset>
+
             <div class="botoes-acoes">
                 <button type="submit" class="btn-primario">Salvar configurações</button>
             </div>
         </form>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var chkAtivo = document.getElementById("pagamento_online_ativo");
+            var painel = document.getElementById("painel-agillex-pay");
+            var selTipo = document.getElementById("pagamento_tipo");
+            var campoSinal = document.getElementById("campo-valor-sinal");
+
+            if (chkAtivo && painel) {
+                chkAtivo.addEventListener("change", function() {
+                    painel.style.display = this.checked ? "block" : "none";
+                });
+            }
+
+            if (selTipo && campoSinal) {
+                selTipo.addEventListener("change", function() {
+                    campoSinal.style.display = (this.value === "sinal") ? "block" : "none";
+                });
+            }
+        });
+    </script>
 {% endblock %}
