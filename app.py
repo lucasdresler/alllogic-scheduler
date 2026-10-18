@@ -476,7 +476,7 @@ def public_cancelar_reserva(token):
 
 @app.route("/experimente")
 def experimente():
-    return render_template("experimente.html", **_carregar_config_template())
+    return redirect(url_for("agillex"), code=302)
 
 
 @app.route("/agillex", methods=["GET", "POST"])

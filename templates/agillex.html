@@ -10,14 +10,14 @@
 {% endblock %}
 
 {% block conteudo %}
-<!-- 1. Topbar de Utilidades Institucional -->
-<a class="header__services" href="https://alllogiconline.com.br/dominios-e-hospedagem">
-    <span>Encontre seu domínio</span>
-    <span>Hospede seu site</span>
-</a>
-
 <!-- 2. Cabeçalho / Menu Principal Institucional -->
 <header class="header">
+    <!-- 1. Topbar de Utilidades Institucional -->
+    <a class="header__services" href="https://alllogiconline.com.br/dominios-e-hospedagem">
+        <span>Encontre seu domínio</span>
+        <span>Hospede seu site</span>
+    </a>
+
     <div class="header__container">
         <div class="header__inner">
             <div class="header__brand">
@@ -41,9 +41,11 @@
                     <li class="navigation__item"><a href="https://alllogiconline.com.br/" class="navigation__link">Início</a></li>
                     <li class="navigation__item"><a href="https://alllogiconline.com.br/#solucoes" class="navigation__link">Soluções</a></li>
                     <li class="navigation__item navigation__dropdown" id="nav-dropdown-família-agillex">
-                        <button type="button" class="navigation__dropdown-toggle" id="dropdown-toggle-agillex" aria-expanded="false" aria-haspopup="true">
+                        <button type="button" class="navigation__link navigation__dropdown-toggle" id="dropdown-toggle-agillex" aria-expanded="false" aria-haspopup="true">
                             <span>Família Agillex</span>
-                            <svg class="navigation__dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <svg class="navigation__dropdown-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
                         </button>
                         <ul class="navigation__dropdown-menu" role="menu">
                             <li role="none"><a href="https://alllogiconline.com.br/agillex-hub" class="navigation__dropdown-link" role="menuitem">Agillex Hub</a></li>
@@ -355,9 +357,11 @@
     </div>
 </footer>
 
-<!-- 5. Botão Voltar ao Topo -->
+<!-- 5. Botão Voltar ao Topo (Dourado com seta branca encorpada) -->
 <button class="scroll-to-top" type="button" aria-label="Voltar ao topo" title="Voltar ao topo" id="scroll-to-top-btn">
-    <span aria-hidden="true">↑</span>
+    <svg class="scroll-to-top__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 19V5M5 12l7-7 7 7"></path>
+    </svg>
 </button>
 
 <style>
@@ -521,6 +525,8 @@ body {
 /* Dropdown */
 .navigation__dropdown {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .navigation__dropdown-toggle {
@@ -692,8 +698,11 @@ body {
 }
 
 .agillex-cadastro-container {
-    max-width: 880px;
+    max-width: 1024px;
+    width: 100%;
     margin: 0 auto;
+    padding-inline: 1rem;
+    box-sizing: border-box;
 }
 
 .agillex-topo {
@@ -1453,11 +1462,16 @@ body {
     box-shadow: 0 6px 18px rgba(201, 162, 39, 0.55);
 }
 
-.scroll-to-top span {
-    font-size: 1.25rem;
-    line-height: 1;
-    font-weight: 700;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+.scroll-to-top__icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    stroke: #ffffff;
+    transition: transform 180ms ease;
+}
+
+.scroll-to-top:hover .scroll-to-top__icon {
+    transform: translateY(-2px);
 }
 
 /* Animações */
