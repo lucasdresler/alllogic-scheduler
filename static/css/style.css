@@ -1977,6 +1977,29 @@ table.tabela-agendamentos .col-acoes {
     gap: 16px;
 }
 
+.admin-footer-left {
+    display: flex;
+    align-items: center;
+}
+
+.admin-footer-logo-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.admin-footer-logo {
+    display: block;
+    height: 38px;
+    width: auto;
+    object-fit: contain;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.admin-footer-logo:hover {
+    opacity: 0.85;
+}
+
 .admin-footer-brand-section {
     display: flex;
     flex-direction: column;
