@@ -706,17 +706,31 @@ table.tabela-agendamentos .col-acoes {
     text-decoration: underline;
 }
 
-/* Chamada comercial para teste gratuito no rodapé público */
+/* Chamada comercial e institucional no rodapé público */
 .rodape-comercial {
     margin-top: 14px;
     padding-top: 12px;
     border-top: 1px dashed var(--border-subtle);
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.rodape-comercial-chamada,
+.rodape-institucional-contato {
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     flex-wrap: wrap;
-    font-size: 0.82rem;
+}
+
+.rodape-institucional-contato {
+    font-size: 0.80rem;
 }
 
 .rodape-comercial-marca {
@@ -742,6 +756,24 @@ table.tabela-agendamentos .col-acoes {
 .link-experimente:hover {
     color: var(--navy-profundo);
     text-decoration: underline;
+}
+
+.link-institucional {
+    color: var(--text-muted, #5A6270);
+    text-decoration: none;
+    transition: color 0.15s ease-in-out;
+}
+
+.link-institucional:hover {
+    color: var(--navy-profundo, #0A1F44);
+    text-decoration: underline;
+}
+
+.rodape-copy {
+    margin: 4px 0 0;
+    font-size: 0.74rem;
+    color: var(--text-muted, #6B7280);
+    opacity: 0.85;
 }
 
 .link-experimente:focus-visible {
