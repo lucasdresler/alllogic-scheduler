@@ -184,7 +184,7 @@
                 <div class="agillex-termos-wrapper">
                     <label class="agillex-checkbox-label" for="input-termos">
                         <input type="checkbox" id="input-termos" name="termos" value="1" {% if valores.get('termos') %}checked{% endif %} required>
-                        <span>Concordo com os termos de uso e política de privacidade da AllLogic para ativação dos 14 dias de teste gratuito no plano selecionado.</span>
+                        <span>Concordo com os <a href="https://alllogiconline.com.br/termos-de-uso/" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" class="agillex-link-legal">termos de uso</a> e <a href="https://alllogiconline.com.br/politica-de-privacidade/" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" class="agillex-link-legal">política de privacidade</a> da AllLogic para ativação dos 14 dias de teste gratuito no plano selecionado.</span>
                     </label>
                 </div>
 
@@ -633,6 +633,17 @@ body {
     height: 16px;
     accent-color: var(--alllogic-primary);
     cursor: pointer;
+}
+
+.agillex-checkbox-label .agillex-link-legal {
+    color: var(--alllogic-secondary);
+    text-decoration: underline;
+    font-weight: 600;
+    transition: color 0.15s ease;
+}
+
+.agillex-checkbox-label .agillex-link-legal:hover {
+    color: var(--alllogic-primary);
 }
 
 /* Botão Submit */
