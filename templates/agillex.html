@@ -13,10 +13,15 @@
 <!-- 2. Cabeçalho / Menu Principal Institucional -->
 <header class="header">
     <!-- 1. Topbar de Utilidades Institucional -->
-    <a class="header__services" href="https://alllogiconline.com.br/dominios-e-hospedagem">
-        <span>Encontre seu domínio</span>
-        <span>Hospede seu site</span>
-    </a>
+    <div class="header__services">
+        <a class="header__services-link" href="https://alllogiconline.com.br/dominios-e-hospedagem#busca-dominio" target="_blank" rel="noopener noreferrer">
+            <span>Encontre seu domínio</span>
+        </a>
+        <span class="header__services-sep" aria-hidden="true">|</span>
+        <a class="header__services-link" href="https://alllogiconline.com.br/dominios-e-hospedagem#hospedagem-sites" target="_blank" rel="noopener noreferrer">
+            <span>Hospede seu site</span>
+        </a>
+    </div>
 
     <div class="header__container">
         <div class="header__inner">
@@ -413,34 +418,39 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-lg);
+    gap: var(--space-md);
     width: 100%;
     padding: 0.5rem var(--space-md);
     background-color: var(--color-primary);
     color: var(--color-background);
-    text-decoration: none;
     font-size: 0.875rem;
     font-weight: 600;
     box-sizing: border-box;
 }
 
-.header__services span + span {
-    position: relative;
-    padding-left: var(--space-lg);
-}
-
-.header__services span + span::before {
-    content: "|";
-    position: absolute;
-    left: 0;
-    color: currentColor;
-    opacity: 0.6;
-}
-
-.header__services:hover,
-.header__services:focus-visible {
-    color: var(--color-accent);
+.header__services-link {
+    color: var(--color-background);
     text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.header__services-link:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
+.header__services-link:focus-visible {
+    color: var(--color-accent);
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 2px;
+}
+
+.header__services-sep {
+    color: var(--color-background);
+    opacity: 0.5;
+    user-select: none;
 }
 
 /* ==========================================================================
