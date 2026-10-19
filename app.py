@@ -205,10 +205,10 @@ def _carregar_config_template(estabelecimento_id=None):
 
     url_base = _obter_url_base_whatsapp()
     slug = (est.get("slug") if est else "") or ""
-    if slug:
-        url_publica_agendamento = f"{url_base}/agendar/{slug}"
-    else:
+    if estab_id == 1 or slug in ("default", ""):
         url_publica_agendamento = f"{url_base}/"
+    else:
+        url_publica_agendamento = f"{url_base}/{slug}"
 
     dias_func = config.get("dias_funcionamento", "1,2,3,4,5,6")
     if isinstance(dias_func, str):

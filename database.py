@@ -1105,8 +1105,12 @@ def obter_estabelecimento_por_slug(conn, slug):
     if not slug:
         return None
     s = slug.strip().lower()
-    if s == "alllogic-online":
+    if s in ("alllogic-online", "alllogic"):
         s = "alllogic"
+    elif s in ("default", "salao-premium", "salaopremium"):
+        row = conn.execute("SELECT * FROM estabelecimento WHERE slug IN ('salao-premium', 'default') OR id = 1").fetchone()
+        if row:
+            return row
     return conn.execute(
         "SELECT * FROM estabelecimento WHERE slug = %s", (s,)
     ).fetchone()
