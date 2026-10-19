@@ -170,6 +170,35 @@ def alterar_status_servico(servico_id, ativo):
         return True, None
 
 
+def excluir_servico(servico_id, estabelecimento_id=None):
+    with db_session() as conn:
+        cond_estab = ""
+        params = [servico_id]
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                cond_estab = " AND (estabelecimento_id = 1 OR estabelecimento_id IS NULL)"
+            else:
+                cond_estab = " AND estabelecimento_id = %s"
+                params.append(estabelecimento_id)
+
+        row = conn.execute(
+            f"SELECT id, nome FROM servico WHERE id = %s{cond_estab}", tuple(params)
+        ).fetchone()
+        if not row:
+            return False, "Serviço não encontrado."
+
+        agendamentos = conn.execute(
+            "SELECT COUNT(*) AS c FROM agendamento WHERE servico_id = %s", (servico_id,)
+        ).fetchone()["c"]
+        if agendamentos > 0:
+            return False, f"Não é possível excluir o serviço '{row['nome']}' porque existem {agendamentos} agendamento(s) vinculado(s) a ele. Você pode desativá-lo para que não apareça na agenda."
+
+        conn.execute("DELETE FROM profissional_servico WHERE servico_id = %s", (servico_id,))
+        conn.execute("DELETE FROM agendamento_servico WHERE servico_id = %s", (servico_id,))
+        conn.execute("DELETE FROM servico WHERE id = %s", (servico_id,))
+        return True, None
+
+
 def listar_profissionais_admin(estabelecimento_id=None):
     with db_session() as conn:
         if estabelecimento_id is not None:
@@ -284,6 +313,35 @@ def alterar_status_profissional(profissional_id, ativo):
             "UPDATE profissional SET ativo = %s WHERE id = %s",
             (bool(ativo), profissional_id),
         )
+        return True, None
+
+
+def excluir_profissional(profissional_id, estabelecimento_id=None):
+    with db_session() as conn:
+        cond_estab = ""
+        params = [profissional_id]
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                cond_estab = " AND (estabelecimento_id = 1 OR estabelecimento_id IS NULL)"
+            else:
+                cond_estab = " AND estabelecimento_id = %s"
+                params.append(estabelecimento_id)
+
+        row = conn.execute(
+            f"SELECT id, nome FROM profissional WHERE id = %s{cond_estab}", tuple(params)
+        ).fetchone()
+        if not row:
+            return False, "Profissional não encontrado."
+
+        agendamentos = conn.execute(
+            "SELECT COUNT(*) AS c FROM agendamento WHERE profissional_id = %s", (profissional_id,)
+        ).fetchone()["c"]
+        if agendamentos > 0:
+            return False, f"Não é possível excluir o profissional '{row['nome']}' porque existem {agendamentos} agendamento(s) vinculado(s) a ele. Você pode desativá-lo para que não apareça na agenda."
+
+        conn.execute("DELETE FROM profissional_disponibilidade WHERE profissional_id = %s", (profissional_id,))
+        conn.execute("DELETE FROM profissional_servico WHERE profissional_id = %s", (profissional_id,))
+        conn.execute("DELETE FROM profissional WHERE id = %s", (profissional_id,))
         return True, None
 
 

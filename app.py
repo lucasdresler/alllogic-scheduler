@@ -972,9 +972,13 @@ def admin_logout():
 def admin_servicos():
     estab_id = session.get("estabelecimento_id") or 1
     servicos = models.listar_servicos_admin(estabelecimento_id=estab_id)
+    erro = session.pop("flash_erro", None)
+    sucesso = session.pop("flash_sucesso", None)
     return render_template(
         "admin_servicos.html",
         servicos=servicos,
+        erro=erro,
+        sucesso=sucesso,
         **_carregar_config_template(estab_id),
     )
 
@@ -1055,6 +1059,18 @@ def admin_servico_toggle(servico_id):
     return redirect(url_for("admin_servicos"))
 
 
+@app.route("/admin/servicos/<int:servico_id>/excluir", methods=["POST"])
+@login_requerido
+def admin_servico_excluir(servico_id):
+    estab_id = session.get("estabelecimento_id") or 1
+    ok, erro = models.excluir_servico(servico_id, estabelecimento_id=estab_id)
+    if not ok:
+        session["flash_erro"] = erro
+    else:
+        session["flash_sucesso"] = "Serviço excluído com sucesso."
+    return redirect(url_for("admin_servicos"))
+
+
 @app.route("/admin/profissionais")
 @login_requerido
 def admin_profissionais():
@@ -1067,6 +1083,8 @@ def admin_profissionais():
     plano = estab.get("plano", "intermediario") if estab else "intermediario"
     limite = obter_limite_profissionais(plano)
     cfg_plano = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
+    erro = session.pop("flash_erro", None)
+    sucesso = session.pop("flash_sucesso", None)
 
     return render_template(
         "admin_profissionais.html",
@@ -1076,6 +1094,8 @@ def admin_profissionais():
         limite_profissionais=limite,
         atingiu_limite=(total_ativos >= limite),
         plano_config=cfg_plano,
+        erro=erro,
+        sucesso=sucesso,
         **_carregar_config_template(estab_id),
     )
 
@@ -1216,6 +1236,18 @@ def admin_profissional_toggle(profissional_id):
                     if total_ativos >= limite:
                         return redirect(url_for("admin_profissionais", erro_limite="1"))
         models.alterar_status_profissional(profissional_id, novo_status)
+    return redirect(url_for("admin_profissionais"))
+
+
+@app.route("/admin/profissionais/<int:profissional_id>/excluir", methods=["POST"])
+@login_requerido
+def admin_profissional_excluir(profissional_id):
+    estab_id = session.get("estabelecimento_id") or 1
+    ok, erro = models.excluir_profissional(profissional_id, estabelecimento_id=estab_id)
+    if not ok:
+        session["flash_erro"] = erro
+    else:
+        session["flash_sucesso"] = "Profissional excluído com sucesso."
     return redirect(url_for("admin_profissionais"))
 
 

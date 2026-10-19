@@ -48,7 +48,13 @@
                             </span>
                         </td>
                         <td>
-                            <a href="{{ url_for('admin_servico_editar', servico_id=servico.id) }}" class="btn-secundario">Editar</a>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <a href="{{ url_for('admin_servico_editar', servico_id=servico.id) }}" class="btn-secundario btn-compacto">Editar</a>
+                                <form method="POST" action="{{ url_for('admin_servico_excluir', servico_id=servico.id) }}" style="display: inline; margin: 0;" onsubmit="return confirm('Deseja realmente excluir o serviço \'{{ servico.nome }}\'? Esta ação é permanente.');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-acao btn-acao-perigo btn-compacto" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; border: 1px solid #FECACA;">Excluir</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
