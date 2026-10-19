@@ -1104,8 +1104,11 @@ def obter_estabelecimento_por_slug(conn, slug):
     """Retorna dados do estabelecimento pelo slug."""
     if not slug:
         return None
+    s = slug.strip().lower()
+    if s == "alllogic-online":
+        s = "alllogic"
     return conn.execute(
-        "SELECT * FROM estabelecimento WHERE slug = %s", (slug.strip().lower(),)
+        "SELECT * FROM estabelecimento WHERE slug = %s", (s,)
     ).fetchone()
 
 
