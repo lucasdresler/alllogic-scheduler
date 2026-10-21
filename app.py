@@ -218,6 +218,8 @@ def _carregar_config_template(estabelecimento_id=None):
     else:
         dias_funcionamento_lista = [0, 1, 2, 3, 4, 5]
 
+    eh_demo = estab_id in ESTABELECIMENTOS_DEMONSTRACAO_IDS or slug in SLUGS_DEMONSTRACAO
+
     return {
         "nome_estabelecimento": config.get("nome_estabelecimento", "AllLogic Scheduler"),
         "telefone_estabelecimento": telefone,
@@ -230,6 +232,7 @@ def _carregar_config_template(estabelecimento_id=None):
         "estabelecimento_id": estab_id,
         "estabelecimento_slug": slug,
         "url_publica_agendamento": url_publica_agendamento,
+        "eh_demo": eh_demo,
     }
 
 
@@ -344,6 +347,17 @@ ROTAS_RESERVADAS = {
     "admin", "api", "agillex", "experimente", "reserva", "agendamento",
     "static", "favicon.ico", "robots.txt", "sitemap.xml", "health", "healthz"
 }
+
+# Lista branca estrita de instâncias de demonstração pública
+SLUGS_DEMONSTRACAO = {"default", "salao-premium", "petshop", "clinica-odonto", "barbearia"}
+ESTABELECIMENTOS_DEMONSTRACAO_IDS = {1, 3, 4, 5}
+
+
+def eh_slug_demonstracao(slug):
+    if not slug:
+        return False
+    s = slug.strip().lower()
+    return s in SLUGS_DEMONSTRACAO
 
 DADOS_PORTFOLIO_POR_NICHO = {
     "petshop": {
@@ -1286,12 +1300,19 @@ def admin_acesso_demo(slug):
     if slug_limpo in ("", "default"):
         slug_limpo = "default"
 
+    # Isolamento de segurança: apenas slugs e estabelecimentos da whitelist de demonstração
+    if not eh_slug_demonstracao(slug_limpo):
+        return redirect(url_for("admin_login", slug=slug_limpo))
+
     with db_session() as conn:
         est = obter_estabelecimento_por_slug(conn, slug_limpo)
     if not est:
         abort(404)
 
     estab_id = est["id"]
+    if estab_id not in ESTABELECIMENTOS_DEMONSTRACAO_IDS:
+        return redirect(url_for("admin_login", slug=slug_limpo))
+
     session["admin_logado"] = True
     session["admin_usuario"] = "admin"
     session["estabelecimento_id"] = estab_id
@@ -1303,7 +1324,11 @@ def admin_acesso_demo(slug):
 @app.route("/admin/trocar/<slug>")
 @login_requerido
 def admin_trocar_estabelecimento(slug):
-    return admin_acesso_demo(slug)
+    slug_limpo = (slug or "").strip().lower()
+    if not eh_slug_demonstracao(slug_limpo):
+        session["flash_erro"] = "Acesso negado: troca rápida restrita a instâncias de demonstração."
+        return redirect(url_for("admin_dashboard"))
+    return admin_acesso_demo(slug_limpo)
 
 
 @app.route("/admin/login", methods=["GET", "POST"])

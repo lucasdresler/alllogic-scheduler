@@ -316,7 +316,11 @@
         </p>
         {% endif %}
         <p class="rodape-admin-link">
+            {% if eh_demo %}
             <a href="{{ url_for('admin_acesso_demo', slug=estabelecimento_slug or slug or 'default') }}" class="link-painel-admin">Painel Administrativo {{ nome_estabelecimento }}</a>
+            {% else %}
+            <a href="{{ url_for('admin_login', slug=estabelecimento_slug or slug or '') }}" class="link-painel-admin">Painel Administrativo {{ nome_estabelecimento }}</a>
+            {% endif %}
         </p>
         <div class="rodape-comercial">
             <div class="rodape-comercial-chamada">
