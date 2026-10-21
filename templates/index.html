@@ -11,14 +11,14 @@
             {% endif %}
             <h1>{{ nome_estabelecimento }}</h1>
         </div>
-        <p>Agende seu horário</p>
+        <p>{{ subtitulo_publico|default('Agende seu horário') }}</p>
         <div class="badge-reputacao-publico">
-            <span class="estrelas-ouro">★★★★★</span>
-            <strong class="nota-reputacao">4.9</strong>
+            <span class="estrelas-ouro">{{ (badge_reputacao.estrelas if badge_reputacao else '★★★★★') }}</span>
+            <strong class="nota-reputacao">{{ (badge_reputacao.nota if badge_reputacao else '4.9') }}</strong>
             <span class="badge-divisor">·</span>
-            <span class="badge-texto">Profissional Verificado</span>
+            <span class="badge-texto">{{ (badge_reputacao.selo if badge_reputacao else 'Profissional Verificado') }}</span>
             <span class="badge-divisor">·</span>
-            <span class="badge-atendimentos">+100 atendimentos</span>
+            <span class="badge-atendimentos">{{ (badge_reputacao.atendimentos if badge_reputacao else '+100 atendimentos') }}</span>
         </div>
     </header>
 
@@ -111,27 +111,39 @@
                 <strong>Regras & Pontualidade do Atendimento</strong>
             </div>
             <ul class="politica-lista">
-                <li>
-                    <span class="politica-item-icone">⏰</span>
-                    <div>
-                        <strong>Tolerância de 10 minutos:</strong>
-                        <span>Para manter os horários do dia sem atrasos, solicitamos pontualidade na sua chegada.</span>
-                    </div>
-                </li>
-                <li>
-                    <span class="politica-item-icone">🔄</span>
-                    <div>
-                        <strong>Cancelamento ou Reagendamento:</strong>
-                        <span>Gratuito e simples, avisando com pelo menos 2 horas de antecedência pelo WhatsApp.</span>
-                    </div>
-                </li>
-                <li>
-                    <span class="politica-item-icone">📲</span>
-                    <div>
-                        <strong>Lembretes Automáticos:</strong>
-                        <span>Você receberá confirmação e avisos no seu WhatsApp para não esquecer o horário.</span>
-                    </div>
-                </li>
+                {% if politicas_atendimento %}
+                    {% for pol in politicas_atendimento %}
+                    <li>
+                        <span class="politica-item-icone">{{ pol.icone }}</span>
+                        <div>
+                            <strong>{{ pol.titulo }}</strong>
+                            <span>{{ pol.texto }}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li>
+                        <span class="politica-item-icone">⏰</span>
+                        <div>
+                            <strong>Tolerância de 10 minutos:</strong>
+                            <span>Para manter os horários do dia sem atrasos, solicitamos pontualidade na sua chegada.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="politica-item-icone">🔄</span>
+                        <div>
+                            <strong>Cancelamento ou Reagendamento:</strong>
+                            <span>Gratuito e simples, avisando com pelo menos 2 horas de antecedência pelo WhatsApp.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="politica-item-icone">📲</span>
+                        <div>
+                            <strong>Lembretes Automáticos:</strong>
+                            <span>Você receberá confirmação e avisos no seu WhatsApp para não esquecer o horário.</span>
+                        </div>
+                    </li>
+                {% endif %}
             </ul>
         </div>
 
@@ -152,46 +164,61 @@
                 <span class="portfolio-subtitulo">Inspire-se com resultados reais</span>
             </div>
             <div class="portfolio-grid">
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" data-titulo="Alongamento em Fibra" data-desc="Técnica baby boomer com acabamento elegante em folha de ouro e alinhamento impecável.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" alt="Alongamento em Fibra" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Alongamento</span>
+                {% if portfolio_itens %}
+                    {% for item in portfolio_itens %}
+                    <div class="card-portfolio" data-img="{{ url_for('static', filename=item.img) }}" data-titulo="{{ item.titulo }}" data-desc="{{ item.desc }}">
+                        <div class="portfolio-thumb-wrapper">
+                            <img src="{{ url_for('static', filename=item.img) }}" alt="{{ item.titulo }}" class="portfolio-thumb" loading="lazy">
+                            <span class="portfolio-tag-badge">{{ item.tag }}</span>
+                        </div>
+                        <div class="portfolio-info">
+                            <strong>{{ item.titulo }}</strong>
+                            <span>{{ item.subtitulo }}</span>
+                        </div>
                     </div>
-                    <div class="portfolio-info">
-                        <strong>Alongamento Fibra</strong>
-                        <span>Baby boomer & Ouro</span>
+                    {% endfor %}
+                {% else %}
+                    <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" data-titulo="Alongamento em Fibra" data-desc="Técnica baby boomer com acabamento elegante em folha de ouro e alinhamento impecável.">
+                        <div class="portfolio-thumb-wrapper">
+                            <img src="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" alt="Alongamento em Fibra" class="portfolio-thumb" loading="lazy">
+                            <span class="portfolio-tag-badge">Alongamento</span>
+                        </div>
+                        <div class="portfolio-info">
+                            <strong>Alongamento Fibra</strong>
+                            <span>Baby boomer & Ouro</span>
+                        </div>
                     </div>
-                </div>
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" data-titulo="Esmaltação em Gel" data-desc="Vermelho cherry clássico com cuticulagem alinhada e durabilidade de até 20 dias.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" alt="Esmaltação em Gel" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Esmaltação Gel</span>
+                    <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" data-titulo="Esmaltação em Gel" data-desc="Vermelho cherry clássico com cuticulagem alinhada e durabilidade de até 20 dias.">
+                        <div class="portfolio-thumb-wrapper">
+                            <img src="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" alt="Esmaltação em Gel" class="portfolio-thumb" loading="lazy">
+                            <span class="portfolio-tag-badge">Esmaltação Gel</span>
+                        </div>
+                        <div class="portfolio-info">
+                            <strong>Esmaltação em Gel</strong>
+                            <span>Vermelho Cherry</span>
+                        </div>
                     </div>
-                    <div class="portfolio-info">
-                        <strong>Esmaltação em Gel</strong>
-                        <span>Vermelho Cherry</span>
+                    <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" data-titulo="Francesinha & Chrome" data-desc="Design fino com sorriso perfeito e detalhe chrome minimalista contemporâneo.">
+                        <div class="portfolio-thumb-wrapper">
+                            <img src="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" alt="Francesinha & Chrome" class="portfolio-thumb" loading="lazy">
+                            <span class="portfolio-tag-badge">Nail Art</span>
+                        </div>
+                        <div class="portfolio-info">
+                            <strong>Francesinha & Chrome</strong>
+                            <span>Minimalista Chic</span>
+                        </div>
                     </div>
-                </div>
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" data-titulo="Francesinha & Chrome" data-desc="Design fino com sorriso perfeito e detalhe chrome minimalista contemporâneo.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" alt="Francesinha & Chrome" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Nail Art</span>
+                    <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" data-titulo="Nail Art Marmorizada" data-desc="Milky ombre sofisticada com efeito mármore delicado na filha única e acabamento primoroso.">
+                        <div class="portfolio-thumb-wrapper">
+                            <img src="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" alt="Nail Art Marmorizada" class="portfolio-thumb" loading="lazy">
+                            <span class="portfolio-tag-badge">Especial</span>
+                        </div>
+                        <div class="portfolio-info">
+                            <strong>Marmorizada</strong>
+                            <span>Milky Ombre Suave</span>
+                        </div>
                     </div>
-                    <div class="portfolio-info">
-                        <strong>Francesinha & Chrome</strong>
-                        <span>Minimalista Chic</span>
-                    </div>
-                </div>
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" data-titulo="Nail Art Marmorizada" data-desc="Milky ombre sofisticada com efeito mármore delicado na filha única e acabamento primoroso.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" alt="Nail Art Marmorizada" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Especial</span>
-                    </div>
-                    <div class="portfolio-info">
-                        <strong>Marmorizada</strong>
-                        <span>Milky Ombre Suave</span>
-                    </div>
-                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -199,47 +226,63 @@
         <section class="secao-avaliacoes-publico">
             <div class="secao-avaliacoes-topo">
                 <div class="avaliacoes-titulo-bloco">
-                    <h3 class="avaliacoes-titulo">Avaliações das Clientes</h3>
+                    <h3 class="avaliacoes-titulo">Avaliações dos Clientes</h3>
                     <div class="avaliacoes-media">
-                        <span class="estrelas-ouro">★★★★★</span>
-                        <span><strong>4.9</strong> de 5.0 (Avaliações verificadas)</span>
+                        <span class="estrelas-ouro">{{ (badge_reputacao.estrelas if badge_reputacao else '★★★★★') }}</span>
+                        <span><strong>{{ (badge_reputacao.nota if badge_reputacao else '4.9') }}</strong> de 5.0 (Avaliações verificadas)</span>
                     </div>
                 </div>
             </div>
             <div class="avaliacoes-grid">
-                <div class="card-avaliacao">
-                    <div class="avaliacao-cabecalho">
-                        <div class="avaliacao-avatar">MC</div>
-                        <div class="avaliacao-info-autor">
-                            <strong class="avaliacao-autor">Mariana Costa</strong>
-                            <div class="estrelas-ouro">★★★★★</div>
+                {% if avaliacoes_clientes %}
+                    {% for av in avaliacoes_clientes %}
+                    <div class="card-avaliacao">
+                        <div class="avaliacao-cabecalho">
+                            <div class="avaliacao-avatar">{{ av.iniciais }}</div>
+                            <div class="avaliacao-info-autor">
+                                <strong class="avaliacao-autor">{{ av.autor }}</strong>
+                                <div class="estrelas-ouro">{{ av.estrelas }}</div>
+                            </div>
+                            <span class="avaliacao-data">{{ av.data }}</span>
                         </div>
-                        <span class="avaliacao-data">Há 2 dias</span>
+                        <p class="avaliacao-texto">"{{ av.texto }}"</p>
                     </div>
-                    <p class="avaliacao-texto">"Atendimento impecável! O agendamento online foi super prático e o resultado ficou perfeito. Muito pontual e caprichosa!"</p>
-                </div>
-                <div class="card-avaliacao">
-                    <div class="avaliacao-cabecalho">
-                        <div class="avaliacao-avatar">FA</div>
-                        <div class="avaliacao-info-autor">
-                            <strong class="avaliacao-autor">Fernanda Alves</strong>
-                            <div class="estrelas-ouro">★★★★★</div>
+                    {% endfor %}
+                {% else %}
+                    <div class="card-avaliacao">
+                        <div class="avaliacao-cabecalho">
+                            <div class="avaliacao-avatar">MC</div>
+                            <div class="avaliacao-info-autor">
+                                <strong class="avaliacao-autor">Mariana Costa</strong>
+                                <div class="estrelas-ouro">★★★★★</div>
+                            </div>
+                            <span class="avaliacao-data">Há 2 dias</span>
                         </div>
-                        <span class="avaliacao-data">Há 4 dias</span>
+                        <p class="avaliacao-texto">"Atendimento impecável! O agendamento online foi super prático e o resultado ficou perfeito. Muito pontual e caprichosa!"</p>
                     </div>
-                    <p class="avaliacao-texto">"Amei a facilidade de agendar direto pelo link da bio. O lembrete no WhatsApp me salvou. Super recomendo!"</p>
-                </div>
-                <div class="card-avaliacao">
-                    <div class="avaliacao-cabecalho">
-                        <div class="avaliacao-avatar">BS</div>
-                        <div class="avaliacao-info-autor">
-                            <strong class="avaliacao-autor">Beatriz Silva</strong>
-                            <div class="estrelas-ouro">★★★★★</div>
+                    <div class="card-avaliacao">
+                        <div class="avaliacao-cabecalho">
+                            <div class="avaliacao-avatar">FA</div>
+                            <div class="avaliacao-info-autor">
+                                <strong class="avaliacao-autor">Fernanda Alves</strong>
+                                <div class="estrelas-ouro">★★★★★</div>
+                            </div>
+                            <span class="avaliacao-data">Há 4 dias</span>
                         </div>
-                        <span class="avaliacao-data">Há 1 semana</span>
+                        <p class="avaliacao-texto">"Amei a facilidade de agendar direto pelo link da bio. O lembrete no WhatsApp me salvou. Super recomendo!"</p>
                     </div>
-                    <p class="avaliacao-texto">"Profissional excelente, ambiente aconchegante e cuidado em cada detalhe. Já virei cliente fiel!"</p>
-                </div>
+                    <div class="card-avaliacao">
+                        <div class="avaliacao-cabecalho">
+                            <div class="avaliacao-avatar">BS</div>
+                            <div class="avaliacao-info-autor">
+                                <strong class="avaliacao-autor">Beatriz Silva</strong>
+                                <div class="estrelas-ouro">★★★★★</div>
+                            </div>
+                            <span class="avaliacao-data">Há 1 semana</span>
+                        </div>
+                        <p class="avaliacao-texto">"Profissional excelente, ambiente aconchegante e cuidado em cada detalhe. Já virei cliente fiel!"</p>
+                    </div>
+                {% endif %}
             </div>
         </section>
     </aside>

@@ -345,17 +345,364 @@ ROTAS_RESERVADAS = {
     "static", "favicon.ico", "robots.txt", "sitemap.xml", "health", "healthz"
 }
 
+DADOS_PORTFOLIO_POR_NICHO = {
+    "petshop": {
+        "subtitulo_publico": "Agende o cuidado, banho e tosa do seu pet com carinho e comodidade",
+        "badge_reputacao": {
+            "estrelas": "★★★★★",
+            "nota": "4.9",
+            "selo": "Espaço Pet Seguro & Higienizado",
+            "atendimentos": "+350 pets atendidos",
+        },
+        "portfolio_itens": [
+            {
+                "img": "images/portfolio/petshop/pet_1.jpg",
+                "tag": "Banho & Spa",
+                "titulo": "Banho Relaxante",
+                "subtitulo": "Espuma Hipoalergênica",
+                "desc": "Banho morno com produtos dermatológicos especiais, massagem relaxante e secagem carinhosa sem estresse."
+            },
+            {
+                "img": "images/portfolio/petshop/pet_2.jpg",
+                "tag": "Tosa Tesoura",
+                "titulo": "Tosa Teddy Bear",
+                "subtitulo": "Poodle Toy Estilizado",
+                "desc": "Acabamento primoroso na tesoura estilo ursinho de pelúcia, preservando o conforto e a higiene."
+            },
+            {
+                "img": "images/portfolio/petshop/pet_3.jpg",
+                "tag": "Pelagem Volumosa",
+                "titulo": "Escovação & Desembolo",
+                "subtitulo": "Spitz Alemão / Lulu",
+                "desc": "Tratamento reconstrutor para pelagens densas, garantindo brilho, maciez e toque suave de nuvem."
+            },
+            {
+                "img": "images/portfolio/petshop/pet_4.jpg",
+                "tag": "Spa Felino",
+                "titulo": "Spa & Higiene Felina",
+                "subtitulo": "Gato Persa Tranquilo",
+                "desc": "Ambiente silencioso e calmo com escovação delicada e manuseio suave adaptado para felinos."
+            },
+        ],
+        "avaliacoes_clientes": [
+            {
+                "iniciais": "JM",
+                "autor": "Juliana Mendes",
+                "estrelas": "★★★★★",
+                "data": "Há 2 dias",
+                "texto": "O Thor voltou parecendo uma nuvem de tão macio e cheiroso! O Bruno teve muita paciência com ele, que sempre tinha medo de secador. O agendamento pelo link foi super rápido!"
+            },
+            {
+                "iniciais": "RN",
+                "autor": "Rodrigo Nogueira",
+                "estrelas": "★★★★★",
+                "data": "Há 4 dias",
+                "texto": "Excelente estrutura e muito carinho com os animais. Receber o lembrete de horário no WhatsApp facilitou muito minha rotina corrida."
+            },
+            {
+                "iniciais": "CB",
+                "autor": "Carla Bezerra",
+                "estrelas": "★★★★★",
+                "data": "Há 1 semana",
+                "texto": "A tosa na tesoura da Mel ficou uma perfeição! Melhor pet shop da região, recomendo de olhos fechados."
+            },
+        ],
+        "politicas_atendimento": [
+            {
+                "icone": "🐾",
+                "titulo": "Carteirinha de Vacinação em Dia:",
+                "texto": "Para a segurança e saúde de todos os pets, solicitamos a comprovação das vacinas atualizadas."
+            },
+            {
+                "icone": "⏰",
+                "titulo": "Tolerância de 15 minutos:",
+                "texto": "Para mantermos o ritmo calmo e individual de cada banho e tosa sem pressa."
+            },
+            {
+                "icone": "🔄",
+                "titulo": "Cancelamento ou Reagendamento:",
+                "texto": "Gratuito avisando com pelo menos 2 horas de antecedência pelo WhatsApp."
+            },
+            {
+                "icone": "📲",
+                "titulo": "Avisos pelo WhatsApp:",
+                "texto": "Você receberá confirmação e aviso imediato assim que seu pet estiver pronto para ser buscado."
+            },
+        ],
+    },
+    "clinica-odonto": {
+        "subtitulo_publico": "Agende sua consulta odontológica e cuide do seu sorriso com especialistas",
+        "badge_reputacao": {
+            "estrelas": "★★★★★",
+            "nota": "4.9",
+            "selo": "Consultório Verificado & ANVISA",
+            "atendimentos": "+500 pacientes atendidos",
+        },
+        "portfolio_itens": [
+            {
+                "img": "images/portfolio/odonto/odonto_1.jpg",
+                "tag": "Estética Dental",
+                "titulo": "Estética do Sorriso",
+                "subtitulo": "Clareamento & Harmonia",
+                "desc": "Sorriso radiante com clareamento a laser de alta potência e alinhamento funcional perfeito."
+            },
+            {
+                "img": "images/portfolio/odonto/odonto_2.jpg",
+                "tag": "Infraestrutura",
+                "titulo": "Consultório High-Tech",
+                "subtitulo": "Conforto & Tecnologia",
+                "desc": "Ambiente acolhedor com equipamentos odontológicos ergonômicos e diagnóstico por imagem de alta definição."
+            },
+            {
+                "img": "images/portfolio/odonto/odonto_3.jpg",
+                "tag": "Ortodontia",
+                "titulo": "Alinhadores Invisíveis",
+                "subtitulo": "Correção Discreta",
+                "desc": "Planejamento ortodôntico digital com placas transparentes removíveis, confortáveis e imperceptíveis."
+            },
+            {
+                "img": "images/portfolio/odonto/odonto_4.jpg",
+                "tag": "Prevenção",
+                "titulo": "Profilaxia & Check-up",
+                "subtitulo": "Saúde Bucal Integral",
+                "desc": "Remoção ultrassônica de tártaro e polimento profilático para um sorriso saudável e protegido."
+            },
+        ],
+        "avaliacoes_clientes": [
+            {
+                "iniciais": "EP",
+                "autor": "Dr. Eduardo Paiva",
+                "estrelas": "★★★★★",
+                "data": "Há 2 dias",
+                "texto": "Ambiente muito agradável e tecnologia de ponta. Fiz a limpeza e o clareamento com a Dra. Beatriz e o resultado superou minhas expectativas!"
+            },
+            {
+                "iniciais": "RV",
+                "autor": "Renata Vasconcellos",
+                "estrelas": "★★★★★",
+                "data": "Há 3 dias",
+                "texto": "Pontualidade britânica no atendimento e muita clareza nas explicações. Agendar online e receber a confirmação no WhatsApp é uma comodidade fantástica."
+            },
+            {
+                "iniciais": "TL",
+                "autor": "Thiago Leite",
+                "estrelas": "★★★★★",
+                "data": "Há 6 dias",
+                "texto": "Tinha receio de dentista por traumas passados, mas o atendimento humanizado do Dr. Marcos me deixou super tranquilo. Recomendo demais!"
+            },
+        ],
+        "politicas_atendimento": [
+            {
+                "icone": "🩺",
+                "titulo": "Biossegurança Rigorosa:",
+                "texto": "Instrumentais 100% esterilizados em autoclave com monitoramento biológico estrito."
+            },
+            {
+                "icone": "⏰",
+                "titulo": "Chegada com 10 minutos de antecedência:",
+                "texto": "Importante para atualização da anamnese e preparo calmo da consulta clínica."
+            },
+            {
+                "icone": "🔄",
+                "titulo": "Reagendamento Sem Custo:",
+                "texto": "Avisando com pelo menos 4 horas de antecedência pelo WhatsApp ou link de reserva."
+            },
+            {
+                "icone": "📲",
+                "titulo": "Lembretes Automáticos:",
+                "texto": "Notificações de confirmação de consulta enviadas no WhatsApp para você não esquecer."
+            },
+        ],
+    },
+    "barbearia": {
+        "subtitulo_publico": "Agende seu corte e barba sem filas com mestres barbeiros",
+        "badge_reputacao": {
+            "estrelas": "★★★★★",
+            "nota": "4.9",
+            "selo": "Barbearia Premium Verificada",
+            "atendimentos": "+600 cortes realizados",
+        },
+        "portfolio_itens": [
+            {
+                "img": "images/portfolio/barbearia/barber_1.jpg",
+                "tag": "Fade Clássico",
+                "titulo": "Skin Fade Degradê",
+                "subtitulo": "Acabamento na Navalha",
+                "desc": "Degradê suave e milimétrico com transição limpa e penteado finalizado com pomada matte de fixação média."
+            },
+            {
+                "img": "images/portfolio/barbearia/barber_2.jpg",
+                "tag": "Barboterapia",
+                "titulo": "Ritual da Toalha Quente",
+                "subtitulo": "Navalha & Óleos Nobres",
+                "desc": "Abertura dos poros com toalha a vapor aromática, navalhete afiado e massagem facial revitalizante."
+            },
+            {
+                "img": "images/portfolio/barbearia/barber_3.jpg",
+                "tag": "Visagismo",
+                "titulo": "Barba Alinhada & Estilo",
+                "subtitulo": "Design & Contornos",
+                "desc": "Escultura de barba adaptada ao formato do rosto com alinhamento preciso de bochechas e queixo."
+            },
+            {
+                "img": "images/portfolio/barbearia/barber_4.jpg",
+                "tag": "Ambiance",
+                "titulo": "Vintage Lounge",
+                "subtitulo": "Cerveja & Boa Música",
+                "desc": "Espaço clássico acolhedor com poltronas retrô de couro e chopp gelado de cortesia na recepção."
+            },
+        ],
+        "avaliacoes_clientes": [
+            {
+                "iniciais": "LS",
+                "autor": "Lucas Silveira",
+                "estrelas": "★★★★★",
+                "data": "Há 1 dia",
+                "texto": "Melhor barbearia de São Paulo! O atendimento do Gustavo no degradê é cirúrgico. E a cerveja gelada na recepção fecha com chave de ouro."
+            },
+            {
+                "iniciais": "MP",
+                "autor": "Marcelo Prado",
+                "estrelas": "★★★★★",
+                "data": "Há 3 dias",
+                "texto": "Sensacional o combo de barba na toalha quente. Relaxa de verdade e a barba fica perfeita. Poder agendar online sem esperar na fila foi a melhor coisa."
+            },
+            {
+                "iniciais": "GD",
+                "autor": "Gabriel Diniz",
+                "estrelas": "★★★★★",
+                "data": "Há 5 dias",
+                "texto": "Profissionais de altíssimo nível, ambiente com música boa e pontualidade no horário marcado. Sou cliente fixo toda quinzena!"
+            },
+        ],
+        "politicas_atendimento": [
+            {
+                "icone": "⏱️",
+                "titulo": "Sem Espera / Pontualidade:",
+                "texto": "Atendimento rigoroso no horário agendado para respeitar o seu tempo e sua agenda."
+            },
+            {
+                "icone": "☕",
+                "titulo": "Lounge & Bebidas Cortesia:",
+                "texto": "Chegue 10 minutinhos antes para relaxar no lounge e tomar um espresso ou chopp gelado."
+            },
+            {
+                "icone": "🔄",
+                "titulo": "Cancelamento Fácil:",
+                "texto": "Pedimos aviso com pelo menos 1 hora de antecedência para liberar a vaga."
+            },
+            {
+                "icone": "📲",
+                "titulo": "Lembrete no WhatsApp:",
+                "texto": "Aviso pontual no WhatsApp para você se programar e não esquecer seu corte."
+            },
+        ],
+    },
+    "default": {
+        "subtitulo_publico": "Agende seu horário",
+        "badge_reputacao": {
+            "estrelas": "★★★★★",
+            "nota": "4.9",
+            "selo": "Profissional Verificado",
+            "atendimentos": "+100 atendimentos",
+        },
+        "portfolio_itens": [
+            {
+                "img": "images/portfolio/portfolio_1.jpg",
+                "tag": "Alongamento",
+                "titulo": "Alongamento Fibra",
+                "subtitulo": "Baby boomer & Ouro",
+                "desc": "Técnica baby boomer com acabamento elegante em folha de ouro e alinhamento impecável."
+            },
+            {
+                "img": "images/portfolio/portfolio_2.jpg",
+                "tag": "Esmaltação Gel",
+                "titulo": "Esmaltação em Gel",
+                "subtitulo": "Vermelho Cherry",
+                "desc": "Vermelho cherry clássico com cuticulagem alinhada e durabilidade de até 20 dias."
+            },
+            {
+                "img": "images/portfolio/portfolio_3.jpg",
+                "tag": "Nail Art",
+                "titulo": "Francesinha & Chrome",
+                "subtitulo": "Minimalista Chic",
+                "desc": "Design fino com sorriso perfeito e detalhe chrome minimalista contemporâneo."
+            },
+            {
+                "img": "images/portfolio/portfolio_4.jpg",
+                "tag": "Especial",
+                "titulo": "Marmorizada",
+                "subtitulo": "Milky Ombre Suave",
+                "desc": "Milky ombre sofisticada com efeito mármore delicado na filha única e acabamento primoroso."
+            },
+        ],
+        "avaliacoes_clientes": [
+            {
+                "iniciais": "MC",
+                "autor": "Mariana Costa",
+                "estrelas": "★★★★★",
+                "data": "Há 2 dias",
+                "texto": "Atendimento impecável! O agendamento online foi super prático e o resultado ficou perfeito. Muito pontual e caprichosa!"
+            },
+            {
+                "iniciais": "FA",
+                "autor": "Fernanda Alves",
+                "estrelas": "★★★★★",
+                "data": "Há 4 dias",
+                "texto": "Amei a facilidade de agendar direto pelo link da bio. O lembrete no WhatsApp me salvou. Super recomendo!"
+            },
+            {
+                "iniciais": "BS",
+                "autor": "Beatriz Silva",
+                "estrelas": "★★★★★",
+                "data": "Há 1 semana",
+                "texto": "Profissional excelente, ambiente aconchegante e cuidado em cada detalhe. Já virei cliente fiel!"
+            },
+        ],
+        "politicas_atendimento": [
+            {
+                "icone": "⏰",
+                "titulo": "Tolerância de 10 minutos:",
+                "texto": "Para manter os horários do dia sem atrasos, solicitamos pontualidade na sua chegada."
+            },
+            {
+                "icone": "🔄",
+                "titulo": "Cancelamento ou Reagendamento:",
+                "texto": "Gratuito e simples, avisando com pelo menos 2 horas de antecedência pelo WhatsApp."
+            },
+            {
+                "icone": "📲",
+                "titulo": "Lembretes Automáticos:",
+                "texto": "Você receberá confirmação e avisos no seu WhatsApp para não esquecer o horário."
+            },
+        ],
+    }
+}
+
+
+def _obter_dados_nicho(slug=""):
+    slug_limpo = (slug or "").strip().lower()
+    if "pet" in slug_limpo:
+        return DADOS_PORTFOLIO_POR_NICHO["petshop"]
+    elif "odonto" in slug_limpo or "dent" in slug_limpo:
+        return DADOS_PORTFOLIO_POR_NICHO["clinica-odonto"]
+    elif "barb" in slug_limpo:
+        return DADOS_PORTFOLIO_POR_NICHO["barbearia"]
+    return DADOS_PORTFOLIO_POR_NICHO["default"]
+
 
 @app.route("/")
 def index():
     servicos = models.listar_servicos(apenas_ativos=True, estabelecimento_id=1)
     profissionais = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=1)
     config = _carregar_config_template(1)
+    dados_nicho = _obter_dados_nicho("default")
     return render_template(
         "index.html",
         servicos=servicos,
         profissionais=profissionais,
         slug="",
+        **dados_nicho,
         **config,
     )
 
@@ -372,6 +719,7 @@ def agendar_por_slug(slug):
     servicos = models.listar_servicos(apenas_ativos=True, estabelecimento_id=estab_id)
     profissionais = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=estab_id)
     config = _carregar_config_template(estab_id)
+    dados_nicho = _obter_dados_nicho(slug_limpo)
 
     return render_template(
         "index.html",
@@ -379,6 +727,7 @@ def agendar_por_slug(slug):
         profissionais=profissionais,
         estabelecimento=est,
         slug=slug_limpo,
+        **dados_nicho,
         **config,
     )
 
