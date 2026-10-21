@@ -64,6 +64,12 @@
             <span>Serviços</span>
             <span>{{ agendamento.servico_nome }}</span>
         </div>
+        {% if agendamento.servico_duracao_minutos %}
+        <div class="resumo-item">
+            <span>Tempo estimado</span>
+            <span>⏱️ {{ agendamento.servico_duracao_minutos }} min</span>
+        </div>
+        {% endif %}
         <div class="resumo-item">
             <span>Preço</span>
             <span>R$ {{ "%.2f"|format(agendamento.servico_preco)|replace(".", ",") }}</span>
@@ -111,6 +117,37 @@
                 Ir para o início agora
             </a>
         </div>
+    </div>
+
+    <!-- Card de Política de Agendamento & Pontualidade -->
+    <div class="card card-politica-agendamento card-politica-sucesso">
+        <div class="politica-cabecalho">
+            <span class="politica-icone">📋</span>
+            <strong>Regras & Recomendações do Seu Horário</strong>
+        </div>
+        <ul class="politica-lista">
+            <li>
+                <span class="politica-item-icone">⏰</span>
+                <div>
+                    <strong>Chegue com pontualidade:</strong>
+                    <span>Tolerância máxima de 10 minutos para garantir o tempo total do seu procedimento.</span>
+                </div>
+            </li>
+            <li>
+                <span class="politica-item-icone">🔄</span>
+                <div>
+                    <strong>Cancelamento ou Reagendamento:</strong>
+                    <span>Gratuito e prático pelo link da sua reserva acima ou com 2 horas de antecedência pelo WhatsApp.</span>
+                </div>
+            </li>
+            <li>
+                <span class="politica-item-icone">📲</span>
+                <div>
+                    <strong>Lembretes Automáticos:</strong>
+                    <span>Você receberá avisos no seu WhatsApp antes do seu horário.</span>
+                </div>
+            </li>
+        </ul>
     </div>
 
     <footer class="rodape-publico">

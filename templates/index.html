@@ -12,6 +12,14 @@
             <h1>{{ nome_estabelecimento }}</h1>
         </div>
         <p>Agende seu horário</p>
+        <div class="badge-reputacao-publico">
+            <span class="estrelas-ouro">★★★★★</span>
+            <strong class="nota-reputacao">4.9</strong>
+            <span class="badge-divisor">·</span>
+            <span class="badge-texto">Profissional Verificado</span>
+            <span class="badge-divisor">·</span>
+            <span class="badge-atendimentos">+100 atendimentos</span>
+        </div>
     </header>
 
     <div id="progresso" class="etapa-titulo"></div>
@@ -20,14 +28,71 @@
 
     <!-- Etapa 1: Serviço -->
     <section class="etapa" id="etapa-1">
-        <div class="card">
+        <!-- Portfólio / Galeria de Trabalhos Recentes (Estilo Booksy) -->
+        <div class="card-portfolio-container" id="galeria-portfolio">
+            <div class="portfolio-cabecalho">
+                <div class="portfolio-cabecalho-texto">
+                    <span class="portfolio-tag-destaque">✨ Portfólio</span>
+                    <h2 class="portfolio-titulo">Trabalhos Recentes</h2>
+                </div>
+                <span class="portfolio-subtitulo">Inspire-se com resultados reais</span>
+            </div>
+            <div class="portfolio-grid">
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" data-titulo="Alongamento em Fibra" data-desc="Técnica baby boomer com acabamento elegante em folha de ouro e alinhamento impecável.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" alt="Alongamento em Fibra" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Alongamento</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Alongamento Fibra</strong>
+                        <span>Baby boomer & Ouro</span>
+                    </div>
+                </div>
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" data-titulo="Esmaltação em Gel" data-desc="Vermelho cherry clássico com cuticulagem alinhada e durabilidade de até 20 dias.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" alt="Esmaltação em Gel" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Esmaltação Gel</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Esmaltação em Gel</strong>
+                        <span>Vermelho Cherry</span>
+                    </div>
+                </div>
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" data-titulo="Francesinha & Chrome" data-desc="Design fino com sorriso perfeito e detalhe chrome minimalista contemporâneo.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" alt="Francesinha & Chrome" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Nail Art</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Francesinha & Chrome</strong>
+                        <span>Minimalista Chic</span>
+                    </div>
+                </div>
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" data-titulo="Nail Art Marmorizada" data-desc="Milky ombre sofisticada com efeito mármore delicado na filha única e acabamento primoroso.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" alt="Nail Art Marmorizada" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Especial</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Marmorizada</strong>
+                        <span>Milky Ombre Suave</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="card-servicos-bloco">
             <div class="etapa-titulo">Escolha um ou mais serviços</div>
             <div class="opcoes-grid">
                 {% for servico in servicos %}
-                <button type="button" class="opcao-btn" data-etapa="servico"
+                <button type="button" class="opcao-btn opcao-btn-servico" data-etapa="servico"
                         data-id="{{ servico.id }}" data-nome="{{ servico.nome }}"
-                        data-preco="{{ servico.preco }}">
-                    <span>{{ servico.nome }}</span>
+                        data-preco="{{ servico.preco }}"
+                        data-duracao="{{ servico.duracao_minutos }}">
+                    <div class="servico-info-bloco">
+                        <span class="servico-nome">{{ servico.nome }}</span>
+                        <span class="servico-duracao">⏱️ {{ servico.duracao_minutos }} min</span>
+                    </div>
                     <span class="preco">R$ {{ "%.2f"|format(servico.preco)|replace(".", ",") }}</span>
                 </button>
                 {% endfor %}
@@ -82,14 +147,113 @@
         <div class="card">
             <div class="etapa-titulo">Confirme seu agendamento</div>
             <div class="resumo-item"><span>Serviço</span><span id="resumo-servico"></span></div>
+            <div class="resumo-item"><span>Tempo estimado</span><span id="resumo-duracao"></span></div>
             <div class="resumo-item"><span>Preço</span><span id="resumo-preco"></span></div>
             <div class="resumo-item"><span>Profissional</span><span id="resumo-profissional"></span></div>
             <div class="resumo-item"><span>Data</span><span id="resumo-data"></span></div>
             <div class="resumo-item"><span>Horário</span><span id="resumo-hora"></span></div>
         </div>
+
+        <!-- Card de Política de Agendamento & Pontualidade -->
+        <div class="card card-politica-agendamento">
+            <div class="politica-cabecalho">
+                <span class="politica-icone">📋</span>
+                <strong>Regras & Pontualidade do Atendimento</strong>
+            </div>
+            <ul class="politica-lista">
+                <li>
+                    <span class="politica-item-icone">⏰</span>
+                    <div>
+                        <strong>Tolerância de 10 minutos:</strong>
+                        <span>Para manter os horários do dia sem atrasos, solicitamos pontualidade na sua chegada.</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="politica-item-icone">🔄</span>
+                    <div>
+                        <strong>Cancelamento ou Reagendamento:</strong>
+                        <span>Gratuito e simples, avisando com pelo menos 2 horas de antecedência pelo WhatsApp.</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="politica-item-icone">📲</span>
+                    <div>
+                        <strong>Lembretes Automáticos:</strong>
+                        <span>Você receberá confirmação e avisos no seu WhatsApp para não esquecer o horário.</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
         <button type="button" class="btn-primario" id="btn-confirmar">Confirmar Agendamento</button>
         <button type="button" class="btn-secundario" data-voltar="4">Voltar</button>
     </section>
+
+    <!-- Seção de Prova Social e Avaliações de Clientes -->
+    <section class="secao-avaliacoes-publico">
+        <div class="secao-avaliacoes-topo">
+            <div class="avaliacoes-titulo-bloco">
+                <h3 class="avaliacoes-titulo">Avaliações das Clientes</h3>
+                <div class="avaliacoes-media">
+                    <span class="estrelas-ouro">★★★★★</span>
+                    <span><strong>4.9</strong> de 5.0 (Avaliações verificadas)</span>
+                </div>
+            </div>
+        </div>
+        <div class="avaliacoes-grid">
+            <div class="card-avaliacao">
+                <div class="avaliacao-cabecalho">
+                    <div class="avaliacao-avatar">MC</div>
+                    <div class="avaliacao-info-autor">
+                        <strong class="avaliacao-autor">Mariana Costa</strong>
+                        <div class="estrelas-ouro">★★★★★</div>
+                    </div>
+                    <span class="avaliacao-data">Há 2 dias</span>
+                </div>
+                <p class="avaliacao-texto">"Atendimento impecável! O agendamento online foi super prático e o resultado ficou perfeito. Muito pontual e caprichosa!"</p>
+            </div>
+            <div class="card-avaliacao">
+                <div class="avaliacao-cabecalho">
+                    <div class="avaliacao-avatar">FA</div>
+                    <div class="avaliacao-info-autor">
+                        <strong class="avaliacao-autor">Fernanda Alves</strong>
+                        <div class="estrelas-ouro">★★★★★</div>
+                    </div>
+                    <span class="avaliacao-data">Há 4 dias</span>
+                </div>
+                <p class="avaliacao-texto">"Amei a facilidade de agendar direto pelo link da bio. O lembrete no WhatsApp me salvou. Super recomendo!"</p>
+            </div>
+            <div class="card-avaliacao">
+                <div class="avaliacao-cabecalho">
+                    <div class="avaliacao-avatar">BS</div>
+                    <div class="avaliacao-info-autor">
+                        <strong class="avaliacao-autor">Beatriz Silva</strong>
+                        <div class="estrelas-ouro">★★★★★</div>
+                    </div>
+                    <span class="avaliacao-data">Há 1 semana</span>
+                </div>
+                <p class="avaliacao-texto">"Profissional excelente, ambiente aconchegante e cuidado em cada detalhe. Já virei cliente fiel!"</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal / Lightbox do Portfólio (Estilo Booksy) -->
+    <div id="modal-portfolio" class="modal-portfolio" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-portfolio-backdrop" id="modal-portfolio-fechar-bg"></div>
+        <div class="modal-portfolio-card">
+            <button type="button" class="modal-portfolio-fechar" id="modal-portfolio-fechar-btn" aria-label="Fechar modal">✕</button>
+            <div class="modal-portfolio-imagem-box">
+                <img id="modal-portfolio-img" src="" alt="Trabalho ampliado" class="modal-portfolio-img">
+            </div>
+            <div class="modal-portfolio-corpo">
+                <h4 id="modal-portfolio-titulo" class="modal-portfolio-titulo"></h4>
+                <p id="modal-portfolio-desc" class="modal-portfolio-desc"></p>
+                <button type="button" class="btn-primario modal-portfolio-btn-agendar" id="modal-portfolio-btn-agendar">
+                    ✨ Quero este serviço
+                </button>
+            </div>
+        </div>
+    </div>
 
     <footer class="rodape-publico">
         {% if endereco_estabelecimento %}

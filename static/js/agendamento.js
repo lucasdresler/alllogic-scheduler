@@ -20,6 +20,14 @@
         return "R$ " + Number(valor).toFixed(2).replace(".", ",");
     }
 
+    function formatarDuracao(minutos) {
+        if (!minutos || minutos <= 0) return "Sob consulta";
+        if (minutos < 60) return minutos + " min";
+        var h = Math.floor(minutos / 60);
+        var m = minutos % 60;
+        return m > 0 ? h + "h " + m + "min" : h + "h";
+    }
+
     function pad(n) {
         return n < 10 ? "0" + n : String(n);
     }
@@ -86,7 +94,8 @@
                     estado.servicos.push({
                         id: id,
                         nome: btn.getAttribute("data-nome"),
-                        preco: parseFloat(btn.getAttribute("data-preco"))
+                        preco: parseFloat(btn.getAttribute("data-preco")),
+                        duracao: parseInt(btn.getAttribute("data-duracao") || 0, 10)
                     });
                 }
 
@@ -337,8 +346,16 @@
             return total + servico.preco;
         }, 0);
 
+        var duracaoTotal = estado.servicos.reduce(function (total, servico) {
+            return total + (servico.duracao || 0);
+        }, 0);
+
         document.getElementById("resumo-servico").textContent = nomesServicos;
         document.getElementById("resumo-preco").textContent = formatarPrecoBR(precoTotal);
+        var elDuracao = document.getElementById("resumo-duracao");
+        if (elDuracao) {
+            elDuracao.textContent = formatarDuracao(duracaoTotal);
+        }
         document.getElementById("resumo-profissional").textContent = estado.profissional.nome;
         document.getElementById("resumo-data").textContent = formatarDataBR(estado.data);
         document.getElementById("resumo-hora").textContent = estado.hora;
@@ -444,6 +461,59 @@
     }
 
     // ---------------------------------------------------------------------
+    // Modal Lightbox do Portfólio (Inspiração Booksy)
+    // ---------------------------------------------------------------------
+    function configurarModalPortfolio() {
+        var modal = document.getElementById("modal-portfolio");
+        if (!modal) return;
+        var modalImg = document.getElementById("modal-portfolio-img");
+        var modalTitulo = document.getElementById("modal-portfolio-titulo");
+        var modalDesc = document.getElementById("modal-portfolio-desc");
+        var btnFechar = document.getElementById("modal-portfolio-fechar-btn");
+        var backdrop = document.getElementById("modal-portfolio-fechar-bg");
+        var btnAgendar = document.getElementById("modal-portfolio-btn-agendar");
+
+        function abrirModal(card) {
+            var img = card.getAttribute("data-img");
+            var titulo = card.getAttribute("data-titulo");
+            var desc = card.getAttribute("data-desc");
+            if (modalImg) modalImg.src = img;
+            if (modalTitulo) modalTitulo.textContent = titulo;
+            if (modalDesc) modalDesc.textContent = desc;
+            modal.style.display = "flex";
+            modal.setAttribute("aria-hidden", "false");
+            document.body.style.overflow = "hidden";
+        }
+
+        function fecharModal() {
+            modal.style.display = "none";
+            modal.setAttribute("aria-hidden", "true");
+            document.body.style.overflow = "";
+        }
+
+        var cards = document.querySelectorAll(".card-portfolio");
+        for (var i = 0; i < cards.length; i++) {
+            (function (c) {
+                c.addEventListener("click", function () {
+                    abrirModal(c);
+                });
+            })(cards[i]);
+        }
+
+        if (btnFechar) btnFechar.addEventListener("click", fecharModal);
+        if (backdrop) backdrop.addEventListener("click", fecharModal);
+        if (btnAgendar) {
+            btnAgendar.addEventListener("click", function () {
+                fecharModal();
+                var cardServicos = document.getElementById("card-servicos-bloco");
+                if (cardServicos) {
+                    cardServicos.scrollIntoView({ behavior: "smooth" });
+                }
+            });
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Inicialização
     // ---------------------------------------------------------------------
     document.addEventListener("DOMContentLoaded", function () {
@@ -452,6 +522,7 @@
         configurarEtapa3();
         configurarEtapa4();
         configurarEtapa5();
+        configurarModalPortfolio();
         limparEstadoAgendamento();
     });
 
