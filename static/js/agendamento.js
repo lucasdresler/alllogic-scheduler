@@ -70,6 +70,14 @@
         if (numero === 2) {
             carregarProfissionais();
         }
+        var portfolio = document.getElementById("galeria-portfolio");
+        if (portfolio) {
+            if (numero > 1) {
+                portfolio.classList.add("oculto-mobile-etapa");
+            } else {
+                portfolio.classList.remove("oculto-mobile-etapa");
+            }
+        }
         window.scrollTo(0, 0);
     }
 

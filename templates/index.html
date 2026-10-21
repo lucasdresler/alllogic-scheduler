@@ -3,7 +3,7 @@
 {% block titulo %}{{ nome_estabelecimento }} — Agendar Horário{% endblock %}
 
 {% block conteudo %}
-<div class="container">
+<div class="container container-publico-agenda">
     <header class="topo">
         <div class="topo-marca">
             {% if logotipo %}
@@ -22,67 +22,17 @@
         </div>
     </header>
 
-    <div id="progresso" class="etapa-titulo"></div>
+    <div class="layout-grade-publico">
+        <!-- Coluna Principal (Fluxo de Agendamento) -->
+        <main class="coluna-fluxo-agendamento">
+            <div id="progresso" class="etapa-titulo"></div>
 
-    <div id="mensagem-erro-global" class="mensagem-erro" style="display:none;"></div>
+            <div id="mensagem-erro-global" class="mensagem-erro" style="display:none;"></div>
 
-    <!-- Etapa 1: Serviço -->
-    <section class="etapa" id="etapa-1">
-        <!-- Portfólio / Galeria de Trabalhos Recentes (Estilo Booksy) -->
-        <div class="card-portfolio-container" id="galeria-portfolio">
-            <div class="portfolio-cabecalho">
-                <div class="portfolio-cabecalho-texto">
-                    <span class="portfolio-tag-destaque">✨ Portfólio</span>
-                    <h2 class="portfolio-titulo">Trabalhos Recentes</h2>
-                </div>
-                <span class="portfolio-subtitulo">Inspire-se com resultados reais</span>
-            </div>
-            <div class="portfolio-grid">
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" data-titulo="Alongamento em Fibra" data-desc="Técnica baby boomer com acabamento elegante em folha de ouro e alinhamento impecável.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" alt="Alongamento em Fibra" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Alongamento</span>
-                    </div>
-                    <div class="portfolio-info">
-                        <strong>Alongamento Fibra</strong>
-                        <span>Baby boomer & Ouro</span>
-                    </div>
-                </div>
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" data-titulo="Esmaltação em Gel" data-desc="Vermelho cherry clássico com cuticulagem alinhada e durabilidade de até 20 dias.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" alt="Esmaltação em Gel" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Esmaltação Gel</span>
-                    </div>
-                    <div class="portfolio-info">
-                        <strong>Esmaltação em Gel</strong>
-                        <span>Vermelho Cherry</span>
-                    </div>
-                </div>
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" data-titulo="Francesinha & Chrome" data-desc="Design fino com sorriso perfeito e detalhe chrome minimalista contemporâneo.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" alt="Francesinha & Chrome" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Nail Art</span>
-                    </div>
-                    <div class="portfolio-info">
-                        <strong>Francesinha & Chrome</strong>
-                        <span>Minimalista Chic</span>
-                    </div>
-                </div>
-                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" data-titulo="Nail Art Marmorizada" data-desc="Milky ombre sofisticada com efeito mármore delicado na filha única e acabamento primoroso.">
-                    <div class="portfolio-thumb-wrapper">
-                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" alt="Nail Art Marmorizada" class="portfolio-thumb" loading="lazy">
-                        <span class="portfolio-tag-badge">Especial</span>
-                    </div>
-                    <div class="portfolio-info">
-                        <strong>Marmorizada</strong>
-                        <span>Milky Ombre Suave</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" id="card-servicos-bloco">
-            <div class="etapa-titulo">Escolha um ou mais serviços</div>
+            <!-- Etapa 1: Serviço -->
+            <section class="etapa" id="etapa-1">
+                <div class="card" id="card-servicos-bloco">
+                    <div class="etapa-titulo">Escolha um ou mais serviços</div>
             <div class="opcoes-grid">
                 {% for servico in servicos %}
                 <button type="button" class="opcao-btn opcao-btn-servico" data-etapa="servico"
@@ -188,54 +138,112 @@
         <button type="button" class="btn-primario" id="btn-confirmar">Confirmar Agendamento</button>
         <button type="button" class="btn-secundario" data-voltar="4">Voltar</button>
     </section>
+    </main>
 
-    <!-- Seção de Prova Social e Avaliações de Clientes -->
-    <section class="secao-avaliacoes-publico">
-        <div class="secao-avaliacoes-topo">
-            <div class="avaliacoes-titulo-bloco">
-                <h3 class="avaliacoes-titulo">Avaliações das Clientes</h3>
-                <div class="avaliacoes-media">
-                    <span class="estrelas-ouro">★★★★★</span>
-                    <span><strong>4.9</strong> de 5.0 (Avaliações verificadas)</span>
+    <!-- Coluna Lateral (Portfólio & Testemunhos no Desktop) -->
+    <aside class="coluna-lateral-publico">
+        <!-- Portfólio / Galeria de Trabalhos Realizados -->
+        <div class="card-portfolio-container" id="galeria-portfolio">
+            <div class="portfolio-cabecalho">
+                <div class="portfolio-cabecalho-texto">
+                    <span class="portfolio-tag-destaque">✨ Portfólio</span>
+                    <h2 class="portfolio-titulo">Trabalhos Realizados</h2>
+                </div>
+                <span class="portfolio-subtitulo">Inspire-se com resultados reais</span>
+            </div>
+            <div class="portfolio-grid">
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" data-titulo="Alongamento em Fibra" data-desc="Técnica baby boomer com acabamento elegante em folha de ouro e alinhamento impecável.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_1.jpg') }}" alt="Alongamento em Fibra" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Alongamento</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Alongamento Fibra</strong>
+                        <span>Baby boomer & Ouro</span>
+                    </div>
+                </div>
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" data-titulo="Esmaltação em Gel" data-desc="Vermelho cherry clássico com cuticulagem alinhada e durabilidade de até 20 dias.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_2.jpg') }}" alt="Esmaltação em Gel" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Esmaltação Gel</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Esmaltação em Gel</strong>
+                        <span>Vermelho Cherry</span>
+                    </div>
+                </div>
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" data-titulo="Francesinha & Chrome" data-desc="Design fino com sorriso perfeito e detalhe chrome minimalista contemporâneo.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_3.jpg') }}" alt="Francesinha & Chrome" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Nail Art</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Francesinha & Chrome</strong>
+                        <span>Minimalista Chic</span>
+                    </div>
+                </div>
+                <div class="card-portfolio" data-img="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" data-titulo="Nail Art Marmorizada" data-desc="Milky ombre sofisticada com efeito mármore delicado na filha única e acabamento primoroso.">
+                    <div class="portfolio-thumb-wrapper">
+                        <img src="{{ url_for('static', filename='images/portfolio/portfolio_4.jpg') }}" alt="Nail Art Marmorizada" class="portfolio-thumb" loading="lazy">
+                        <span class="portfolio-tag-badge">Especial</span>
+                    </div>
+                    <div class="portfolio-info">
+                        <strong>Marmorizada</strong>
+                        <span>Milky Ombre Suave</span>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="avaliacoes-grid">
-            <div class="card-avaliacao">
-                <div class="avaliacao-cabecalho">
-                    <div class="avaliacao-avatar">MC</div>
-                    <div class="avaliacao-info-autor">
-                        <strong class="avaliacao-autor">Mariana Costa</strong>
-                        <div class="estrelas-ouro">★★★★★</div>
+
+        <!-- Seção de Prova Social e Avaliações de Clientes -->
+        <section class="secao-avaliacoes-publico">
+            <div class="secao-avaliacoes-topo">
+                <div class="avaliacoes-titulo-bloco">
+                    <h3 class="avaliacoes-titulo">Avaliações das Clientes</h3>
+                    <div class="avaliacoes-media">
+                        <span class="estrelas-ouro">★★★★★</span>
+                        <span><strong>4.9</strong> de 5.0 (Avaliações verificadas)</span>
                     </div>
-                    <span class="avaliacao-data">Há 2 dias</span>
                 </div>
-                <p class="avaliacao-texto">"Atendimento impecável! O agendamento online foi super prático e o resultado ficou perfeito. Muito pontual e caprichosa!"</p>
             </div>
-            <div class="card-avaliacao">
-                <div class="avaliacao-cabecalho">
-                    <div class="avaliacao-avatar">FA</div>
-                    <div class="avaliacao-info-autor">
-                        <strong class="avaliacao-autor">Fernanda Alves</strong>
-                        <div class="estrelas-ouro">★★★★★</div>
+            <div class="avaliacoes-grid">
+                <div class="card-avaliacao">
+                    <div class="avaliacao-cabecalho">
+                        <div class="avaliacao-avatar">MC</div>
+                        <div class="avaliacao-info-autor">
+                            <strong class="avaliacao-autor">Mariana Costa</strong>
+                            <div class="estrelas-ouro">★★★★★</div>
+                        </div>
+                        <span class="avaliacao-data">Há 2 dias</span>
                     </div>
-                    <span class="avaliacao-data">Há 4 dias</span>
+                    <p class="avaliacao-texto">"Atendimento impecável! O agendamento online foi super prático e o resultado ficou perfeito. Muito pontual e caprichosa!"</p>
                 </div>
-                <p class="avaliacao-texto">"Amei a facilidade de agendar direto pelo link da bio. O lembrete no WhatsApp me salvou. Super recomendo!"</p>
-            </div>
-            <div class="card-avaliacao">
-                <div class="avaliacao-cabecalho">
-                    <div class="avaliacao-avatar">BS</div>
-                    <div class="avaliacao-info-autor">
-                        <strong class="avaliacao-autor">Beatriz Silva</strong>
-                        <div class="estrelas-ouro">★★★★★</div>
+                <div class="card-avaliacao">
+                    <div class="avaliacao-cabecalho">
+                        <div class="avaliacao-avatar">FA</div>
+                        <div class="avaliacao-info-autor">
+                            <strong class="avaliacao-autor">Fernanda Alves</strong>
+                            <div class="estrelas-ouro">★★★★★</div>
+                        </div>
+                        <span class="avaliacao-data">Há 4 dias</span>
                     </div>
-                    <span class="avaliacao-data">Há 1 semana</span>
+                    <p class="avaliacao-texto">"Amei a facilidade de agendar direto pelo link da bio. O lembrete no WhatsApp me salvou. Super recomendo!"</p>
                 </div>
-                <p class="avaliacao-texto">"Profissional excelente, ambiente aconchegante e cuidado em cada detalhe. Já virei cliente fiel!"</p>
+                <div class="card-avaliacao">
+                    <div class="avaliacao-cabecalho">
+                        <div class="avaliacao-avatar">BS</div>
+                        <div class="avaliacao-info-autor">
+                            <strong class="avaliacao-autor">Beatriz Silva</strong>
+                            <div class="estrelas-ouro">★★★★★</div>
+                        </div>
+                        <span class="avaliacao-data">Há 1 semana</span>
+                    </div>
+                    <p class="avaliacao-texto">"Profissional excelente, ambiente aconchegante e cuidado em cada detalhe. Já virei cliente fiel!"</p>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </aside>
+    </div>
 
     <!-- Modal / Lightbox do Portfólio (Estilo Booksy) -->
     <div id="modal-portfolio" class="modal-portfolio" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true">

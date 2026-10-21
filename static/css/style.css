@@ -2859,3 +2859,123 @@ table.tabela-agendamentos .col-acoes {
     margin: 0;
     line-height: 1.42;
 }
+
+/* ==========================================================================
+   Layout Desktop em 2 Colunas: Fluxo Principal + Coluna Lateral (Portfólio & Testemunhos)
+   ========================================================================== */
+.container-publico-agenda {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+}
+
+.layout-grade-publico {
+    display: flex;
+    flex-direction: column;
+}
+
+.coluna-fluxo-agendamento {
+    width: 100%;
+}
+
+.coluna-lateral-publico {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mobile (< 900px): ordem lógica linear com recolhimento limpo */
+@media (max-width: 899px) {
+    .coluna-lateral-publico {
+        display: contents;
+    }
+
+    .card-portfolio-container {
+        order: 1;
+        margin-bottom: 16px;
+    }
+
+    .coluna-fluxo-agendamento {
+        order: 2;
+    }
+
+    .secao-avaliacoes-publico {
+        order: 3;
+        margin-top: 26px;
+        margin-bottom: 22px;
+    }
+
+    /* No mobile, ao avançar das etapas 2 a 5, recolhe o portfólio para foco no agendamento */
+    .card-portfolio-container.oculto-mobile-etapa {
+        display: none !important;
+    }
+}
+
+/* Desktop (>= 900px): 2 colunas com Portfólio e Testemunhos na coluna lateral */
+@media (min-width: 900px) {
+    .container.container-publico-agenda {
+        max-width: 1040px;
+        padding: 30px 24px 60px;
+    }
+
+    header.topo {
+        padding: 28px 0 22px;
+        margin-bottom: 10px;
+    }
+
+    header.topo h1 {
+        font-size: 1.85rem;
+    }
+
+    .layout-grade-publico {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(350px, 400px);
+        gap: 32px;
+        align-items: start;
+    }
+
+    .coluna-fluxo-agendamento {
+        min-width: 0;
+    }
+
+    .coluna-lateral-publico {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        position: sticky;
+        top: 24px;
+    }
+
+    .card-portfolio-container {
+        margin-bottom: 0;
+    }
+
+    .secao-avaliacoes-publico {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    /* No desktop, o portfólio e avaliações permanecem sempre visíveis na coluna lateral */
+    .card-portfolio-container.oculto-mobile-etapa {
+        display: block !important;
+    }
+
+    .rodape-publico {
+        margin-top: 44px;
+        border-top: 1px solid var(--border-subtle);
+        padding-top: 30px;
+    }
+}
+
+/* Desktop Wide (>= 1200px): Proporções generosas */
+@media (min-width: 1200px) {
+    .container.container-publico-agenda {
+        max-width: 1140px;
+        padding: 36px 32px 70px;
+    }
+
+    .layout-grade-publico {
+        grid-template-columns: minmax(0, 1.3fr) minmax(380px, 420px);
+        gap: 40px;
+    }
+}
+
