@@ -698,7 +698,7 @@ table.tabela-agendamentos .col-acoes {
 
 .rodape-publico .link-telefone {
     color: var(--navy-700);
-    text-decoration: none;
+    text-decoration: underline;
     font-weight: 600;
 }
 
@@ -746,7 +746,7 @@ table.tabela-agendamentos .col-acoes {
 .link-experimente {
     color: #8C6D2B;
     font-weight: 600;
-    text-decoration: none;
+    text-decoration: underline;
     transition: all 0.15s ease-in-out;
     display: inline-flex;
     align-items: center;
@@ -761,7 +761,7 @@ table.tabela-agendamentos .col-acoes {
 .link-painel-admin {
     color: var(--navy-profundo, #0A1F44);
     font-weight: 500;
-    text-decoration: none;
+    text-decoration: underline;
     transition: color 0.15s ease-in-out;
 }
 
@@ -777,7 +777,7 @@ table.tabela-agendamentos .col-acoes {
 
 .link-institucional {
     color: var(--text-muted, #5A6270);
-    text-decoration: none;
+    text-decoration: underline;
     transition: color 0.15s ease-in-out;
 }
 
