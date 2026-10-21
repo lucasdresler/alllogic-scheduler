@@ -770,6 +770,11 @@ table.tabela-agendamentos .col-acoes {
     text-decoration: underline;
 }
 
+.rodape-admin-link {
+    margin: 6px 0 10px;
+    font-size: 0.83rem;
+}
+
 .link-institucional {
     color: var(--text-muted, #5A6270);
     text-decoration: none;

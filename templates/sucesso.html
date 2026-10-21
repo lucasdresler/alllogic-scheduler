@@ -122,13 +122,14 @@
             <a href="tel:{{ telefone_limpo }}" class="link-telefone">{{ telefone_estabelecimento }}</a>
         </p>
         {% endif %}
+        <p class="rodape-admin-link">
+            <a href="{{ url_for('admin_dashboard') }}" class="link-painel-admin">Painel Administrativo {{ nome_estabelecimento }}</a>
+        </p>
         <div class="rodape-comercial">
             <div class="rodape-comercial-chamada">
                 <span class="rodape-comercial-marca">Agillex Agenda</span>
                 <span class="rodape-comercial-sep">·</span>
                 <a href="https://alllogiconline.com.br/agillex-agenda/" class="link-experimente" target="_blank" rel="noopener noreferrer">Experimente grátis por 14 dias</a>
-                <span class="rodape-comercial-sep">·</span>
-                <a href="{{ url_for('admin_dashboard') }}" class="link-painel-admin">Painel Administrativo</a>
             </div>
             <div class="rodape-institucional-contato">
                 <a href="https://alllogiconline.com.br/politica-de-privacidade" class="link-institucional" target="_blank" rel="noopener noreferrer">Privacidade</a>
