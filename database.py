@@ -561,26 +561,21 @@ def _incrementar_versao_configuracoes(conn):
     )
 
 
-def admin_precisa_alterar_senha(conn, usuario):
+def admin_precisa_alterar_senha(conn, usuario, estabelecimento_id=None):
     """Verifica se o admin precisa concluir a configuração inicial (primeiro acesso)."""
-    row = conn.execute(
-        "SELECT usuario, senha_inicial_alterada, email, nome_responsavel FROM admin WHERE usuario = %s",
-        (usuario,),
-    ).fetchone()
+    if estabelecimento_id:
+        row = conn.execute(
+            "SELECT usuario, senha_inicial_alterada, email, nome_responsavel FROM admin WHERE usuario = %s AND estabelecimento_id = %s",
+            (usuario, estabelecimento_id),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT usuario, senha_inicial_alterada, email, nome_responsavel FROM admin WHERE usuario = %s",
+            (usuario,),
+        ).fetchone()
     if not row:
         return False
-    email = (row["email"] or "").strip() if "email" in row and row["email"] else ""
-    nome_responsavel = (
-        (row["nome_responsavel"] or "").strip()
-        if "nome_responsavel" in row and row["nome_responsavel"]
-        else ""
-    )
-    return (
-        (not row["senha_inicial_alterada"])
-        or (not email)
-        or (not nome_responsavel)
-        or (row["usuario"] == "admin")
-    )
+    return not row["senha_inicial_alterada"]
 
 
 def admin_concluir_primeiro_acesso(

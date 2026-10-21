@@ -295,7 +295,7 @@ def login_requerido(f):
             usuario = session.get("admin_usuario")
             estab_id = session.get("estabelecimento_id")
             with db_session() as conn:
-                if admin_precisa_alterar_senha(conn, usuario):
+                if admin_precisa_alterar_senha(conn, usuario, estab_id):
                     return redirect(url_for("admin_configuracao_inicial"))
                 if estab_id and estab_id != 1:
                     info_trial = verificar_status_trial(conn, estab_id)
@@ -1346,7 +1346,7 @@ def admin_login():
                     if adm and adm["estabelecimento_id"]:
                         session["estabelecimento_id"] = adm["estabelecimento_id"]
             with db_session() as conn:
-                if admin_precisa_alterar_senha(conn, admin_usuario):
+                if admin_precisa_alterar_senha(conn, admin_usuario, session.get("estabelecimento_id")):
                     return redirect(url_for("admin_configuracao_inicial"))
             return redirect(url_for("admin_dashboard"))
         erro = "Usuário ou senha inválidos."
