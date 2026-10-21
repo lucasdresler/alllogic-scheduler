@@ -444,6 +444,11 @@ def init_db():
             ALTER TABLE admin
             ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER REFERENCES estabelecimento(id) ON DELETE SET NULL
         """)
+        conn.execute("""
+            ALTER TABLE admin DROP CONSTRAINT IF EXISTS admin_usuario_key;
+            ALTER TABLE admin DROP CONSTRAINT IF EXISTS admin_usuario_estab_key;
+            ALTER TABLE admin ADD CONSTRAINT admin_usuario_estab_key UNIQUE (usuario, estabelecimento_id);
+        """)
 
         # Assegura que o estabelecimento piloto padrão (ID 1) exista para retrocompatibilidade
         conn.execute("""
@@ -852,14 +857,20 @@ def criar_estabelecimento_com_admin(
     cnpj_cpf,
     email,
     telefone,
-    usuario,
-    senha_hash,
+    usuario="admin",
+    senha_hash=None,
     plano="intermediario",
 ):
     """
     Cria atomicamente um novo estabelecimento com 14 dias de teste e sua conta admin vinculada.
     Garante integridade transacional completa (sem contas orfas).
+    Padroniza usuario para 'admin' e senha inicial para '1234abcd' caso nao informados.
     """
+    if not usuario:
+        usuario = "admin"
+    if not senha_hash:
+        from werkzeug.security import generate_password_hash
+        senha_hash = generate_password_hash("1234abcd")
     base_slug = gerar_slug(nome_estabelecimento)
     slug = base_slug
     contador = 1

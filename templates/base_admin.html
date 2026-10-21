@@ -100,6 +100,13 @@
                 </div>
             </div>
             <div class="topbar-right">
+                <div class="seletor-demo-admin" style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; background: rgba(0,0,0,0.04); padding: 0.25rem 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); margin-right: 0.5rem;">
+                    <span style="color: #64748b; font-weight: 600;">Demos:</span>
+                    <a href="{{ url_for('admin_acesso_demo', slug='default') }}" style="text-decoration: none; padding: 0.2rem 0.45rem; border-radius: 4px; font-size: 0.75rem; {% if estabelecimento_id == 1 %}color: #fff; background: #2563eb; font-weight: bold;{% else %}color: #475569; background: #fff; border: 1px solid #cbd5e1;{% endif %}" title="Alternar para Painel do Salão Premium">💅 Salão</a>
+                    <a href="{{ url_for('admin_acesso_demo', slug='petshop') }}" style="text-decoration: none; padding: 0.2rem 0.45rem; border-radius: 4px; font-size: 0.75rem; {% if estabelecimento_slug == 'petshop' %}color: #fff; background: #2563eb; font-weight: bold;{% else %}color: #475569; background: #fff; border: 1px solid #cbd5e1;{% endif %}" title="Alternar para Painel do Pet Spa & Care">🐾 Pet</a>
+                    <a href="{{ url_for('admin_acesso_demo', slug='clinica-odonto') }}" style="text-decoration: none; padding: 0.2rem 0.45rem; border-radius: 4px; font-size: 0.75rem; {% if estabelecimento_slug == 'clinica-odonto' %}color: #fff; background: #2563eb; font-weight: bold;{% else %}color: #475569; background: #fff; border: 1px solid #cbd5e1;{% endif %}" title="Alternar para Painel da OdontoPrime">🦷 Odonto</a>
+                    <a href="{{ url_for('admin_acesso_demo', slug='barbearia') }}" style="text-decoration: none; padding: 0.2rem 0.45rem; border-radius: 4px; font-size: 0.75rem; {% if estabelecimento_slug == 'barbearia' %}color: #fff; background: #2563eb; font-weight: bold;{% else %}color: #475569; background: #fff; border: 1px solid #cbd5e1;{% endif %}" title="Alternar para Painel da Barbearia">💈 Barba</a>
+                </div>
                 {% if plano_config %}
                 <a href="{{ url_for('admin_upgrade') }}" class="badge-plano-ativo" title="Ver detalhes do plano ou solicitar upgrade">
                     <span class="badge-dot"></span>

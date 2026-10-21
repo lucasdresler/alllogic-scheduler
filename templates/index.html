@@ -316,7 +316,7 @@
         </p>
         {% endif %}
         <p class="rodape-admin-link">
-            <a href="{{ url_for('admin_dashboard') }}" class="link-painel-admin">Painel Administrativo {{ nome_estabelecimento }}</a>
+            <a href="{{ url_for('admin_acesso_demo', slug=estabelecimento_slug or slug or 'default') }}" class="link-painel-admin">Painel Administrativo {{ nome_estabelecimento }}</a>
         </p>
         <div class="rodape-comercial">
             <div class="rodape-comercial-chamada">

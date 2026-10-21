@@ -1279,6 +1279,33 @@ def webhook_asaas_agendamento():
     return jsonify({"status": "ignored"}), 200
 
 
+@app.route("/admin/demo/<slug>")
+@app.route("/admin/acesso/<slug>")
+def admin_acesso_demo(slug):
+    slug_limpo = (slug or "default").strip().lower()
+    if slug_limpo in ("", "default"):
+        slug_limpo = "default"
+
+    with db_session() as conn:
+        est = obter_estabelecimento_por_slug(conn, slug_limpo)
+    if not est:
+        abort(404)
+
+    estab_id = est["id"]
+    session["admin_logado"] = True
+    session["admin_usuario"] = "admin"
+    session["estabelecimento_id"] = estab_id
+    session["estabelecimento_slug"] = slug_limpo
+    session["flash_sucesso"] = f"Painel Administrativo: {est['nome']}"
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/trocar/<slug>")
+@login_requerido
+def admin_trocar_estabelecimento(slug):
+    return admin_acesso_demo(slug)
+
+
 @app.route("/admin/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def admin_login():
@@ -1286,11 +1313,27 @@ def admin_login():
     sucesso = None
     if request.args.get("redefinida") == "1":
         sucesso = "Senha redefinida com sucesso. Faça login com a sua nova senha."
-    config = _carregar_config_template()
+
+    slug_alvo = (request.args.get("slug") or request.args.get("estab") or "").strip().lower()
+    target_estab_id = None
+    if slug_alvo:
+        with db_session() as conn:
+            est_alvo = obter_estabelecimento_por_slug(conn, slug_alvo)
+            if est_alvo:
+                target_estab_id = est_alvo["id"]
+
+    estab_id_config = target_estab_id or session.get("estabelecimento_id") or 1
+    config = _carregar_config_template(estab_id_config)
     if request.method == "POST":
         usuario = request.form.get("usuario", "").strip()
         senha = request.form.get("senha", "")
-        admin_data = models.verificar_admin(usuario, senha)
+        post_estab_id = request.form.get("estabelecimento_id")
+        if post_estab_id:
+            try:
+                target_estab_id = int(post_estab_id)
+            except ValueError:
+                pass
+        admin_data = models.verificar_admin(usuario, senha, estabelecimento_id=target_estab_id or session.get("estabelecimento_id"))
         if admin_data:
             admin_usuario = admin_data["usuario"] if isinstance(admin_data, dict) else usuario
             session["admin_logado"] = True
@@ -1307,7 +1350,7 @@ def admin_login():
                     return redirect(url_for("admin_configuracao_inicial"))
             return redirect(url_for("admin_dashboard"))
         erro = "Usuário ou senha inválidos."
-    return render_template("admin_login.html", erro=erro, sucesso=sucesso, **config)
+    return render_template("admin_login.html", erro=erro, sucesso=sucesso, target_estab_id=target_estab_id, **config)
 
 
 @app.route("/admin/logout")

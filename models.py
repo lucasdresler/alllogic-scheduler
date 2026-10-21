@@ -1472,25 +1472,36 @@ def obter_historico_reagendamentos(agendamento_id):
 
 
 
-def verificar_admin(usuario, senha):
+def verificar_admin(usuario, senha, estabelecimento_id=None):
     from werkzeug.security import check_password_hash
 
     if not usuario or not senha:
         return False
 
     with db_session() as conn:
-        row = conn.execute(
-            """
-            SELECT * FROM admin
-            WHERE LOWER(usuario) = LOWER(%s)
-               OR (email IS NOT NULL AND LOWER(email) = LOWER(%s))
-            """,
-            (usuario.strip(), usuario.strip()),
-        ).fetchone()
-        if not row:
-            return False
-        if check_password_hash(row["senha_hash"], senha):
-            return dict(row)
+        if estabelecimento_id:
+            rows = conn.execute(
+                """
+                SELECT * FROM admin
+                WHERE (LOWER(usuario) = LOWER(%s) OR (email IS NOT NULL AND LOWER(email) = LOWER(%s)))
+                  AND estabelecimento_id = %s
+                """,
+                (usuario.strip(), usuario.strip(), estabelecimento_id),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT * FROM admin
+                WHERE LOWER(usuario) = LOWER(%s)
+                   OR (email IS NOT NULL AND LOWER(email) = LOWER(%s))
+                ORDER BY id ASC
+                """,
+                (usuario.strip(), usuario.strip()),
+            ).fetchall()
+
+        for row in rows:
+            if check_password_hash(row["senha_hash"], senha):
+                return dict(row)
         return False
 
 
