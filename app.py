@@ -1856,6 +1856,31 @@ def admin_cancelar_agendamento(agendamento_id):
     return redirect(url_for("admin_dashboard", **params))
 
 
+@app.route("/admin/agendamento/<int:agendamento_id>/excluir", methods=["POST"])
+@login_requerido
+def admin_excluir_agendamento(agendamento_id):
+    estab_id = session.get("estabelecimento_id") or 1
+    aba = request.args.get("aba") or request.form.get("aba") or "hoje"
+    profissional_id = request.args.get("profissional_id") or request.form.get("profissional_id")
+    ok, erro = models.excluir_agendamento(agendamento_id, estabelecimento_id=estab_id)
+    params = {"aba": aba}
+    if profissional_id:
+        params["profissional_id"] = profissional_id
+    for param in ("cliente", "telefone", "data_inicio", "data_fim"):
+        val = request.args.get(param) or request.form.get(param)
+        if val:
+            params[param] = val
+    st = request.args.get("filtro_status") or request.form.get("filtro_status") or request.args.get("status")
+    if st:
+        params["status"] = st
+
+    if ok:
+        params["sucesso"] = "Agendamento cancelado excluído com sucesso."
+    elif erro:
+        params["erro"] = erro
+    return redirect(url_for("admin_dashboard", **params))
+
+
 @app.route("/admin/agendamento/<int:agendamento_id>/status", methods=["POST"])
 @login_requerido
 def admin_atualizar_status_agendamento(agendamento_id):

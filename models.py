@@ -187,12 +187,21 @@ def excluir_servico(servico_id, estabelecimento_id=None):
         if not row:
             return False, "Serviço não encontrado."
 
-        agendamentos = conn.execute(
-            "SELECT COUNT(*) AS c FROM agendamento WHERE servico_id = %s", (servico_id,)
+        agendamentos_ativos = conn.execute(
+            """
+            SELECT COUNT(DISTINCT a.id) AS c
+            FROM agendamento a
+            LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            WHERE (a.servico_id = %s OR ags.servico_id = %s)
+              AND a.status != 'cancelado'
+            """,
+            (servico_id, servico_id),
         ).fetchone()["c"]
-        if agendamentos > 0:
-            return False, f"Não é possível excluir o serviço '{row['nome']}' porque existem {agendamentos} agendamento(s) vinculado(s) a ele. Você pode desativá-lo para que não apareça na agenda."
+        if agendamentos_ativos > 0:
+            return False, f"Não é possível excluir o serviço '{row['nome']}' porque existem {agendamentos_ativos} agendamento(s) ativo(s) vinculado(s) a ele. Você pode desativá-lo para que não apareça na agenda."
 
+        # Remove agendamentos cancelados vinculados a este serviço para evitar violação de integridade referencial
+        conn.execute("DELETE FROM agendamento WHERE servico_id = %s AND status = 'cancelado'", (servico_id,))
         conn.execute("DELETE FROM profissional_servico WHERE servico_id = %s", (servico_id,))
         conn.execute("DELETE FROM agendamento_servico WHERE servico_id = %s", (servico_id,))
         conn.execute("DELETE FROM servico WHERE id = %s", (servico_id,))
@@ -333,12 +342,15 @@ def excluir_profissional(profissional_id, estabelecimento_id=None):
         if not row:
             return False, "Profissional não encontrado."
 
-        agendamentos = conn.execute(
-            "SELECT COUNT(*) AS c FROM agendamento WHERE profissional_id = %s", (profissional_id,)
+        agendamentos_ativos = conn.execute(
+            "SELECT COUNT(*) AS c FROM agendamento WHERE profissional_id = %s AND status != 'cancelado'",
+            (profissional_id,),
         ).fetchone()["c"]
-        if agendamentos > 0:
-            return False, f"Não é possível excluir o profissional '{row['nome']}' porque existem {agendamentos} agendamento(s) vinculado(s) a ele. Você pode desativá-lo para que não apareça na agenda."
+        if agendamentos_ativos > 0:
+            return False, f"Não é possível excluir o profissional '{row['nome']}' porque existem {agendamentos_ativos} agendamento(s) ativo(s) vinculado(s) a ele. Você pode desativá-lo para que não apareça na agenda."
 
+        # Remove agendamentos cancelados vinculados a este profissional para evitar violação de integridade referencial
+        conn.execute("DELETE FROM agendamento WHERE profissional_id = %s AND status = 'cancelado'", (profissional_id,))
         conn.execute("DELETE FROM profissional_disponibilidade WHERE profissional_id = %s", (profissional_id,))
         conn.execute("DELETE FROM profissional_servico WHERE profissional_id = %s", (profissional_id,))
         conn.execute("DELETE FROM profissional WHERE id = %s", (profissional_id,))
@@ -1241,6 +1253,33 @@ def cancelar_agendamento(agendamento_id, usuario=None):
             """,
             (agendamento_id, row["status"], usuario),
         )
+        return True, None
+
+
+def excluir_agendamento(agendamento_id, estabelecimento_id=None):
+    """Exclui permanentemente um agendamento com status 'cancelado'."""
+    with db_session() as conn:
+        cond_estab = ""
+        params = [agendamento_id]
+        if estabelecimento_id is not None:
+            if estabelecimento_id == 1:
+                cond_estab = " AND (estabelecimento_id = 1 OR estabelecimento_id IS NULL)"
+            else:
+                cond_estab = " AND estabelecimento_id = %s"
+                params.append(estabelecimento_id)
+
+        row = conn.execute(
+            f"SELECT id, status, cliente_nome FROM agendamento WHERE id = %s{cond_estab}",
+            tuple(params),
+        ).fetchone()
+
+        if not row:
+            return False, "Agendamento não encontrado."
+
+        if row["status"] != "cancelado":
+            return False, "Apenas agendamentos cancelados podem ser excluídos permanentemente."
+
+        conn.execute("DELETE FROM agendamento WHERE id = %s", (agendamento_id,))
         return True, None
 
 
