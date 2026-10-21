@@ -758,6 +758,18 @@ table.tabela-agendamentos .col-acoes {
     text-decoration: underline;
 }
 
+.link-painel-admin {
+    color: var(--navy-profundo, #0A1F44);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s ease-in-out;
+}
+
+.link-painel-admin:hover {
+    color: #8C6D2B;
+    text-decoration: underline;
+}
+
 .link-institucional {
     color: var(--text-muted, #5A6270);
     text-decoration: none;
