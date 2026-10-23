@@ -275,22 +275,7 @@ def _validar_email(email):
 
 
 def _obter_url_base_whatsapp():
-    """Return base URL for public access (used for QR code generation)."""
-    url_env = os.environ.get("APP_URL_BASE", "").strip().rstrip('/')
-    if url_env:
-        return url_env
-    try:
-        host = request.host if request else ""
-        if not host or "127.0.0.1" in host or "localhost" in host:
-            return "https://agenda.alllogiconline.com.br"
-        scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-        if "alllogiconline.com.br" in host or request.headers.get("X-Forwarded-ssl") == "on":
-            scheme = "https"
-        return f"{scheme}://{host}".rstrip('/')
-    except Exception:
-        return "https://agenda.alllogiconline.com.br"
-    pass
-    """Retorna URL base com domínio público para garantir que o WhatsApp reconheça o link como clicável."""
+    """Retorna URL base com domínio público para garantir que links e QR codes funcionem externamente."""
     url_env = os.environ.get("APP_URL_BASE", "").strip().rstrip("/")
     if url_env:
         return url_env
@@ -299,11 +284,25 @@ def _obter_url_base_whatsapp():
         if not host or "127.0.0.1" in host or "localhost" in host:
             return "https://agenda.alllogiconline.com.br"
         scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-        if "alllogiconline.com.br" in host or request.headers.get("X-Forwarded-Ssl") == "on":
+        if "alllogiconline.com.br" in host or request.headers.get("X-Forwarded-Ssl") == "on" or request.headers.get("X-Forwarded-ssl") == "on":
             scheme = "https"
         return f"{scheme}://{host}".rstrip("/")
     except Exception:
         return "https://agenda.alllogiconline.com.br"
+
+
+def _obter_total_profissionais_ativos(conn, estab_id):
+    """Retorna a contagem exata de profissionais ativos do estabelecimento (com isolamento multi-tenant)."""
+    if estab_id and estab_id != 1:
+        row = conn.execute(
+            "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE AND estabelecimento_id = %s",
+            (estab_id,)
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE AND (estabelecimento_id = 1 OR estabelecimento_id IS NULL)"
+        ).fetchone()
+    return row["c"] if row else 0
 
 
 def login_requerido(f):
@@ -802,18 +801,39 @@ def agendamento_sucesso(agendamento_id):
     )
 
 
-@app.route("/reserva/<token>")
+@app.route("/admin/qrcode")
+@app.route("/admin/qrcode/<slug>")
 @app.route("/admin/estabelecimento/qrcode/<slug>")
-def admin_estabelecimento_qrcode(slug):
-    """Generate QR code PNG for the public reservation URL of the given slug."""
+@login_requerido
+def admin_estabelecimento_qrcode(slug=None):
+    """Gera o QR code em PNG para divulgação da página pública de agendamento do estabelecimento."""
+    estab_id = session.get("estabelecimento_id") or 1
+    if not slug:
+        with db_session() as conn:
+            est = obter_estabelecimento_por_id(conn, estab_id)
+            slug = est.get("slug") if est else "default"
     base_url = _obter_url_base_whatsapp()
-    public_url = f"{base_url}/{slug}" if slug else base_url
+    if not slug or slug in ("default", ""):
+        public_url = f"{base_url}/"
+    else:
+        public_url = f"{base_url}/agendar/{slug}"
     img = qrcode.make(public_url)
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    try:
+        img.save(buf, format="PNG")
+    except TypeError:
+        img.save(buf)
     buf.seek(0)
-    return send_file(buf, mimetype="image/png", as_attachment=True, download_name="qrcode.png")
+    nome_slug = slug if slug and slug != "default" else "agenda"
+    return send_file(
+        buf,
+        mimetype="image/png",
+        as_attachment=True,
+        download_name=f"qrcode-{nome_slug}.png",
+    )
 
+
+@app.route("/reserva/<token>")
 def public_ver_reserva(token):
     agendamento = models.obter_agendamento_por_token(token)
     config_template = _carregar_config_template()
@@ -995,9 +1015,7 @@ def admin_upgrade():
             if estab_id != 1
             else {"status": "ativo", "expirado": False, "dias_restantes": 3650}
         )
-        total_profissionais = conn.execute(
-            "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
-        ).fetchone()["c"]
+        total_profissionais = _obter_total_profissionais_ativos(conn, estab_id)
         plano_atual = estab.get("plano", "intermediario")
         cfg_atual = PLANOS_CONFIG.get(plano_atual, PLANOS_CONFIG["intermediario"])
         limite_atual = cfg_atual["limite_profissionais"]
@@ -1557,20 +1575,16 @@ def admin_profissional_novo():
         servico_ids = request.form.getlist("servicos", type=int)
 
         with db_session() as conn:
-            if estab_id and estab_id != 1:
-                estab = obter_estabelecimento_por_id(conn, estab_id)
-                plano = estab.get("plano", "intermediario") if estab else "intermediario"
-                limite = obter_limite_profissionais(plano)
-                total_ativos = conn.execute(
-                    "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE AND estabelecimento_id = %s",
-                    (estab_id,)
-                ).fetchone()["c"]
-                if ativo and total_ativos >= limite:
-                    cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
-                    erro = (
-                        f"Limite atingido: O seu plano atual ({cfg['nome']}) permite no máximo "
-                        f"{limite} profissional(is) ativo(s). Faça o upgrade do seu plano para cadastrar mais profissionais."
-                    )
+            estab = obter_estabelecimento_por_id(conn, estab_id)
+            plano = estab.get("plano", "intermediario") if estab else "intermediario"
+            limite = obter_limite_profissionais(plano)
+            total_ativos = _obter_total_profissionais_ativos(conn, estab_id)
+            if ativo and total_ativos >= limite:
+                cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
+                erro = (
+                    f"Limite atingido: O seu plano atual ({cfg['nome']}) permite no máximo "
+                    f"{limite} profissional(is) ativo(s). Faça o upgrade do seu plano para cadastrar mais profissionais."
+                )
 
         if not erro:
             profissional_id, erro = models.criar_profissional(nome, ativo, servico_ids, estabelecimento_id=estab_id)
@@ -1631,20 +1645,16 @@ def admin_profissional_editar(profissional_id):
             erro = erro_disp
         elif ativo and not profissional["ativo"]:
             with db_session() as conn:
-                if estab_id and estab_id != 1:
-                    estab = obter_estabelecimento_por_id(conn, estab_id)
-                    plano = estab.get("plano", "intermediario") if estab else "intermediario"
-                    limite = obter_limite_profissionais(plano)
-                    total_ativos = conn.execute(
-                        "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE AND estabelecimento_id = %s",
-                        (estab_id,)
-                    ).fetchone()["c"]
-                    if total_ativos >= limite:
-                        cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
-                        erro = (
-                            f"Limite atingido: O seu plano atual ({cfg['nome']}) permite no máximo "
-                            f"{limite} profissional(is) ativo(s). Faça o upgrade do seu plano para ativar este profissional."
-                        )
+                estab = obter_estabelecimento_por_id(conn, estab_id)
+                plano = estab.get("plano", "intermediario") if estab else "intermediario"
+                limite = obter_limite_profissionais(plano)
+                total_ativos = _obter_total_profissionais_ativos(conn, estab_id)
+                if total_ativos >= limite:
+                    cfg = PLANOS_CONFIG.get(plano, PLANOS_CONFIG["intermediario"])
+                    erro = (
+                        f"Limite atingido: O seu plano atual ({cfg['nome']}) permite no máximo "
+                        f"{limite} profissional(is) ativo(s). Faça o upgrade do seu plano para ativar este profissional."
+                    )
         if not erro:
             ok, erro = models.atualizar_profissional(profissional_id, nome, ativo, servico_ids)
             if ok:
@@ -1670,16 +1680,13 @@ def admin_profissional_toggle(profissional_id):
         novo_status = not profissional["ativo"]
         if novo_status:
             with db_session() as conn:
-                estab_id = session.get("estabelecimento_id")
-                if estab_id and estab_id != 1:
-                    estab = obter_estabelecimento_por_id(conn, estab_id)
-                    plano = estab.get("plano", "intermediario") if estab else "intermediario"
-                    limite = obter_limite_profissionais(plano)
-                    total_ativos = conn.execute(
-                        "SELECT COUNT(*) AS c FROM profissional WHERE ativo = TRUE"
-                    ).fetchone()["c"]
-                    if total_ativos >= limite:
-                        return redirect(url_for("admin_profissionais", erro_limite="1"))
+                estab_id = session.get("estabelecimento_id") or 1
+                estab = obter_estabelecimento_por_id(conn, estab_id)
+                plano = estab.get("plano", "intermediario") if estab else "intermediario"
+                limite = obter_limite_profissionais(plano)
+                total_ativos = _obter_total_profissionais_ativos(conn, estab_id)
+                if total_ativos >= limite:
+                    return redirect(url_for("admin_profissionais", erro_limite="1"))
         models.alterar_status_profissional(profissional_id, novo_status)
     return redirect(url_for("admin_profissionais"))
 

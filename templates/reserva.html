@@ -23,6 +23,7 @@
     <div class="mensagem-sucesso" style="margin-bottom: 16px;">{{ sucesso }}</div>
     {% endif %}
 
+    {% if agendamento %}
     <div class="card" style="background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-subtle); padding: 24px; box-shadow: var(--shadow-sm);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 14px;">
             <div>
@@ -122,6 +123,14 @@
             {% endif %}
         </div>
     </div>
+    {% else %}
+    <div class="card" style="background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-subtle); padding: 24px; text-align: center;">
+        <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 16px;">Não foi possível localizar os dados desta reserva.</p>
+        <a href="{{ url_for('index') }}" class="btn-primario" style="display: inline-block; text-decoration: none;">
+            Ir para a Página Inicial / Novo Agendamento
+        </a>
+    </div>
+    {% endif %}
 
     <footer class="rodape-publico" style="text-align: center; margin-top: 30px; font-size: 0.85rem; color: var(--text-muted);">
         <p>&copy; {{ nome_estabelecimento }} · Agendamento Online</p>

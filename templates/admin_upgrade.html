@@ -46,7 +46,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-weight: 600; font-size: 0.9rem; color: #0a1f44;">Capacidade de Profissionais Ativos</span>
                 <span style="font-weight: 700; font-size: 0.95rem; color: #0a1f44;">
-                    {{ total_profissionais }} de {{ limite_atual }} profissional{{ 'is' if limite_atual > 1 else '' }}
+                    {{ total_profissionais }} de {{ limite_atual }} {{ 'profissionais' if limite_atual > 1 else 'profissional' }}
                 </span>
             </div>
             {% set perc = (total_profissionais / limite_atual * 100)|round|int %}

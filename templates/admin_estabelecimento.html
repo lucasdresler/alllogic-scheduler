@@ -30,6 +30,29 @@
     </div>
     {% endif %}
 
+    <!-- Card Divulgação e QR Code -->
+    <div class="card" style="max-width: 800px; margin-bottom: 20px; background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(59,130,246,0.02)); border: 1px solid rgba(59,130,246,0.25); border-radius: 12px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="flex: 1; min-width: 250px;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: #1f6fff; text-transform: uppercase; letter-spacing: 0.04em;">Divulgação da Página Pública</span>
+            <div style="font-size: 1.1rem; font-weight: 700; color: #0a1f44; margin-top: 2px;">
+                QR Code para Impressão e Balcão
+            </div>
+            <p style="color: #64748b; font-size: 0.85rem; margin: 4px 0 0;">
+                Baixe o QR Code em alta resolução para imprimir em displays de balcão, cartazes ou adesivos para seus clientes agendarem pelo celular.
+            </p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{{ url_for('admin_estabelecimento_qrcode', slug=estabelecimento_slug) }}" class="btn-primario" style="padding: 9px 18px; border-radius: 6px; text-decoration: none; font-size: 0.88rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" download>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Baixar QR Code</span>
+            </a>
+            <a href="{{ url_publica_agendamento }}" target="_blank" rel="noopener noreferrer" class="btn-secundario" style="padding: 9px 16px; border-radius: 6px; text-decoration: none; font-size: 0.88rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                <span>Ver Página</span>
+            </a>
+        </div>
+    </div>
+
     <div class="card" style="max-width: 800px;">
         <form method="POST" action="{{ url_for('admin_estabelecimento') }}" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -122,7 +145,7 @@
 
             <div class="botoes-acoes" style="margin-top: 16px;">
             <button type="submit" class="btn-primario">Salvar alterações</button>
-            <a href="{{ url_for('admin_estabelecimento_qrcode', slug=slug) }}" class="btn-secundario" download>Baixar QR Code</a>
+            <a href="{{ url_for('admin_estabelecimento_qrcode', slug=estabelecimento_slug) }}" class="btn-secundario" download>Baixar QR Code</a>
             </div>
         </form>
     </div>
