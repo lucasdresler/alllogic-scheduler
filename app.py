@@ -6,8 +6,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import Flask, abort, g, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, abort, g, jsonify, redirect, render_template, request, session, url_for, send_file
 from flask_wtf.csrf import CSRFProtect
+import io
+import qrcode
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -273,6 +275,21 @@ def _validar_email(email):
 
 
 def _obter_url_base_whatsapp():
+    """Return base URL for public access (used for QR code generation)."""
+    url_env = os.environ.get("APP_URL_BASE", "").strip().rstrip('/')
+    if url_env:
+        return url_env
+    try:
+        host = request.host if request else ""
+        if not host or "127.0.0.1" in host or "localhost" in host:
+            return "https://agenda.alllogiconline.com.br"
+        scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+        if "alllogiconline.com.br" in host or request.headers.get("X-Forwarded-ssl") == "on":
+            scheme = "https"
+        return f"{scheme}://{host}".rstrip('/')
+    except Exception:
+        return "https://agenda.alllogiconline.com.br"
+    pass
     """Retorna URL base com domínio público para garantir que o WhatsApp reconheça o link como clicável."""
     url_env = os.environ.get("APP_URL_BASE", "").strip().rstrip("/")
     if url_env:
@@ -786,6 +803,17 @@ def agendamento_sucesso(agendamento_id):
 
 
 @app.route("/reserva/<token>")
+@app.route("/admin/estabelecimento/qrcode/<slug>")
+def admin_estabelecimento_qrcode(slug):
+    """Generate QR code PNG for the public reservation URL of the given slug."""
+    base_url = _obter_url_base_whatsapp()
+    public_url = f"{base_url}/{slug}" if slug else base_url
+    img = qrcode.make(public_url)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png", as_attachment=True, download_name="qrcode.png")
+
 def public_ver_reserva(token):
     agendamento = models.obter_agendamento_por_token(token)
     config_template = _carregar_config_template()

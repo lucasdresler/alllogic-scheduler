@@ -121,7 +121,8 @@
             </div>
 
             <div class="botoes-acoes" style="margin-top: 16px;">
-                <button type="submit" class="btn-primario">Salvar alterações</button>
+            <button type="submit" class="btn-primario">Salvar alterações</button>
+            <a href="{{ url_for('admin_estabelecimento_qrcode', slug=slug) }}" class="btn-secundario" download>Baixar QR Code</a>
             </div>
         </form>
     </div>
