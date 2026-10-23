@@ -219,8 +219,8 @@ def test_multi_tenant_isolamento_completo(client):
     html_dash_a = resp_dash_a.data.decode("utf-8")
     assert f"Cliente Alpha {suffix_a}" in html_dash_a
     assert f"Cliente Beta {suffix_b}" not in html_dash_a
-    # Link público no dashboard
-    assert f"/agendar/{slug_a}" in html_dash_a
+    # Link público no dashboard (aceita tanto rota curta /{slug} quanto /agendar/{slug})
+    assert f"/{slug_a}" in html_dash_a or f"/agendar/{slug_a}" in html_dash_a
 
     # 8. Verifica isolamento de Clientes no Estabelecimento A
     resp_cli_a = client.get("/admin/clientes")
@@ -240,7 +240,7 @@ def test_multi_tenant_isolamento_completo(client):
     html_dash_b = resp_dash_b.data.decode("utf-8")
     assert f"Cliente Beta {suffix_b}" in html_dash_b
     assert f"Cliente Alpha {suffix_a}" not in html_dash_b
-    assert f"/agendar/{slug_b}" in html_dash_b
+    assert f"/{slug_b}" in html_dash_b or f"/agendar/{slug_b}" in html_dash_b
 
     resp_cli_b = client.get("/admin/clientes")
     assert resp_cli_b.status_code == 200

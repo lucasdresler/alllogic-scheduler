@@ -619,13 +619,15 @@ def listar_profissionais_para_servicos(servico_ids, estabelecimento_id=None):
 
     with db_session() as conn:
         cond_estab = ""
-        params = [servico_ids, len(servico_ids)]
         if estabelecimento_id is not None:
             if estabelecimento_id == 1:
                 cond_estab = "AND (p.estabelecimento_id = 1 OR p.estabelecimento_id IS NULL)"
+                params = [servico_ids, len(servico_ids)]
             else:
                 cond_estab = "AND p.estabelecimento_id = %s"
-                params.insert(1, estabelecimento_id)
+                params = [estabelecimento_id, servico_ids, len(servico_ids)]
+        else:
+            params = [servico_ids, len(servico_ids)]
 
         rows = conn.execute(
             f"""

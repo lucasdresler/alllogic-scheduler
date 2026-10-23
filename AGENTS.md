@@ -285,9 +285,16 @@ A produção existente não deve ser modificada diretamente durante o desenvolvi
 
 Alterações devem ser desenvolvidas e validadas em ambiente local ou de homologação antes de qualquer publicação.
 
-A existência de uma aplicação atualmente em produção não autoriza alterações diretas no ambiente produtivo.
+A existência de uma aplicação atualmente em produção não autoriza alterações diretas no ambiente produtivo nem deploys antecipados.
 
-Qualquer publicação deve ocorrer somente após validação adequada.
+### Protocolo de Validação Local e Portão Obrigatório de Deploy
+
+O Agente de IA deve cumprir estritamente o ciclo:
+1. Desenvolver e testar primeiro no ambiente local.
+2. Apresentar evidências e comportamento validado localmente ao fundador.
+3. Formular obrigatoriamente a pergunta:
+   > *"Testes locais validados com sucesso. Autoriza a publicação em produção?"*
+4. Parar a execução e aguardar. Fica terminantemente proibido executar `git push` ou comandos remotos via SSH antes da autorização expressa do fundador.
 
 ---
 
