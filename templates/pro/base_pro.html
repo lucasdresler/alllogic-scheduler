@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block conteudo %}
+<div style="min-height: 100vh; background: #f8fafc; display: flex; flex-direction: column;">
+    <!-- Barra Superior do Profissional -->
+    <header style="background: white; border-bottom: 1px solid var(--borda); padding: 12px 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: #EFF6FF; color: #1D4ED8; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;">
+                    {{ session.get('profissional_nome', 'P')[0]|upper }}
+                </div>
+                <div>
+                    <div style="font-weight: 700; color: var(--navy-900); font-size: 1rem; line-height: 1.2;">
+                        {{ session.get('profissional_nome', 'Profissional') }}
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--cor-mutada);">
+                        {{ nome_estabelecimento }} • Portal do Profissional
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navegação -->
+            <nav style="display: flex; align-items: center; gap: 8px;">
+                <a href="{{ url_for('pro_agenda') }}" style="padding: 8px 14px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; {% if pagina_pro == 'agenda' %}background: #1D4ED8; color: white;{% else %}color: var(--navy-900); background: #f1f5f9;{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>Minha Agenda</span>
+                </a>
+                <a href="{{ url_for('pro_comissoes') }}" style="padding: 8px 14px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; {% if pagina_pro == 'comissoes' %}background: #1D4ED8; color: white;{% else %}color: var(--navy-900); background: #f1f5f9;{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline><line x1="12" y1="8" x2="12" y2="12"></line><path d="M14.83 14.83a4 4 0 1 1-5.66 0"></path></svg>
+                    <span>Minhas Comissões</span>
+                </a>
+                <a href="{{ url_for('pro_logout') }}" style="padding: 8px 12px; border-radius: 8px; font-size: 0.88rem; color: #DC2626; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;" title="Sair do portal">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <span>Sair</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Conteúdo Específico -->
+    <main style="max-width: 1100px; width: 100%; margin: 24px auto; padding: 0 16px; flex: 1;">
+        {% if sucesso %}
+        <div class="mensagem-sucesso" style="margin-bottom: 20px;">{{ sucesso }}</div>
+        {% endif %}
+        {% if erro %}
+        <div class="mensagem-erro" style="margin-bottom: 20px;">{{ erro }}</div>
+        {% endif %}
+
+        {% block conteudo_pro %}{% endblock %}
+    </main>
+
+    <!-- Rodapé -->
+    <footer style="text-align: center; padding: 18px; font-size: 0.8rem; color: var(--cor-mutada); border-top: 1px solid var(--borda); background: white;">
+        {{ nome_estabelecimento }} • Powered by <strong>Agillex</strong>
+    </footer>
+</div>
+{% endblock %}

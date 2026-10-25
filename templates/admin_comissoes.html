@@ -1,0 +1,213 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "comissoes" %}
+
+{% block titulo %}Controle de Comissões — {{ nome_estabelecimento }}{% endblock %}
+{% block titulo_pagina %}Controle de Comissões{% endblock %}
+{% block subtitulo_topbar %}Apuração automática e extrato de repasses para profissionais{% endblock %}
+
+{% block conteudo_admin %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--navy-900); margin: 0 0 4px 0;">Comissões da Equipe</h2>
+        <span style="font-size: 0.88rem; color: var(--text-muted);">Apuração sobre atendimentos concluídos e produtos vendidos</span>
+    </div>
+</div>
+
+{% if sucesso %}
+<div class="mensagem-sucesso" style="margin-bottom: 20px;">{{ sucesso }}</div>
+{% endif %}
+{% if erro %}
+<div class="mensagem-erro" style="margin-bottom: 20px;">{{ erro }}</div>
+{% endif %}
+
+<!-- Cards de Resumo -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px;">
+    <div class="card" style="padding: 18px; border-left: 4px solid #F59E0B; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Comissões a Pagar</span>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #D97706; margin-top: 6px;">
+            R$ {{ '%.2f'|format(resumo.total_pendente or 0) }}
+        </div>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">{{ resumo.qtd_pendente or 0 }} lançamento(s) pendente(s)</span>
+    </div>
+
+    <div class="card" style="padding: 18px; border-left: 4px solid #10B981; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Total já Pago</span>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #059669; margin-top: 6px;">
+            R$ {{ '%.2f'|format(resumo.total_pago or 0) }}
+        </div>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">{{ resumo.qtd_paga or 0 }} repasse(s) liquidado(s)</span>
+    </div>
+
+    <div class="card" style="padding: 18px; border-left: 4px solid #3B82F6; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Total Geral de Comissões</span>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--navy-900); margin-top: 6px;">
+            R$ {{ '%.2f'|format((resumo.total_pendente or 0) + (resumo.total_pago or 0)) }}
+        </div>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Total apurado no período</span>
+    </div>
+</div>
+
+<!-- Barra de Filtros -->
+<div class="card" style="padding: 16px; margin-bottom: 20px;">
+    <form method="GET" action="{{ url_for('admin_comissoes') }}" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px;">
+            <label for="filtro_profissional" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; display: block;">Profissional</label>
+            <select id="filtro_profissional" name="profissional_id" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+                <option value="">Todos os profissionais</option>
+                {% for prof in profissionais %}
+                <option value="{{ prof.id }}" {% if profissional_id_filtro|string == prof.id|string %}selected{% endif %}>{{ prof.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="width: 180px;">
+            <label for="filtro_status" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; display: block;">Status</label>
+            <select id="filtro_status" name="status" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+                <option value="" {% if not status_filtro %}selected{% endif %}>Todos</option>
+                <option value="pendente" {% if status_filtro == 'pendente' %}selected{% endif %}>Apenas Pendentes</option>
+                <option value="pago" {% if status_filtro == 'pago' %}selected{% endif %}>Apenas Pagos</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-primario" style="padding: 9px 18px; font-weight: 600;">Filtrar</button>
+        {% if profissional_id_filtro or status_filtro %}
+        <a href="{{ url_for('admin_comissoes') }}" class="btn-secundario" style="padding: 9px 14px; text-decoration: none;">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Tabela de Comissões -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    {% if comissoes %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--borda); text-align: left;">
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Data</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Profissional</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Origem</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Cliente / Detalhe</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">Valor Base</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">%</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">Comissão</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: center;">Status</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in comissoes %}
+                <tr style="border-bottom: 1px solid var(--borda);">
+                    <td style="padding: 12px 16px; white-space: nowrap; color: var(--cor-mutada);">
+                        {{ c.data_lancamento.strftime('%d/%m/%Y %H:%M') if c.data_lancamento else '-' }}
+                    </td>
+                    <td style="padding: 12px 16px; font-weight: 600; color: var(--navy-900);">
+                        {{ c.profissional_nome }}
+                    </td>
+                    <td style="padding: 12px 16px;">
+                        {% if c.tipo == 'servico' %}
+                        <span style="background: #EFF6FF; color: #1D4ED8; padding: 3px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;">
+                            ✂️ Serviço
+                        </span>
+                        {% else %}
+                        <span style="background: #F0FDF4; color: #15803D; padding: 3px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;">
+                            🛍️ Produto
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px 16px;">
+                        {% if c.tipo == 'servico' %}
+                            <strong>{{ c.servico_nome or 'Atendimento' }}</strong>
+                            <div style="font-size: 0.8rem; color: var(--cor-mutada);">Cliente: {{ c.cliente_nome or '-' }}</div>
+                        {% else %}
+                            <strong>Venda PDV #{{ c.venda_id }}</strong>
+                            <div style="font-size: 0.8rem; color: var(--cor-mutada);">Cliente: {{ c.venda_cliente or 'Consumidor Final' }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; color: var(--cor-mutada);">
+                        R$ {{ '%.2f'|format(c.valor_base) }}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; font-weight: 600;">
+                        {{ '%.1f'|format(c.percentual) }}%
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; font-weight: 700; color: #059669; font-size: 0.95rem;">
+                        R$ {{ '%.2f'|format(c.valor_comissao) }}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: center;">
+                        {% if c.status == 'pago' %}
+                        <span style="background: #D1FAE5; color: #065F46; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                            ✓ Pago
+                        </span>
+                        <div style="font-size: 0.75rem; color: var(--cor-mutada); margin-top: 2px;">
+                            {{ c.data_pagamento.strftime('%d/%m/%Y') if c.data_pagamento else '' }} ({{ c.forma_pagamento or 'Pix' }})
+                        </div>
+                        {% else %}
+                        <span style="background: #FEF3C7; color: #92400E; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                            Pendente
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
+                        {% if c.status == 'pendente' %}
+                        <button type="button" class="btn-primario" style="font-size: 0.8rem; padding: 5px 10px;" onclick="abrirModalBaixa({{ c.id }}, '{{ c.profissional_nome|e }}', '{{ '%.2f'|format(c.valor_comissao) }}')">
+                            Dar Baixa
+                        </button>
+                        {% else %}
+                        <span style="color: var(--cor-mutada); font-size: 0.8rem;">Liquidado</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: var(--cor-mutada);">
+        <p style="font-size: 1.1rem; margin-bottom: 8px;">Nenhuma comissão encontrada para os filtros selecionados.</p>
+        <p style="font-size: 0.88rem;">As comissões são geradas automaticamente quando um agendamento é marcado como <strong>Realizado</strong> ou quando uma venda de produto é vinculada ao profissional.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Baixa de Comissão -->
+<div id="modal-baixa-comissao" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="background: white; border-radius: 12px; max-width: 440px; width: 90%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">Confirmar Pagamento de Comissão</h3>
+            <button type="button" onclick="fecharModalBaixa()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--cor-mutada);">&times;</button>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--cor-mutada); margin-bottom: 16px;">
+            Profissional: <strong id="modal-prof-nome"></strong><br>
+            Valor a Pagar: <strong id="modal-valor-comissao" style="color: #059669; font-size: 1.1rem;"></strong>
+        </p>
+        <form id="form-baixa-comissao" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="margin-bottom: 14px;">
+                <label for="forma_pagamento" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px;">Forma de Pagamento</label>
+                <select id="forma_pagamento" name="forma_pagamento" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--borda);" required>
+                    <option value="Pix" selected>Pix</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Transferência">Transferência Bancária</option>
+                    <option value="Outro">Outro</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn-secundario" onclick="fecharModalBaixa()">Cancelar</button>
+                <button type="submit" class="btn-primario">Confirmar Baixa</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function abrirModalBaixa(id, profNome, valor) {
+    document.getElementById('modal-prof-nome').textContent = profNome;
+    document.getElementById('modal-valor-comissao').textContent = 'R$ ' + valor;
+    document.getElementById('form-baixa-comissao').action = '/admin/comissoes/' + id + '/pagar';
+    const modal = document.getElementById('modal-baixa-comissao');
+    modal.style.display = 'flex';
+}
+
+function fecharModalBaixa() {
+    document.getElementById('modal-baixa-comissao').style.display = 'none';
+}
+</script>
+{% endblock %}

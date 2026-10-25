@@ -1,0 +1,294 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "produtos" %}
+
+{% block titulo %}Produtos & Vendas — {{ nome_estabelecimento }}{% endblock %}
+{% block titulo_pagina %}Produtos & Vendas{% endblock %}
+{% block subtitulo_topbar %}Catálogo de produtos, controle de estoque e vendas no balcão{% endblock %}
+
+{% block conteudo_admin %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--navy-900); margin: 0 0 4px 0;">Catálogo de Produtos & Estoque</h2>
+        <span style="font-size: 0.88rem; color: var(--text-muted);">Venda produtos no balcão com baixa automática de estoque e comissão para a equipe</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn-primario" onclick="abrirModalVenda()" style="background: #059669; border-color: #059669; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span>+ Registrar Venda (PDV)</span>
+        </button>
+        <a href="{{ url_for('admin_produto_novo') }}" class="btn-primario" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Novo Produto</span>
+        </a>
+    </div>
+</div>
+
+{% if sucesso %}
+<div class="mensagem-sucesso" style="margin-bottom: 20px;">{{ sucesso }}</div>
+{% endif %}
+{% if erro %}
+<div class="mensagem-erro" style="margin-bottom: 20px;">{{ erro }}</div>
+{% endif %}
+
+<!-- Tabela de Produtos -->
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px;">
+    <div style="padding: 16px 20px; border-bottom: 1px solid var(--borda); background: #fafafa; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--navy-900);">Produtos Cadastrados</h3>
+        <span style="font-size: 0.82rem; color: var(--cor-mutada);">{{ produtos|length }} produto(s) no total</span>
+    </div>
+
+    {% if produtos %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--borda); text-align: left;">
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Produto</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Categoria</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">Preço Venda</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">Custo</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: center;">Estoque</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">% Comissão</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: center;">Status</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in produtos %}
+                <tr style="border-bottom: 1px solid var(--borda); {% if not p.ativo %}opacity: 0.6;{% endif %}">
+                    <td style="padding: 12px 16px; font-weight: 600; color: var(--navy-900);">
+                        {{ p.nome }}
+                    </td>
+                    <td style="padding: 12px 16px; color: var(--cor-mutada);">
+                        {{ p.categoria or 'Geral' }}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; font-weight: 700; color: #059669;">
+                        R$ {{ '%.2f'|format(p.preco_venda) }}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; color: var(--cor-mutada);">
+                        {% if p.preco_custo %}R$ {{ '%.2f'|format(p.preco_custo) }}{% else %}-{% endif %}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: center;">
+                        {% if p.estoque <= 0 %}
+                        <span style="background: #FEE2E2; color: #DC2626; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;">
+                            Esgotado (0)
+                        </span>
+                        {% elif p.estoque <= 3 %}
+                        <span style="background: #FEF3C7; color: #D97706; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;">
+                            Baixo ({{ p.estoque }})
+                        </span>
+                        {% else %}
+                        <span style="background: #E0E7FF; color: #3730A3; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;">
+                            {{ p.estoque }} un
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right;">
+                        {% if p.comissao_percentual is not none and p.comissao_percentual > 0 %}
+                            {{ '%.1f'|format(p.comissao_percentual) }}%
+                        {% else %}
+                            <span style="color: var(--cor-mutada); font-size: 0.8rem;">Padrão</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: center;">
+                        {% if p.ativo %}
+                        <span style="background: #D1FAE5; color: #065F46; padding: 3px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;">Ativo</span>
+                        {% else %}
+                        <span style="background: #F3F4F6; color: #6B7280; padding: 3px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
+                        <a href="{{ url_for('admin_produto_editar', produto_id=p.id) }}" class="btn-secundario btn-compacto" style="text-decoration: none; font-size: 0.8rem; margin-right: 4px;">Editar</a>
+                        <form method="POST" action="{{ url_for('admin_produto_toggle', produto_id=p.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-secundario btn-compacto" style="font-size: 0.8rem;">
+                                {% if p.ativo %}Desativar{% else %}Ativar{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: var(--cor-mutada);">
+        <p style="font-size: 1.1rem; margin-bottom: 8px;">Nenhum produto cadastrado ainda.</p>
+        <p style="font-size: 0.88rem; margin-bottom: 16px;">Cadastre produtos (pomadas, shampoos, óleos, cosméticos) para vender no seu estabelecimento.</p>
+        <a href="{{ url_for('admin_produto_novo') }}" class="btn-primario">Cadastrar Primeiro Produto</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Histórico de Vendas Recentes -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 16px 20px; border-bottom: 1px solid var(--borda); background: #fafafa; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--navy-900);">Últimas Vendas Realizadas</h3>
+        <span style="font-size: 0.82rem; color: var(--cor-mutada);">{{ vendas|length }} venda(s) recentes</span>
+    </div>
+
+    {% if vendas %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--borda); text-align: left;">
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Venda #</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Data</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Cliente</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Vendedor</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada);">Itens</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: right;">Total</th>
+                    <th style="padding: 12px 16px; font-weight: 600; color: var(--cor-mutada); text-align: center;">Pagamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vendas %}
+                <tr style="border-bottom: 1px solid var(--borda);">
+                    <td style="padding: 12px 16px; font-weight: 700; color: var(--navy-900);">
+                        #{{ v.id }}
+                    </td>
+                    <td style="padding: 12px 16px; white-space: nowrap; color: var(--cor-mutada);">
+                        {{ v.data_venda.strftime('%d/%m/%Y %H:%M') if v.data_venda else '-' }}
+                    </td>
+                    <td style="padding: 12px 16px; font-weight: 500;">
+                        {{ v.cliente_nome or 'Consumidor Final' }}
+                    </td>
+                    <td style="padding: 12px 16px;">
+                        {% if v.profissional_nome %}
+                        <span style="font-weight: 600; color: #1D4ED8;">{{ v.profissional_nome }}</span>
+                        {% else %}
+                        <span style="color: var(--cor-mutada);">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px 16px; font-size: 0.85rem;">
+                        {{ v.itens_resumo or 'Produtos diversos' }}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: right; font-weight: 700; color: #059669;">
+                        R$ {{ '%.2f'|format(v.valor_total) }}
+                    </td>
+                    <td style="padding: 12px 16px; text-align: center;">
+                        <span style="background: #F3F4F6; color: #374151; padding: 3px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;">
+                            {{ v.forma_pagamento }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 30px; text-align: center; color: var(--cor-mutada); font-size: 0.9rem;">
+        Nenhuma venda registrada até o momento.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Registrar Venda (PDV Rápido) -->
+<div id="modal-venda" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto; padding: 20px;">
+    <div class="card" style="background: white; border-radius: 12px; max-width: 580px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--navy-900);">🛍️ Venda de Balcão (PDV)</h3>
+            <button type="button" onclick="fecharModalVenda()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--cor-mutada);">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin_produto_vender') }}" id="form-pdv">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Seleção do Produto e Quantidade -->
+            <div style="background: #f8fafc; border: 1px solid var(--borda); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <label for="pdv_produto" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px;">Selecione o Produto *</label>
+                <select id="pdv_produto" name="produto_id" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--borda);" required onchange="atualizarTotalPDV()">
+                    <option value="">Selecione um produto...</option>
+                    {% for p in produtos %}
+                        {% if p.ativo and p.estoque > 0 %}
+                        <option value="{{ p.id }}" data-preco="{{ p.preco_venda }}" data-estoque="{{ p.estoque }}">
+                            {{ p.nome }} — R$ {{ '%.2f'|format(p.preco_venda) }} (Estoque: {{ p.estoque }})
+                        </option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                    <div>
+                        <label for="pdv_quantidade" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px;">Quantidade *</label>
+                        <input type="number" id="pdv_quantidade" name="quantidade" value="1" min="1" max="99" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--borda);" required oninput="atualizarTotalPDV()">
+                    </div>
+                    <div>
+                        <label for="pdv_desconto" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px;">Desconto (R$)</label>
+                        <input type="number" step="0.01" id="pdv_desconto" name="desconto" value="0.00" min="0" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--borda);" oninput="atualizarTotalPDV()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vendedor / Profissional para Comissão -->
+            <div style="margin-bottom: 14px;">
+                <label for="pdv_profissional" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px;">Profissional Vendedor (para comissão)</label>
+                <select id="pdv_profissional" name="profissional_id" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+                    <option value="">Nenhum (Venda direta do estabelecimento)</option>
+                    {% for prof in profissionais %}
+                    <option value="{{ prof.id }}">{{ prof.nome }} ({{ prof.comissao_produtos_percentual or 10 }}% comissão)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Cliente Opcional -->
+            <div style="margin-bottom: 14px;">
+                <label for="pdv_cliente" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px;">Cliente (Opcional)</label>
+                <select id="pdv_cliente" name="cliente_id" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+                    <option value="">Consumidor Final (Sem cadastro)</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}">{{ c.nome }} ({{ c.telefone or 'Sem fone' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Forma de Pagamento -->
+            <div style="margin-bottom: 18px;">
+                <label for="pdv_forma_pagamento" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px;">Forma de Pagamento *</label>
+                <select id="pdv_forma_pagamento" name="forma_pagamento" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--borda);" required>
+                    <option value="Pix" selected>Pix</option>
+                    <option value="Cartão de Crédito">Cartão de Crédito</option>
+                    <option value="Cartão de Débito">Cartão de Débito</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Fiado">Fiado (Adicionar à conta do cliente)</option>
+                </select>
+            </div>
+
+            <!-- Resumo do Total -->
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span style="font-weight: 600; color: #065f46;">Total da Venda:</span>
+                <span id="pdv_total_exibicao" style="font-size: 1.4rem; font-weight: 800; color: #059669;">R$ 0,00</span>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn-secundario" onclick="fecharModalVenda()">Cancelar</button>
+                <button type="submit" class="btn-primario" style="background: #059669; border-color: #059669;">Concluir Venda</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function abrirModalVenda() {
+    document.getElementById('modal-venda').style.display = 'flex';
+    atualizarTotalPDV();
+}
+
+function fecharModalVenda() {
+    document.getElementById('modal-venda').style.display = 'none';
+}
+
+function atualizarTotalPDV() {
+    const select = document.getElementById('pdv_produto');
+    const selectedOption = select.options[select.selectedIndex];
+    const preco = selectedOption ? parseFloat(selectedOption.getAttribute('data-preco') || 0) : 0;
+    const qtd = parseInt(document.getElementById('pdv_quantidade').value || 1);
+    const desconto = parseFloat(document.getElementById('pdv_desconto').value || 0);
+
+    let total = (preco * qtd) - desconto;
+    if (total < 0) total = 0;
+
+    document.getElementById('pdv_total_exibicao').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+}
+</script>
+{% endblock %}

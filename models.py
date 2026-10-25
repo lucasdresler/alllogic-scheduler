@@ -246,7 +246,8 @@ def listar_profissionais_admin(estabelecimento_id=None):
         return profissionais
 
 
-def criar_profissional(nome, ativo=True, servico_ids=None, estabelecimento_id=None):
+def criar_profissional(nome, ativo=True, servico_ids=None, estabelecimento_id=None, email=None, telefone=None, comissao_percentual=0.0, comissao_produtos_percentual=0.0, senha=None):
+    import hashlib
     nome = (nome or "").strip()
     if not nome:
         return None, "Nome do profissional é obrigatório."
@@ -256,14 +257,29 @@ def criar_profissional(nome, ativo=True, servico_ids=None, estabelecimento_id=No
         return None, "Selecione pelo menos um serviço para o profissional ativo."
 
     estab_id = estabelecimento_id or 1
+    senha_hash = hashlib.sha256(senha.strip().encode()).hexdigest() if senha and senha.strip() else None
+    email_limpo = email.strip().lower() if email and email.strip() else None
+
     with db_session() as conn:
         cursor = conn.execute(
             """
-            INSERT INTO profissional (nome, ativo, estabelecimento_id)
-            VALUES (%s, %s, %s)
+            INSERT INTO profissional (
+                nome, ativo, estabelecimento_id, email, telefone,
+                comissao_percentual, comissao_produtos_percentual, senha_hash
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (nome, bool(ativo), estab_id),
+            (
+                nome,
+                bool(ativo),
+                estab_id,
+                email_limpo,
+                (telefone or "").strip(),
+                float(comissao_percentual or 0.0),
+                float(comissao_produtos_percentual or 0.0),
+                senha_hash,
+            ),
         )
         profissional_id = cursor.fetchone()["id"]
 
@@ -275,7 +291,8 @@ def criar_profissional(nome, ativo=True, servico_ids=None, estabelecimento_id=No
     return profissional_id, None
 
 
-def atualizar_profissional(profissional_id, nome, ativo, servico_ids=None):
+def atualizar_profissional(profissional_id, nome, ativo, servico_ids=None, email=None, telefone=None, comissao_percentual=0.0, comissao_produtos_percentual=0.0, senha=None):
+    import hashlib
     nome = (nome or "").strip()
     if not nome:
         return False, "Nome do profissional é obrigatório."
@@ -283,6 +300,8 @@ def atualizar_profissional(profissional_id, nome, ativo, servico_ids=None):
     servico_ids = list(dict.fromkeys(servico_ids or []))
     if bool(ativo) and not servico_ids:
         return False, "Selecione pelo menos um serviço para o profissional ativo."
+
+    email_limpo = email.strip().lower() if email and email.strip() else None
 
     with db_session() as conn:
         row = conn.execute(
@@ -292,10 +311,44 @@ def atualizar_profissional(profissional_id, nome, ativo, servico_ids=None):
         if not row:
             return False, "Profissional não encontrado."
 
-        conn.execute(
-            "UPDATE profissional SET nome = %s, ativo = %s WHERE id = %s",
-            (nome, bool(ativo), profissional_id),
-        )
+        if senha and senha.strip():
+            senha_hash = hashlib.sha256(senha.strip().encode()).hexdigest()
+            conn.execute(
+                """
+                UPDATE profissional
+                SET nome = %s, ativo = %s, email = %s, telefone = %s,
+                    comissao_percentual = %s, comissao_produtos_percentual = %s, senha_hash = %s
+                WHERE id = %s
+                """,
+                (
+                    nome,
+                    bool(ativo),
+                    email_limpo,
+                    (telefone or "").strip(),
+                    float(comissao_percentual or 0.0),
+                    float(comissao_produtos_percentual or 0.0),
+                    senha_hash,
+                    profissional_id,
+                ),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE profissional
+                SET nome = %s, ativo = %s, email = %s, telefone = %s,
+                    comissao_percentual = %s, comissao_produtos_percentual = %s
+                WHERE id = %s
+                """,
+                (
+                    nome,
+                    bool(ativo),
+                    email_limpo,
+                    (telefone or "").strip(),
+                    float(comissao_percentual or 0.0),
+                    float(comissao_produtos_percentual or 0.0),
+                    profissional_id,
+                ),
+            )
 
     if servico_ids:
         ok, erro = atualizar_profissional_servicos(profissional_id, servico_ids)
@@ -1336,6 +1389,10 @@ def atualizar_status_agendamento(agendamento_id, novo_status, usuario=None):
             """,
             (agendamento_id, row["status"], novo_status, usuario),
         )
+
+        if novo_status == "realizado":
+            _gerar_comissao_conn(conn, agendamento_id)
+
         return True, None
 
 
@@ -2318,4 +2375,464 @@ def obter_saldo_devedor_cliente(cliente_id, estabelecimento_id=None):
             params,
         ).fetchone()
         return float(row["saldo_devedor"]) if row else 0.0
+
+
+# ==============================================================================
+# GESTÃO DE COMISSÕES DE PROFISSIONAIS
+# ==============================================================================
+
+def _gerar_comissao_conn(conn, agendamento_id):
+    """Gera comissão automaticamente dentro da transação caso o profissional tenha percentual cadastrado."""
+    try:
+        ja_existe = conn.execute(
+            "SELECT id FROM comissao_lancamento WHERE agendamento_id = %s",
+            (agendamento_id,),
+        ).fetchone()
+        if ja_existe:
+            return
+
+        ag = conn.execute(
+            """
+            SELECT a.id, a.estabelecimento_id, a.profissional_id, a.data,
+                   COALESCE(SUM(COALESCE(ags.preco_unitario, s.preco)), 0.0) AS valor_total,
+                   p.nome AS profissional_nome,
+                   COALESCE(p.comissao_percentual, 0.00) AS comissao_pct
+            FROM agendamento a
+            JOIN profissional p ON p.id = a.profissional_id
+            LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            LEFT JOIN servico s ON s.id = a.servico_id
+            WHERE a.id = %s
+            GROUP BY a.id, a.estabelecimento_id, a.profissional_id, a.data, p.nome, p.comissao_percentual
+            """,
+            (agendamento_id,),
+        ).fetchone()
+
+        if not ag or not ag["comissao_pct"] or float(ag["comissao_pct"]) <= 0:
+            return
+
+        valor_base = float(ag["valor_total"])
+        pct = float(ag["comissao_pct"])
+        valor_comissao = round((valor_base * pct) / 100.0, 2)
+
+        if valor_comissao > 0:
+            conn.execute(
+                """
+                INSERT INTO comissao_lancamento (
+                    estabelecimento_id, profissional_id, agendamento_id, tipo,
+                    descricao, valor_base, percentual, valor_comissao, status, data_lancamento
+                ) VALUES (%s, %s, %s, 'servico', %s, %s, %s, %s, 'pendente', CURRENT_DATE)
+                """,
+                (
+                    ag["estabelecimento_id"],
+                    ag["profissional_id"],
+                    ag["id"],
+                    f"Comissão de {pct:.1f}% sobre atendimento #{ag['id']}",
+                    valor_base,
+                    pct,
+                    valor_comissao,
+                ),
+            )
+    except Exception as e:
+        print(f"Erro ao gerar comissão para agendamento {agendamento_id}: {e}")
+
+
+def listar_comissoes(estabelecimento_id=1, profissional_id=None, status=None):
+    """Lista lançamentos de comissão para o administrador ou profissional."""
+    with db_session() as conn:
+        filtros = ["(c.estabelecimento_id = %s OR c.estabelecimento_id IS NULL)"]
+        params = [estabelecimento_id]
+
+        if profissional_id:
+            filtros.append("c.profissional_id = %s")
+            params.append(profissional_id)
+        if status:
+            filtros.append("c.status = %s")
+            params.append(status)
+
+        where_clause = " AND ".join(filtros)
+        query = f"""
+            SELECT c.*, p.nome AS profissional_nome, p.foto_url AS profissional_foto,
+                   a.data AS agendamento_data, a.hora AS agendamento_hora,
+                   a.cliente_nome AS agendamento_cliente
+            FROM comissao_lancamento c
+            JOIN profissional p ON p.id = c.profissional_id
+            LEFT JOIN agendamento a ON a.id = c.agendamento_id
+            WHERE {where_clause}
+            ORDER BY c.data_lancamento DESC, c.id DESC
+        """
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+
+def obter_resumo_comissoes(estabelecimento_id=1, profissional_id=None):
+    """Retorna consolidação financeira de comissões (total a pagar, total pago)."""
+    with db_session() as conn:
+        filtros = ["(estabelecimento_id = %s OR estabelecimento_id IS NULL)"]
+        params = [estabelecimento_id]
+
+        if profissional_id:
+            filtros.append("profissional_id = %s")
+            params.append(profissional_id)
+
+        where_clause = " AND ".join(filtros)
+        row = conn.execute(
+            f"""
+            SELECT 
+                COALESCE(SUM(valor_comissao) FILTER (WHERE status = 'pendente'), 0.0) AS total_pendente,
+                COALESCE(SUM(valor_comissao) FILTER (WHERE status = 'pago'), 0.0) AS total_pago,
+                COUNT(*) FILTER (WHERE status = 'pendente') AS qtd_pendentes,
+                COUNT(*) AS qtd_total
+            FROM comissao_lancamento
+            WHERE {where_clause}
+            """,
+            params,
+        ).fetchone()
+
+        return dict(row) if row else {
+            "total_pendente": 0.0,
+            "total_pago": 0.0,
+            "qtd_pendentes": 0,
+            "qtd_total": 0,
+        }
+
+
+def marcar_comissao_paga(comissao_id, forma_pagamento="pix", observacao=""):
+    """Marca uma comissão como paga / quitada."""
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE comissao_lancamento
+            SET status = 'pago',
+                data_pagamento = CURRENT_DATE,
+                forma_pagamento = %s,
+                observacao = %s
+            WHERE id = %s
+            """,
+            (forma_pagamento.strip().lower(), observacao.strip(), comissao_id),
+        )
+        return True
+
+
+# ==============================================================================
+# PORTAL DO PROFISSIONAL (AUTENTICAÇÃO E DADOS INDIVIDUAIS)
+# ==============================================================================
+
+def autenticar_profissional(email, senha):
+    """Valida o login individual do profissional."""
+    import hashlib
+    if not email or not senha:
+        return None
+
+    email_limpo = email.strip().lower()
+    senha_hash = hashlib.sha256(senha.strip().encode()).hexdigest()
+
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT p.*, e.nome AS estabelecimento_nome, e.slug AS estabelecimento_slug
+            FROM profissional p
+            LEFT JOIN estabelecimento e ON e.id = p.estabelecimento_id
+            WHERE LOWER(p.email) = %s AND p.ativo = TRUE
+            """,
+            (email_limpo,),
+        ).fetchone()
+
+        if row and row["senha_hash"] == senha_hash:
+            return dict(row)
+        return None
+
+
+def definir_senha_profissional(profissional_id, senha):
+    """Atualiza a senha do profissional."""
+    import hashlib
+    senha_hash = hashlib.sha256(senha.strip().encode()).hexdigest()
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE profissional SET senha_hash = %s WHERE id = %s",
+            (senha_hash, profissional_id),
+        )
+        return True
+
+
+def obter_agenda_profissional(profissional_id, data_inicio_str, data_fim_str):
+    """Retorna estritamente os agendamentos do profissional especificado."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT a.*,
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'id', COALESCE(ags.servico_id, s.id),
+                               'nome', COALESCE(ags.nome_servico, s.nome),
+                               'preco', COALESCE(ags.preco_unitario, s.preco),
+                               'duracao_minutos', COALESCE(ags.duracao_minutos, s.duracao_minutos)
+                           )
+                           ORDER BY COALESCE(ags.servico_id, s.id)
+                       ) FILTER (WHERE ags.servico_id IS NOT NULL OR s.id IS NOT NULL),
+                       '[]'::json
+                   ) AS servicos
+            FROM agendamento a
+            LEFT JOIN agendamento_servico ags ON ags.agendamento_id = a.id
+            LEFT JOIN servico s ON s.id = ags.servico_id
+            WHERE a.profissional_id = %s
+              AND a.data >= %s
+              AND a.data <= %s
+            GROUP BY a.id
+            ORDER BY a.data ASC, a.hora ASC
+            """,
+            (profissional_id, data_inicio_str, data_fim_str),
+        ).fetchall()
+
+        agendamentos = []
+        for r in rows:
+            ag = dict(r)
+            ag["servico_nome"] = ", ".join(s["nome"] for s in ag["servicos"]) if ag["servicos"] else "Serviço"
+            ag["servico_preco"] = sum(s["preco"] for s in ag["servicos"]) if ag["servicos"] else 0.0
+            agendamentos.append(ag)
+        return agendamentos
+
+
+def obter_clientes_do_profissional(profissional_id):
+    """Lista clientes atendidos exclusivamente por este profissional."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT c.id, c.nome, c.telefone, c.email,
+                   COUNT(a.id) AS total_atendimentos,
+                   MAX(a.data) AS ultimo_atendimento
+            FROM agendamento a
+            JOIN cliente c ON c.id = a.cliente_id
+            WHERE a.profissional_id = %s AND a.status = 'realizado'
+            GROUP BY c.id, c.nome, c.telefone, c.email
+            ORDER BY ultimo_atendimento DESC, c.nome ASC
+            """,
+            (profissional_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+# ==============================================================================
+# GESTÃO DE PRODUTOS E PONTO DE VENDA (PDV)
+# ==============================================================================
+
+def listar_produtos(estabelecimento_id=1, apenas_ativos=False, categoria=None):
+    """Lista produtos do catálogo do estabelecimento."""
+    with db_session() as conn:
+        filtros = ["(estabelecimento_id = %s OR estabelecimento_id IS NULL)"]
+        params = [estabelecimento_id]
+
+        if apenas_ativos:
+            filtros.append("ativo = TRUE")
+        if categoria:
+            filtros.append("categoria = %s")
+            params.append(categoria)
+
+        where_clause = " AND ".join(filtros)
+        rows = conn.execute(
+            f"""
+            SELECT * FROM produto
+            WHERE {where_clause}
+            ORDER BY ativo DESC, nome ASC
+            """,
+            params,
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def obter_produto(produto_id):
+    """Retorna dados de um produto específico."""
+    with db_session() as conn:
+        row = conn.execute("SELECT * FROM produto WHERE id = %s", (produto_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def criar_produto(estabelecimento_id, nome, preco_venda, descricao='', preco_custo=0, estoque=0, comissao_percentual=0, categoria='Geral', foto_url='', ativo=True):
+    """Cadastra um novo produto."""
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            INSERT INTO produto (
+                estabelecimento_id, nome, descricao, preco_venda, preco_custo,
+                estoque, comissao_percentual, categoria, foto_url, ativo
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                estabelecimento_id,
+                nome.strip(),
+                (descricao or '').strip(),
+                float(preco_venda),
+                float(preco_custo or 0),
+                int(estoque or 0),
+                float(comissao_percentual or 0),
+                categoria.strip() if categoria else "Geral",
+                (foto_url or '').strip(),
+                bool(ativo),
+            ),
+        ).fetchone()
+        return row["id"]
+
+
+def editar_produto(produto_id, nome, preco_venda, descricao='', preco_custo=0, estoque=0, comissao_percentual=0, categoria='Geral', foto_url='', ativo=True):
+    """Atualiza dados de um produto."""
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE produto
+            SET nome = %s, descricao = %s, preco_venda = %s, preco_custo = %s,
+                estoque = %s, comissao_percentual = %s, categoria = %s, foto_url = %s, ativo = %s
+            WHERE id = %s
+            """,
+            (
+                nome.strip(),
+                (descricao or '').strip(),
+                float(preco_venda),
+                float(preco_custo or 0),
+                int(estoque or 0),
+                float(comissao_percentual or 0),
+                categoria.strip() if categoria else "Geral",
+                (foto_url or '').strip(),
+                bool(ativo),
+                produto_id,
+            ),
+        )
+        return True
+
+
+def alternar_status_produto(produto_id):
+    """Ativa ou desativa um produto."""
+    with db_session() as conn:
+        row = conn.execute("SELECT ativo FROM produto WHERE id = %s", (produto_id,)).fetchone()
+        if not row:
+            return False
+        novo_status = not row["ativo"]
+        conn.execute("UPDATE produto SET ativo = %s WHERE id = %s", (novo_status, produto_id))
+        return novo_status
+
+
+def registrar_venda_produtos(estabelecimento_id, itens, cliente_id=None, profissional_id=None, agendamento_id=None, forma_pagamento="dinheiro", desconto=0.0, observacao=""):
+    """
+    Registra venda de um ou mais produtos no PDV.
+    Abate o estoque de cada produto e gera comissão de produto caso o profissional esteja associado.
+    """
+    if not itens:
+        return False, "Nenhum produto selecionado para a venda."
+
+    with db_session() as conn:
+        valor_total = 0.0
+        itens_processados = []
+
+        for item in itens:
+            prod_id = int(item["produto_id"])
+            qtd = int(item.get("quantidade", 1))
+            prod = conn.execute("SELECT id, nome, preco_venda, estoque, comissao_percentual FROM produto WHERE id = %s FOR UPDATE", (prod_id,)).fetchone()
+            if not prod:
+                return False, f"Produto ID {prod_id} não encontrado."
+            if prod["estoque"] < qtd:
+                return False, f"Estoque insuficiente para '{prod['nome']}' (disponível: {prod['estoque']})."
+
+            subtotal = float(prod["preco_venda"]) * qtd
+            valor_total += subtotal
+            itens_processados.append({
+                "produto_id": prod_id,
+                "nome": prod["nome"],
+                "quantidade": qtd,
+                "preco_unitario": float(prod["preco_venda"]),
+                "subtotal": subtotal,
+                "comissao_pct": float(prod["comissao_percentual"] or 0),
+            })
+
+        if float(desconto or 0) > 0:
+            valor_total = max(0.0, valor_total - float(desconto))
+
+        venda_row = conn.execute(
+            """
+            INSERT INTO produto_venda (
+                estabelecimento_id, cliente_id, profissional_id, agendamento_id,
+                valor_total, forma_pagamento, status, observacao
+            ) VALUES (%s, %s, %s, %s, %s, %s, 'concluido', %s)
+            RETURNING id
+            """,
+            (
+                estabelecimento_id,
+                cliente_id or None,
+                profissional_id or None,
+                agendamento_id or None,
+                valor_total,
+                forma_pagamento.strip().lower(),
+                observacao.strip(),
+            ),
+        ).fetchone()
+        venda_id = venda_row["id"]
+
+        for it in itens_processados:
+            conn.execute(
+                """
+                INSERT INTO produto_venda_item (
+                    venda_id, produto_id, quantidade, preco_unitario, subtotal
+                ) VALUES (%s, %s, %s, %s, %s)
+                """,
+                (venda_id, it["produto_id"], it["quantidade"], it["preco_unitario"], it["subtotal"]),
+            )
+            conn.execute(
+                "UPDATE produto SET estoque = estoque - %s WHERE id = %s",
+                (it["quantidade"], it["produto_id"]),
+            )
+
+            pct_comissao = it["comissao_pct"]
+            if pct_comissao <= 0 and profissional_id:
+                prof_row = conn.execute(
+                    "SELECT comissao_produtos_percentual FROM profissional WHERE id = %s",
+                    (profissional_id,),
+                ).fetchone()
+                if prof_row and prof_row["comissao_produtos_percentual"]:
+                    pct_comissao = float(prof_row["comissao_produtos_percentual"])
+
+            if profissional_id and pct_comissao > 0:
+                comissao_val = round((it["subtotal"] * pct_comissao) / 100.0, 2)
+                if comissao_val > 0:
+                    conn.execute(
+                        """
+                        INSERT INTO comissao_lancamento (
+                            estabelecimento_id, profissional_id, venda_id, tipo,
+                            descricao, valor_base, percentual, valor_comissao, status, data_lancamento
+                        ) VALUES (%s, %s, %s, 'produto', %s, %s, %s, %s, 'pendente', CURRENT_DATE)
+                        """,
+                        (
+                            estabelecimento_id,
+                            profissional_id,
+                            venda_id,
+                            f"Comissão sobre venda de produto: {it['nome']} (x{it['quantidade']})",
+                            it["subtotal"],
+                            pct_comissao,
+                            comissao_val,
+                        ),
+                    )
+
+        return True, venda_id
+
+
+def listar_vendas_produtos(estabelecimento_id=1, limite=50):
+    """Lista o histórico recente de vendas de produtos no PDV."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT pv.*, c.nome AS cliente_nome, p.nome AS profissional_nome,
+                   (
+                       SELECT string_agg(p2.nome || ' (x' || pvi.quantidade || ')', ', ')
+                       FROM produto_venda_item pvi
+                       JOIN produto p2 ON p2.id = pvi.produto_id
+                       WHERE pvi.venda_id = pv.id
+                   ) AS itens_resumo
+            FROM produto_venda pv
+            LEFT JOIN cliente c ON c.id = pv.cliente_id
+            LEFT JOIN profissional p ON p.id = pv.profissional_id
+            WHERE (pv.estabelecimento_id = %s OR pv.estabelecimento_id IS NULL)
+            ORDER BY pv.data_venda DESC
+            LIMIT %s
+            """,
+            (estabelecimento_id, limite),
+        ).fetchall()
+        return [dict(r) for r in rows]
 

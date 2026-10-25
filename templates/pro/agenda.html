@@ -1,0 +1,103 @@
+{% extends "pro/base_pro.html" %}
+
+{% set pagina_pro = "agenda" %}
+
+{% block titulo %}Minha Agenda — {{ session.get('profissional_nome', 'Profissional') }}{% endblock %}
+
+{% block conteudo_pro %}
+<!-- Cabeçalho e Seletor de Data -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h1 style="font-size: 1.4rem; font-weight: 800; color: var(--navy-900); margin: 0 0 4px 0;">Minha Agenda de Atendimentos</h1>
+        <span style="font-size: 0.88rem; color: var(--cor-mutada);">Acompanhe seus horários agendados e conclua atendimentos</span>
+    </div>
+
+    <!-- Filtro de Data -->
+    <form method="GET" action="{{ url_for('pro_agenda') }}" style="display: flex; gap: 8px; align-items: center;">
+        <input type="date" name="data" value="{{ data_selecionada }}" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--borda); font-size: 0.9rem;" onchange="this.form.submit()">
+        {% if data_selecionada != hoje_iso %}
+        <a href="{{ url_for('pro_agenda') }}" class="btn-secundario" style="padding: 8px 12px; text-decoration: none; font-size: 0.85rem;">Hoje</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Lista de Agendamentos -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 16px 20px; border-bottom: 1px solid var(--borda); background: #fafafa; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-weight: 700; color: var(--navy-900); font-size: 1rem;">
+            Atendimentos para {{ data_formatada }}
+        </div>
+        <span style="font-size: 0.82rem; color: var(--cor-mutada);">{{ agendamentos|length }} horário(s)</span>
+    </div>
+
+    {% if agendamentos %}
+    <div style="display: flex; flex-direction: column;">
+        {% for a in agendamentos %}
+        <div style="padding: 18px 20px; border-bottom: 1px solid var(--borda); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; {% if a.status == 'cancelado' %}opacity: 0.5; background: #fafafa;{% elif a.status == 'realizado' %}background: #f0fdf4;{% endif %}">
+            <!-- Horário & Status -->
+            <div style="min-width: 140px;">
+                <div style="font-size: 1.3rem; font-weight: 800; color: var(--navy-900);">
+                    {{ a.horario_inicio.strftime('%H:%M') if a.horario_inicio else '' }}
+                    <span style="font-size: 0.85rem; font-weight: normal; color: var(--cor-mutada);">às {{ a.horario_fim.strftime('%H:%M') if a.horario_fim else '' }}</span>
+                </div>
+                <div style="margin-top: 6px;">
+                    {% if a.status == 'realizado' %}
+                        <span style="background: #D1FAE5; color: #065F46; padding: 3px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">✓ Realizado</span>
+                    {% elif a.status == 'cancelado' %}
+                        <span style="background: #FEE2E2; color: #DC2626; padding: 3px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Cancelado</span>
+                    {% elif a.confirmado_pelo_cliente %}
+                        <span style="background: #DBEAFE; color: #1E40AF; padding: 3px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Confirmado pelo Cliente</span>
+                    {% else %}
+                        <span style="background: #FEF3C7; color: #92400E; padding: 3px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">Pendente</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dados do Cliente e Serviço -->
+            <div style="flex: 1; min-width: 220px;">
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900);">
+                    {{ a.cliente_nome }}
+                </div>
+                <div style="font-size: 0.9rem; color: #2563EB; font-weight: 600; margin-top: 2px;">
+                    ✂️ {{ a.servico_nome }}
+                    <span style="color: var(--cor-mutada); font-weight: normal;">• R$ {{ '%.2f'|format(a.preco) }}</span>
+                </div>
+                {% if a.cliente_telefone %}
+                <div style="margin-top: 6px;">
+                    <a href="https://wa.me/55{{ a.cliente_telefone|replace('(', '')|replace(')', '')|replace('-', '')|replace(' ', '') }}" target="_blank" rel="noopener noreferrer" style="color: #059669; text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                        <span>💬 WhatsApp: {{ a.cliente_telefone }}</span>
+                    </a>
+                </div>
+                {% endif %}
+                {% if a.observacoes %}
+                <div style="font-size: 0.8rem; color: var(--cor-mutada); margin-top: 4px; font-style: italic;">
+                    Obs: {{ a.observacoes }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Ações -->
+            <div>
+                {% if a.status != 'realizado' and a.status != 'cancelado' %}
+                <form method="POST" action="{{ url_for('pro_concluir_agendamento', agendamento_id=a.id) }}" onsubmit="return confirm('Confirmar que o atendimento foi concluído? A comissão será calculada automaticamente.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-primario" style="background: #059669; border-color: #059669; font-size: 0.88rem; padding: 8px 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>Concluir Atendimento</span>
+                    </button>
+                </form>
+                {% elif a.status == 'realizado' %}
+                <span style="color: #059669; font-size: 0.85rem; font-weight: 600;">Atendimento Concluído</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding: 50px 20px; text-align: center; color: var(--cor-mutada);">
+        <p style="font-size: 1.1rem; margin-bottom: 6px;">Nenhum atendimento agendado para esta data.</p>
+        <p style="font-size: 0.85rem;">Selecione outra data no filtro acima para visualizar seus horários.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "produtos" %}
+
+{% block titulo %}{{ titulo }} — {{ nome_estabelecimento }}{% endblock %}
+{% block titulo_pagina %}{{ titulo }}{% endblock %}
+
+{% block conteudo_admin %}
+<div class="card" style="max-width: 680px;">
+    <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <span class="subtitulo-admin" style="font-size: 0.875rem; color: var(--cor-mutada);">Preencha os dados do produto para venda e estoque</span>
+        </div>
+        <a href="{{ url_for('admin_produtos') }}" class="btn-secundario btn-compacto">← Voltar para produtos</a>
+    </div>
+
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div style="margin-bottom: 16px;">
+            <label for="nome" style="font-weight: 600; display: block; margin-bottom: 4px;">Nome do Produto *</label>
+            <input type="text" id="nome" name="nome" value="{{ produto.nome if produto else '' }}" placeholder="Ex: Pomada Modeladora Efeito Matte 150g" required style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+            <div>
+                <label for="categoria" style="font-weight: 600; display: block; margin-bottom: 4px;">Categoria</label>
+                <input type="text" id="categoria" name="categoria" value="{{ produto.categoria if produto and produto.categoria else '' }}" placeholder="Ex: Cabelo, Barba, Cosméticos" style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+            </div>
+            <div>
+                <label for="estoque" style="font-weight: 600; display: block; margin-bottom: 4px;">Quantidade em Estoque *</label>
+                <input type="number" id="estoque" name="estoque" value="{{ produto.estoque if produto else '10' }}" min="0" required style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+            <div>
+                <label for="preco_venda" style="font-weight: 600; display: block; margin-bottom: 4px;">Preço de Venda (R$) *</label>
+                <input type="number" step="0.01" min="0" id="preco_venda" name="preco_venda" value="{{ '%.2f'|format(produto.preco_venda) if produto else '' }}" placeholder="Ex: 45.00" required style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+            </div>
+            <div>
+                <label for="preco_custo" style="font-weight: 600; display: block; margin-bottom: 4px;">Preço de Custo (R$)</label>
+                <input type="number" step="0.01" min="0" id="preco_custo" name="preco_custo" value="{{ '%.2f'|format(produto.preco_custo) if produto and produto.preco_custo else '' }}" placeholder="Ex: 20.00" style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="comissao_percentual" style="font-weight: 600; display: block; margin-bottom: 4px;">% Comissão específica para este produto</label>
+            <div style="position: relative; max-width: 240px;">
+                <input type="number" step="0.1" min="0" max="100" id="comissao_percentual" name="comissao_percentual" value="{{ produto.comissao_percentual if produto and produto.comissao_percentual is not none else '' }}" placeholder="Ex: 15.0" style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--borda);">
+                <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--cor-mutada); font-weight: 600;">%</span>
+            </div>
+            <span style="font-size: 0.8rem; color: var(--cor-mutada); display: block; margin-top: 4px;">Deixe em branco para usar o percentual padrão de produtos cadastrado no profissional.</span>
+        </div>
+
+        <label class="checkbox-row" style="margin-bottom: 24px;">
+            <input type="checkbox" name="ativo" {% if not produto or produto.ativo %}checked{% endif %}>
+            <span>Produto disponível para venda</span>
+        </label>
+
+        <div class="botoes-acoes">
+            <button type="submit" class="btn-primario">Salvar Produto</button>
+            <a href="{{ url_for('admin_produtos') }}" class="btn-secundario">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

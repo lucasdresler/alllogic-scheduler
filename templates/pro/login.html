@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block titulo %}Acesso do Profissional — {{ nome_estabelecimento }}{% endblock %}
+
+{% block conteudo %}
+<div style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="max-width: 420px; width: 100%; padding: 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border-radius: 16px;">
+        <div style="text-align: center; margin-bottom: 28px;">
+            <div style="width: 56px; height: 56px; background: #EFF6FF; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; color: #1D4ED8;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--navy-900); margin: 0 0 6px 0;">Portal do Profissional</h2>
+            <p style="font-size: 0.88rem; color: var(--cor-mutada); margin: 0;">Acesse sua agenda individual e comissões</p>
+        </div>
+
+        {% if erro %}
+        <div class="mensagem-erro" style="margin-bottom: 20px;">{{ erro }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('pro_login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div style="margin-bottom: 16px;">
+                <label for="email" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px;">E-mail</label>
+                <input type="email" id="email" name="email" required placeholder="seuemail@exemplo.com" style="width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid var(--borda); font-size: 0.95rem;">
+            </div>
+
+            <div style="margin-bottom: 22px;">
+                <label for="senha" style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px;">Senha</label>
+                <input type="password" id="senha" name="senha" required placeholder="Sua senha" style="width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid var(--borda); font-size: 0.95rem;">
+            </div>
+
+            <button type="submit" class="btn-primario" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 8px;">
+                Entrar no Portal
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--borda);">
+            <a href="{{ url_for('admin_login') }}" style="font-size: 0.85rem; color: var(--cor-mutada); text-decoration: none;">Acesso Administrador →</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

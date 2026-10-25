@@ -331,6 +331,17 @@ def login_requerido(f):
     return decorada
 
 
+def login_profissional_requerido(f):
+    @wraps(f)
+    def decorada(*args, **kwargs):
+        if not session.get("profissional_id"):
+            return redirect(url_for("pro_login"))
+        return f(*args, **kwargs)
+
+    return decorada
+
+
+
 def _validar_configuracoes_operacionais(dados):
     try:
         antecedencia = int(dados["dias_antecedencia_agendamento"])
@@ -1639,6 +1650,17 @@ def admin_profissional_novo():
         nome = request.form.get("nome", "").strip()
         ativo = request.form.get("ativo") == "on"
         servico_ids = request.form.getlist("servicos", type=int)
+        email = request.form.get("email", "").strip() or None
+        telefone = request.form.get("telefone", "").strip() or None
+        senha = request.form.get("senha", "").strip() or None
+        try:
+            comissao_percentual = float(request.form.get("comissao_percentual") or 0.0)
+        except ValueError:
+            comissao_percentual = 0.0
+        try:
+            comissao_produtos_percentual = float(request.form.get("comissao_produtos_percentual") or 10.0)
+        except ValueError:
+            comissao_produtos_percentual = 10.0
 
         with db_session() as conn:
             estab = obter_estabelecimento_por_id(conn, estab_id)
@@ -1653,7 +1675,17 @@ def admin_profissional_novo():
                 )
 
         if not erro:
-            profissional_id, erro = models.criar_profissional(nome, ativo, servico_ids, estabelecimento_id=estab_id)
+            profissional_id, erro = models.criar_profissional(
+                nome,
+                ativo,
+                servico_ids,
+                estabelecimento_id=estab_id,
+                email=email,
+                telefone=telefone,
+                comissao_percentual=comissao_percentual,
+                comissao_produtos_percentual=comissao_produtos_percentual,
+                senha=senha,
+            )
             if profissional_id:
                 return redirect(url_for("admin_profissionais"))
 
@@ -1689,6 +1721,17 @@ def admin_profissional_editar(profissional_id):
         nome = request.form.get("nome", "").strip()
         ativo = request.form.get("ativo") == "on"
         servico_ids = request.form.getlist("servicos", type=int)
+        email = request.form.get("email", "").strip() or None
+        telefone = request.form.get("telefone", "").strip() or None
+        senha = request.form.get("senha", "").strip() or None
+        try:
+            comissao_percentual = float(request.form.get("comissao_percentual") or 0.0)
+        except ValueError:
+            comissao_percentual = 0.0
+        try:
+            comissao_produtos_percentual = float(request.form.get("comissao_produtos_percentual") or 10.0)
+        except ValueError:
+            comissao_produtos_percentual = 10.0
 
         itens_disp = []
         for d in models.DIAS_DA_SEMANA:
@@ -1722,8 +1765,19 @@ def admin_profissional_editar(profissional_id):
                         f"{limite} profissional(is) ativo(s). Faça o upgrade do seu plano para ativar este profissional."
                     )
         if not erro:
-            ok, erro = models.atualizar_profissional(profissional_id, nome, ativo, servico_ids)
+            ok, erro = models.atualizar_profissional(
+                profissional_id,
+                nome,
+                ativo,
+                servico_ids,
+                email=email,
+                telefone=telefone,
+                comissao_percentual=comissao_percentual,
+                comissao_produtos_percentual=comissao_produtos_percentual,
+            )
             if ok:
+                if senha:
+                    models.definir_senha_profissional(profissional_id, senha)
                 models.salvar_disponibilidade_profissional(profissional_id, itens_disp)
                 return redirect(url_for("admin_profissionais"))
 
@@ -2111,8 +2165,347 @@ def admin_fiado_pagar(fiado_id):
             return redirect(url_for("admin_fiados", sucesso=msg))
         return redirect(url_for("admin_fiados", erro=msg))
     except Exception as e:
-        logger.exception("Erro ao processar pagamento de fiado")
         return redirect(url_for("admin_fiados", erro=f"Erro no pagamento: {e}"))
+
+
+# ==============================================================================
+# GESTÃO DE COMISSÕES (ADMINISTRADOR)
+# ==============================================================================
+
+@app.route("/admin/comissoes")
+@login_requerido
+def admin_comissoes():
+    estab_id = session.get("estabelecimento_id") or 1
+    status_filtro = request.args.get("status", "").strip() or None
+    profissional_id_filtro = request.args.get("profissional_id", type=int)
+
+    comissoes = models.listar_comissoes(
+        estabelecimento_id=estab_id,
+        profissional_id=profissional_id_filtro,
+        status=status_filtro,
+    )
+    resumo = models.obter_resumo_comissoes(
+        estabelecimento_id=estab_id,
+        profissional_id=profissional_id_filtro,
+    )
+    profissionais = models.listar_profissionais_admin(estabelecimento_id=estab_id)
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    return render_template(
+        "admin_comissoes.html",
+        comissoes=comissoes,
+        resumo=resumo,
+        profissionais=profissionais,
+        profissional_id_filtro=profissional_id_filtro,
+        status_filtro=status_filtro,
+        sucesso=sucesso,
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/comissoes/<int:comissao_id>/pagar", methods=["POST"])
+@login_requerido
+def admin_comissao_pagar(comissao_id):
+    forma_pagamento = request.form.get("forma_pagamento", "Pix")
+    try:
+        ok = models.marcar_comissao_paga(comissao_id, forma_pagamento=forma_pagamento)
+        if ok:
+            return redirect(url_for("admin_comissoes", sucesso="Comissão baixada e marcada como paga com sucesso!"))
+        return redirect(url_for("admin_comissoes", erro="Comissão não encontrada ou já paga."))
+    except Exception as e:
+        logger.exception("Erro ao registrar pagamento de comissão")
+        return redirect(url_for("admin_comissoes", erro=f"Erro ao processar baixa: {e}"))
+
+
+# ==============================================================================
+# GESTÃO DE PRODUTOS & VENDAS NO BALCÃO (PDV)
+# ==============================================================================
+
+@app.route("/admin/produtos")
+@login_requerido
+def admin_produtos():
+    estab_id = session.get("estabelecimento_id") or 1
+    produtos = models.listar_produtos(estabelecimento_id=estab_id, apenas_ativos=False)
+    vendas = models.listar_vendas_produtos(estabelecimento_id=estab_id, limit=25)
+    profissionais = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=estab_id)
+    clientes = models.listar_clientes(estabelecimento_id=estab_id)
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    return render_template(
+        "admin_produtos.html",
+        produtos=produtos,
+        vendas=vendas,
+        profissionais=profissionais,
+        clientes=clientes,
+        sucesso=sucesso,
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/produtos/novo", methods=["GET", "POST"])
+@login_requerido
+def admin_produto_novo():
+    estab_id = session.get("estabelecimento_id") or 1
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        categoria = request.form.get("categoria", "").strip() or None
+        ativo = request.form.get("ativo") == "on"
+
+        try:
+            preco_venda = float(request.form.get("preco_venda") or 0.0)
+            estoque = int(request.form.get("estoque") or 0)
+        except ValueError:
+            erro = "Preço de venda e estoque devem ser numéricos."
+            preco_venda = 0.0
+            estoque = 0
+
+        preco_custo_str = request.form.get("preco_custo", "").strip()
+        preco_custo = float(preco_custo_str) if preco_custo_str else None
+
+        comissao_str = request.form.get("comissao_percentual", "").strip()
+        comissao_percentual = float(comissao_str) if comissao_str else None
+
+        if not nome or preco_venda <= 0:
+            erro = "Nome e Preço de venda válido são obrigatórios."
+
+        if not erro:
+            try:
+                models.criar_produto(
+                    estabelecimento_id=estab_id,
+                    nome=nome,
+                    preco_venda=preco_venda,
+                    preco_custo=preco_custo,
+                    estoque=estoque,
+                    comissao_percentual=comissao_percentual,
+                    categoria=categoria,
+                    ativo=ativo,
+                )
+                return redirect(url_for("admin_produtos", sucesso="Produto cadastrado com sucesso!"))
+            except Exception as e:
+                logger.exception("Erro ao criar produto")
+                erro = f"Erro ao cadastrar produto: {e}"
+
+    return render_template(
+        "admin_produto_form.html",
+        produto=None,
+        erro=erro,
+        titulo="Novo Produto",
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/produtos/<int:produto_id>/editar", methods=["GET", "POST"])
+@login_requerido
+def admin_produto_editar(produto_id):
+    estab_id = session.get("estabelecimento_id") or 1
+    produto = models.obter_produto(produto_id)
+    if not produto:
+        return redirect(url_for("admin_produtos", erro="Produto não encontrado."))
+
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        categoria = request.form.get("categoria", "").strip() or None
+        ativo = request.form.get("ativo") == "on"
+
+        try:
+            preco_venda = float(request.form.get("preco_venda") or 0.0)
+            estoque = int(request.form.get("estoque") or 0)
+        except ValueError:
+            erro = "Preço de venda e estoque devem ser numéricos."
+            preco_venda = produto["preco_venda"]
+            estoque = produto["estoque"]
+
+        preco_custo_str = request.form.get("preco_custo", "").strip()
+        preco_custo = float(preco_custo_str) if preco_custo_str else None
+
+        comissao_str = request.form.get("comissao_percentual", "").strip()
+        comissao_percentual = float(comissao_str) if comissao_str else None
+
+        if not nome or preco_venda <= 0:
+            erro = "Nome e Preço de venda válido são obrigatórios."
+
+        if not erro:
+            try:
+                models.editar_produto(
+                    produto_id=produto_id,
+                    nome=nome,
+                    preco_venda=preco_venda,
+                    preco_custo=preco_custo,
+                    estoque=estoque,
+                    comissao_percentual=comissao_percentual,
+                    categoria=categoria,
+                    ativo=ativo,
+                )
+                return redirect(url_for("admin_produtos", sucesso="Produto atualizado com sucesso!"))
+            except Exception as e:
+                logger.exception("Erro ao atualizar produto")
+                erro = f"Erro ao atualizar produto: {e}"
+
+    return render_template(
+        "admin_produto_form.html",
+        produto=produto,
+        erro=erro,
+        titulo="Editar Produto",
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/produtos/<int:produto_id>/toggle", methods=["POST"])
+@login_requerido
+def admin_produto_toggle(produto_id):
+    novo_status = models.alternar_status_produto(produto_id)
+    status_txt = "ativado" if novo_status else "desativado"
+    return redirect(url_for("admin_produtos", sucesso=f"Produto {status_txt} com sucesso!"))
+
+
+@app.route("/admin/produtos/vender", methods=["POST"])
+@login_requerido
+def admin_produto_vender():
+    estab_id = session.get("estabelecimento_id") or 1
+    produto_id = request.form.get("produto_id", type=int)
+    quantidade = request.form.get("quantidade", type=int) or 1
+    desconto = float(request.form.get("desconto") or 0.0)
+    forma_pagamento = request.form.get("forma_pagamento", "Pix")
+    cliente_id = request.form.get("cliente_id", type=int) or None
+    profissional_id = request.form.get("profissional_id", type=int) or None
+
+    if not produto_id:
+        return redirect(url_for("admin_produtos", erro="Selecione um produto para vender."))
+
+    itens = [{"produto_id": produto_id, "quantidade": quantidade}]
+    ok, msg = models.registrar_venda_produtos(
+        estabelecimento_id=estab_id,
+        itens=itens,
+        cliente_id=cliente_id,
+        profissional_id=profissional_id,
+        forma_pagamento=forma_pagamento,
+        desconto=desconto,
+    )
+    if ok:
+        return redirect(url_for("admin_produtos", sucesso=msg))
+    return redirect(url_for("admin_produtos", erro=msg))
+
+
+# ==============================================================================
+# PORTAL EXCLUSIVO DO PROFISSIONAL (ACESSO INDIVIDUAL)
+# ==============================================================================
+
+@app.route("/pro/login", methods=["GET", "POST"])
+def pro_login():
+    if session.get("profissional_id"):
+        return redirect(url_for("pro_agenda"))
+
+    estab_id = session.get("estabelecimento_id") or 1
+    erro = None
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        senha = request.form.get("senha", "").strip()
+
+        prof = models.autenticar_profissional(email, senha)
+        if prof:
+            session["profissional_id"] = prof["id"]
+            session["profissional_nome"] = prof["nome"]
+            session["estabelecimento_id"] = prof["estabelecimento_id"]
+            return redirect(url_for("pro_agenda"))
+        else:
+            erro = "E-mail ou senha inválidos. Verifique com a administração."
+
+    return render_template(
+        "pro/login.html",
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/pro/logout")
+def pro_logout():
+    session.pop("profissional_id", None)
+    session.pop("profissional_nome", None)
+    return redirect(url_for("pro_login"))
+
+
+@app.route("/pro/agenda")
+@login_profissional_requerido
+def pro_agenda():
+    prof_id = session["profissional_id"]
+    estab_id = session.get("estabelecimento_id") or 1
+    data_sel_str = request.args.get("data", "").strip()
+    hoje = datetime.now().date()
+    hoje_iso = hoje.isoformat()
+
+    if data_sel_str:
+        try:
+            data_sel = datetime.strptime(data_sel_str, "%Y-%m-%d").date()
+        except ValueError:
+            data_sel = hoje
+    else:
+        data_sel = hoje
+
+    agendamentos = models.obter_agenda_profissional(
+        profissional_id=prof_id,
+        data_inicio=data_sel.isoformat(),
+        data_fim=data_sel.isoformat(),
+    )
+
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    return render_template(
+        "pro/agenda.html",
+        agendamentos=agendamentos,
+        data_selecionada=data_sel.isoformat(),
+        data_formatada=data_sel.strftime("%d/%m/%Y"),
+        hoje_iso=hoje_iso,
+        sucesso=sucesso,
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/pro/agendamento/<int:agendamento_id>/realizado", methods=["POST"])
+@login_profissional_requerido
+def pro_concluir_agendamento(agendamento_id):
+    prof_id = session["profissional_id"]
+    ag = models.obter_agendamento(agendamento_id)
+    if not ag or ag["profissional_id"] != prof_id:
+        return redirect(url_for("pro_agenda", erro="Agendamento não encontrado ou não pertence a você."))
+
+    ok, erro = models.atualizar_status_agendamento(agendamento_id, "realizado")
+    if ok:
+        return redirect(url_for("pro_agenda", sucesso="Atendimento marcado como Realizado e comissão apurada com sucesso!"))
+    return redirect(url_for("pro_agenda", erro=erro or "Erro ao atualizar atendimento."))
+
+
+@app.route("/pro/comissoes")
+@login_profissional_requerido
+def pro_comissoes():
+    prof_id = session["profissional_id"]
+    estab_id = session.get("estabelecimento_id") or 1
+
+    comissoes = models.listar_comissoes(
+        estabelecimento_id=estab_id,
+        profissional_id=prof_id,
+    )
+    resumo = models.obter_resumo_comissoes(
+        estabelecimento_id=estab_id,
+        profissional_id=prof_id,
+    )
+    profissional = models.obter_profissional(prof_id)
+
+    return render_template(
+        "pro/comissoes.html",
+        comissoes=comissoes,
+        resumo=resumo,
+        profissional=profissional,
+        **_carregar_config_template(estab_id),
+    )
+
 
 
 @app.route("/admin/configuracoes", methods=["GET", "POST"])
