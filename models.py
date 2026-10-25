@@ -1990,17 +1990,17 @@ def listar_pacotes(estabelecimento_id=1, apenas_ativos=False):
         return [dict(r) for r in rows]
 
 
-def criar_pacote(estabelecimento_id, nome, descricao, servico_id, quantidade_sessoes, preco, validade_dias=60):
+def criar_pacote(estabelecimento_id, nome, descricao, servico_id, quantidade_sessoes, preco, validade_dias=60, ativo=True):
     """Cria um novo pacote de serviços."""
     with db_session() as conn:
         row = conn.execute(
             """
             INSERT INTO pacote (
                 estabelecimento_id, nome, descricao, servico_id, quantidade_sessoes, preco, validade_dias, ativo
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (estabelecimento_id, nome.strip(), descricao.strip(), servico_id, int(quantidade_sessoes), float(preco), int(validade_dias)),
+            (estabelecimento_id, nome.strip(), descricao.strip(), servico_id, int(quantidade_sessoes), float(preco), int(validade_dias), bool(ativo)),
         ).fetchone()
         return row["id"]
 
@@ -2040,10 +2040,16 @@ def editar_pacote(pacote_id, nome, descricao, servico_id, quantidade_sessoes, pr
         return True
 
 
-def alternar_status_pacote(pacote_id):
+def alternar_status_pacote(pacote_id, estabelecimento_id=None):
     """Ativa ou desativa um pacote."""
     with db_session() as conn:
-        row = conn.execute("SELECT ativo FROM pacote WHERE id = %s", (pacote_id,)).fetchone()
+        filtros = ["id = %s"]
+        params = [pacote_id]
+        if estabelecimento_id:
+            filtros.append("(estabelecimento_id = %s OR estabelecimento_id IS NULL)")
+            params.append(estabelecimento_id)
+        where_clause = " AND ".join(filtros)
+        row = conn.execute(f"SELECT ativo FROM pacote WHERE {where_clause}", params).fetchone()
         if not row:
             return False
         novo_status = not row["ativo"]
@@ -2076,20 +2082,26 @@ def vender_pacote_para_cliente(estabelecimento_id, cliente_id, pacote_id, valor_
         return True, row["id"]
 
 
-def listar_pacotes_do_cliente(cliente_id):
+def listar_pacotes_do_cliente(cliente_id, estabelecimento_id=None):
     """Lista todos os pacotes adquiridos por um cliente com saldo e validade."""
     with db_session() as conn:
+        filtros = ["cp.cliente_id = %s"]
+        params = [cliente_id]
+        if estabelecimento_id:
+            filtros.append("(cp.estabelecimento_id = %s OR cp.estabelecimento_id IS NULL)")
+            params.append(estabelecimento_id)
+        where_clause = " AND ".join(filtros)
         rows = conn.execute(
-            """
+            f"""
             SELECT cp.*, p.nome AS pacote_nome, s.nome AS servico_nome,
                    (cp.quantidade_total - cp.quantidade_utilizada) AS sessoes_restantes
             FROM cliente_pacote cp
             JOIN pacote p ON p.id = cp.pacote_id
             LEFT JOIN servico s ON s.id = p.servico_id
-            WHERE cp.cliente_id = %s
+            WHERE {where_clause}
             ORDER BY cp.status ASC, cp.data_compra DESC
             """,
-            (cliente_id,),
+            params,
         ).fetchall()
         return [dict(r) for r in rows]
 
@@ -2287,16 +2299,22 @@ def obter_resumo_fiados(estabelecimento_id=1):
         }
 
 
-def obter_saldo_devedor_cliente(cliente_id):
+def obter_saldo_devedor_cliente(cliente_id, estabelecimento_id=None):
     """Retorna o valor total devedor atual de um cliente específico."""
     with db_session() as conn:
+        filtros = ["cliente_id = %s", "status <> 'liquidado'"]
+        params = [cliente_id]
+        if estabelecimento_id:
+            filtros.append("(estabelecimento_id = %s OR estabelecimento_id IS NULL)")
+            params.append(estabelecimento_id)
+        where_clause = " AND ".join(filtros)
         row = conn.execute(
-            """
+            f"""
             SELECT COALESCE(SUM(valor - valor_pago), 0.0) AS saldo_devedor
             FROM fiado_lancamento
-            WHERE cliente_id = %s AND status <> 'liquidado'
+            WHERE {where_clause}
             """,
-            (cliente_id,),
+            params,
         ).fetchone()
         return float(row["saldo_devedor"]) if row else 0.0
 

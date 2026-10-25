@@ -1,10 +1,13 @@
 import hashlib
+import logging
 import os
 import re
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+
+logger = logging.getLogger(__name__)
 
 from flask import Flask, abort, g, jsonify, redirect, render_template, request, session, url_for, send_file
 from flask_wtf.csrf import CSRFProtect
