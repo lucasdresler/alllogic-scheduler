@@ -9,7 +9,7 @@ from functools import wraps
 
 logger = logging.getLogger(__name__)
 
-from flask import Flask, abort, g, jsonify, redirect, render_template, request, session, url_for, send_file
+from flask import Flask, abort, g, jsonify, redirect, render_template, request, session, url_for, send_file, send_from_directory
 from flask_wtf.csrf import CSRFProtect
 import io
 import qrcode
@@ -3324,6 +3324,29 @@ def admin_dashboard():
         erro=erro,
         **_carregar_config_template(estab_id),
     )
+
+
+
+# ==============================================================================
+# PWA & ASSET LINKS (GOOGLE PLAY STORE / TWA)
+# ==============================================================================
+
+@app.route("/manifest.json")
+def pwa_manifest():
+    return send_from_directory(app.static_folder, "manifest.json", mimetype="application/manifest+json")
+
+
+@app.route("/sw.js")
+def pwa_service_worker():
+    return send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+
+
+@app.route("/.well-known/assetlinks.json")
+def pwa_assetlinks():
+    assetlinks_path = os.path.join(app.root_path, "static", "assetlinks.json")
+    if os.path.exists(assetlinks_path):
+        return send_from_directory(app.static_folder, "assetlinks.json", mimetype="application/json")
+    return jsonify([])
 
 
 
