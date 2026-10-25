@@ -124,9 +124,19 @@
                         Plano Atual Ativo
                     </button>
                     {% else %}
-                    <a href="https://hub.alllogiconline.com.br/checkout?modulo=agenda&plano=agenda_{{ p_id }}&email={{ estab.email|urlencode }}&nome={{ (estab.nome_responsavel or estab.nome)|urlencode }}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px; background: #0a1f44; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem; text-decoration: none; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 6px rgba(10,31,68,0.15);" onmouseover="this.style.background='#1e3a8a'" onmouseout="this.style.background='#0a1f44'">
-                        <span>Fazer Upgrade para Plano {{ p_cfg.nome }}</span>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    {% set pesos_planos = {'inicial': 1, 'intermediario': 2, 'avancado': 3} %}
+                    {% set peso_atual = pesos_planos.get(plano_atual, 2) %}
+                    {% set peso_alvo = pesos_planos.get(p_id, 2) %}
+                    {% set eh_upgrade = (peso_alvo > peso_atual) %}
+                    <a href="https://hub.alllogiconline.com.br/checkout?modulo=agenda&plano=agenda_{{ p_id }}&email={{ estab.email|urlencode }}&nome={{ (estab.nome_responsavel or estab.nome)|urlencode }}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px; background: {% if eh_upgrade %}#0a1f44{% else %}#475569{% endif %}; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem; text-decoration: none; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 6px rgba(10,31,68,0.15);" onmouseover="this.style.background='{% if eh_upgrade %}#1e3a8a{% else %}#334155{% endif %}'" onmouseout="this.style.background='{% if eh_upgrade %}#0a1f44{% else %}#475569{% endif %}'">
+                        <span>{% if eh_upgrade %}Fazer Upgrade para Plano {{ p_cfg.nome }}{% else %}Fazer Downgrade para Plano {{ p_cfg.nome }}{% endif %}</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            {% if eh_upgrade %}
+                            <line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline>
+                            {% else %}
+                            <line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline>
+                            {% endif %}
+                        </svg>
                     </a>
                     <small style="display: block; text-align: center; margin-top: 6px; color: #64748b; font-size: 0.74rem;">
                         ⚡ Checkout seguro e ativação imediata via PIX ou Cartão
