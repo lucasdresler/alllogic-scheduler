@@ -1979,7 +1979,8 @@ def listar_pacotes(estabelecimento_id=1, apenas_ativos=False):
     with db_session() as conn:
         filtro_ativo = "AND p.ativo = TRUE" if apenas_ativos else ""
         query = f"""
-            SELECT p.*, s.nome AS servico_nome, s.preco AS servico_preco_unitario
+            SELECT p.*, s.nome AS servico_nome, s.preco AS servico_preco_unitario,
+                   COALESCE(s.duracao_minutos, 30) AS servico_duracao_minutos
             FROM pacote p
             LEFT JOIN servico s ON s.id = p.servico_id
             WHERE (p.estabelecimento_id = %s OR p.estabelecimento_id IS NULL)

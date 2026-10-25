@@ -731,12 +731,14 @@ def _obter_dados_nicho(slug=""):
 def index():
     servicos = models.listar_servicos(apenas_ativos=True, estabelecimento_id=1)
     profissionais = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=1)
+    pacotes = models.listar_pacotes(estabelecimento_id=1, apenas_ativos=True)
     config = _carregar_config_template(1)
     dados_nicho = _obter_dados_nicho("default")
     return render_template(
         "index.html",
         servicos=servicos,
         profissionais=profissionais,
+        pacotes=pacotes,
         slug="",
         **dados_nicho,
         **config,
@@ -754,6 +756,7 @@ def agendar_por_slug(slug):
     estab_id = est["id"]
     servicos = models.listar_servicos(apenas_ativos=True, estabelecimento_id=estab_id)
     profissionais = models.listar_profissionais(apenas_ativos=True, estabelecimento_id=estab_id)
+    pacotes = models.listar_pacotes(estabelecimento_id=estab_id, apenas_ativos=True)
     config = _carregar_config_template(estab_id)
     dados_nicho = _obter_dados_nicho(slug_limpo)
 
@@ -761,6 +764,7 @@ def agendar_por_slug(slug):
         "index.html",
         servicos=servicos,
         profissionais=profissionais,
+        pacotes=pacotes,
         estabelecimento=est,
         slug=slug_limpo,
         **dados_nicho,

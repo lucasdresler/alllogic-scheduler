@@ -88,7 +88,7 @@
                             <span style="font-size: 0.82rem; color: var(--text-muted);">Selecione um ou mais serviços</span>
                         </div>
                         <span style="font-size: 0.78rem; font-weight: 600; color: #10B981; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 999px;">
-                            {{ servicos|length }} disponíveis
+                            {{ servicos|length + (pacotes|length if pacotes else 0) }} disponíveis
                         </span>
                     </div>
 
@@ -135,28 +135,64 @@
                         </button>
                         {% endfor %}
                     </div>
-                </div>
 
-                {% if profissionais %}
-                <!-- Seção Nossa Equipe de Profissionais -->
-                <div class="secao-equipe-vitrine">
-                    <div class="equipe-titulo-bloco">
-                        <h3 class="equipe-titulo">Equipe de Especialistas</h3>
-                        <span class="equipe-subtitulo">Profissionais prontos para te atender</span>
-                    </div>
-                    <div class="equipe-cards-grid">
-                        {% for prof in profissionais %}
-                        <div class="card-profissional-vitrine">
-                            <div class="profissional-avatar-box">
-                                {{ prof.nome[0]|upper }}
+                    {% if pacotes %}
+                    <!-- Seção de Pacotes de Serviços Promocionais -->
+                    <div style="margin-top: 22px; border-top: 1px dashed var(--border-subtle); padding-top: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 7px;">
+                                <span style="font-size: 1.15rem;">🎟️</span>
+                                <div>
+                                    <strong style="font-size: 0.98rem; color: var(--navy-900); display: block;">Pacotes de Serviços & Sessões</strong>
+                                    <span style="font-size: 0.76rem; color: var(--text-muted);">Compre combos com desconto e agende a 1ª sessão</span>
+                                </div>
                             </div>
-                            <strong class="profissional-nome-vitrine">{{ prof.nome }}</strong>
-                            <span class="profissional-cargo-vitrine">Verificado</span>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #D97706; background: rgba(245, 158, 11, 0.12); padding: 3px 9px; border-radius: 999px;">
+                                Mais Econômico
+                            </span>
                         </div>
-                        {% endfor %}
+
+                        <div class="opcoes-grid" style="display: flex; flex-direction: column; gap: 10px;">
+                            {% for pct in pacotes %}
+                            <button type="button" class="opcao-btn opcao-btn-servico opcao-btn-pacote" data-etapa="servico"
+                                    data-id="{{ pct.servico_id }}"
+                                    data-pacote-id="{{ pct.id }}"
+                                    data-nome="{{ pct.nome }} ({{ pct.quantidade_sessoes }} sessões)"
+                                    data-preco="{{ pct.preco }}"
+                                    data-duracao="{{ pct.servico_duracao_minutos }}">
+                                <div class="servico-card-conteudo">
+                                    <div class="servico-icone-box" style="background: rgba(217, 119, 6, 0.1); border-color: rgba(217, 119, 6, 0.25);">
+                                        🎟️
+                                    </div>
+                                    <div class="servico-texto-box">
+                                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                            <strong class="servico-nome-destaque">{{ pct.nome }}</strong>
+                                            <span style="background: #FEF3C7; color: #B45309; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;">
+                                                {{ pct.quantidade_sessoes }} sessões
+                                            </span>
+                                        </div>
+                                        {% if pct.descricao %}
+                                        <span class="servico-desc-texto">{{ pct.descricao }}</span>
+                                        {% endif %}
+                                        <div style="display: flex; gap: 10px; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; flex-wrap: wrap;">
+                                            <span>✂️ {{ pct.servico_nome or 'Serviço Incluso' }}</span>
+                                            <span>📅 Validade: {{ pct.validade_dias }} dias</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="servico-preco-coluna">
+                                    <span class="servico-preco-valor" style="color: #B45309;">R$ {{ "%.2f"|format(pct.preco)|replace(".", ",") }}</span>
+                                    <span style="font-size: 0.68rem; color: var(--text-muted);">pacote completo</span>
+                                    <div class="servico-checkbox-visual">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </div>
+                                </div>
+                            </button>
+                            {% endfor %}
+                        </div>
                     </div>
+                    {% endif %}
                 </div>
-                {% endif %}
 
                 <button type="button" class="btn-primario" id="btn-avancar-1" disabled style="margin-top: 14px; font-size: 1rem; padding: 14px 20px; font-weight: 700;">
                     Avançar para Escolher Horário ➔

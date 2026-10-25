@@ -3370,4 +3370,25 @@ table.tabela-agendamentos .col-acoes {
     margin: 0;
 }
 
+/* Estilo para Botão de Pacote no Catálogo */
+.opcao-btn-pacote {
+    border-color: rgba(217, 119, 6, 0.35);
+    background: linear-gradient(to right, rgba(254, 243, 199, 0.18), var(--bg-surface));
+}
+
+.opcao-btn-pacote:hover {
+    border-color: #D97706;
+}
+
+.opcao-btn-pacote.selecionado {
+    border-color: #D97706;
+    background: rgba(245, 158, 11, 0.08);
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.25);
+}
+
+.opcao-btn-pacote.selecionado .servico-checkbox-visual {
+    background: #D97706;
+    border-color: #D97706;
+}
+
 
