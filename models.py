@@ -1807,6 +1807,111 @@ def cancelar_agendamento_por_cliente(token):
     return cancelar_agendamento(ag["id"], usuario="cliente")
 
 
+def confirmar_presenca_por_cliente(token):
+    """
+    Confirma a presença do cliente no agendamento através do token público com 1 clique.
+    """
+    if not token or not str(token).strip():
+        return False, "Token de acesso inválido."
+    token = str(token).strip()
+
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id, status, confirmado_pelo_cliente FROM agendamento WHERE token_acesso = %s",
+            (token,),
+        ).fetchone()
+        if not row:
+            return False, "Agendamento não encontrado."
+        if row["status"] != "agendado":
+            return False, f"Não é possível confirmar presença para agendamento com status '{row['status']}'."
+        if row["confirmado_pelo_cliente"]:
+            return True, "Sua presença já foi confirmada anteriormente."
+
+        conn.execute(
+            """
+            UPDATE agendamento
+            SET confirmado_pelo_cliente = TRUE,
+                confirmado_em = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """,
+            (row["id"],),
+        )
+        return True, "Presença confirmada com sucesso!"
+
+
+def buscar_agendamentos_para_lembretes(estabelecimento_id=None):
+    """
+    Localiza agendamentos futuros elegíveis para lembrete de 24h ou 2h via WhatsApp.
+    Retorna dicionário com listas de ids para cada tipo de lembrete.
+    """
+    from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo
+        tz_br = ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        tz_br = None
+
+    agora = datetime.now(tz_br) if tz_br else datetime.now()
+
+    with db_session() as conn:
+        filtro_estab = "AND estabelecimento_id = %s" if estabelecimento_id else ""
+        params = [agora.strftime("%Y-%m-%d")]
+        if estabelecimento_id:
+            params.append(estabelecimento_id)
+
+        rows = conn.execute(
+            f"""
+            SELECT id, data, hora, lembrete_24h_enviado_em, lembrete_2h_enviado_em, cliente_telefone, estabelecimento_id
+            FROM agendamento
+            WHERE status = 'agendado'
+              AND data >= %s
+              AND cliente_telefone IS NOT NULL
+              AND cliente_telefone <> ''
+              AND (lembrete_24h_enviado_em IS NULL OR lembrete_2h_enviado_em IS NULL)
+              {filtro_estab}
+            ORDER BY data ASC, hora ASC
+            """,
+            params,
+        ).fetchall()
+
+    elegiveis_24h = []
+    elegiveis_2h = []
+
+    for r in rows:
+        data_str = r["data"]
+        hora_str = r["hora"]
+        try:
+            dt_agenda = datetime.strptime(f"{data_str} {hora_str}", "%Y-%m-%d %H:%M")
+            if tz_br:
+                dt_agenda = dt_agenda.replace(tzinfo=tz_br)
+            delta_horas = (dt_agenda - agora).total_seconds() / 3600.0
+
+            # Lembrete 24h: entre 20h e 28h de antecedência
+            if 20.0 <= delta_horas <= 28.0 and not r["lembrete_24h_enviado_em"]:
+                elegiveis_24h.append(r["id"])
+
+            # Lembrete 2h: entre 0.5h (30min) e 3.0h de antecedência
+            if 0.5 <= delta_horas <= 3.0 and not r["lembrete_2h_enviado_em"]:
+                elegiveis_2h.append(r["id"])
+        except Exception:
+            continue
+
+    return {
+        "lembretes_24h": elegiveis_24h,
+        "lembretes_2h": elegiveis_2h,
+    }
+
+
+def marcar_lembrete_enviado(agendamento_id, tipo="24h"):
+    """Registra timestamp do disparo de lembrete 24h ou 2h."""
+    col = "lembrete_24h_enviado_em" if tipo == "24h" else "lembrete_2h_enviado_em"
+    with db_session() as conn:
+        conn.execute(
+            f"UPDATE agendamento SET {col} = CURRENT_TIMESTAMP WHERE id = %s",
+            (agendamento_id,),
+        )
+
+
 # ==============================================================================
 # AGILLEX PAY — GESTÃO DE PAGAMENTOS E TRANSAÇÕES
 # ==============================================================================
@@ -1863,4 +1968,335 @@ def obter_agendamento_por_asaas_id(asaas_payment_id):
             (asaas_payment_id.strip(),),
         ).fetchone()
         return dict(row) if row else None
+
+
+# ==============================================================================
+# CONTROLE DE PACOTES DE SERVIÇOS
+# ==============================================================================
+
+def listar_pacotes(estabelecimento_id=1, apenas_ativos=False):
+    """Lista todos os pacotes cadastrados para o estabelecimento."""
+    with db_session() as conn:
+        filtro_ativo = "AND p.ativo = TRUE" if apenas_ativos else ""
+        query = f"""
+            SELECT p.*, s.nome AS servico_nome, s.preco AS servico_preco_unitario
+            FROM pacote p
+            LEFT JOIN servico s ON s.id = p.servico_id
+            WHERE (p.estabelecimento_id = %s OR p.estabelecimento_id IS NULL)
+            {filtro_ativo}
+            ORDER BY p.ativo DESC, p.nome ASC
+        """
+        rows = conn.execute(query, (estabelecimento_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def criar_pacote(estabelecimento_id, nome, descricao, servico_id, quantidade_sessoes, preco, validade_dias=60):
+    """Cria um novo pacote de serviços."""
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            INSERT INTO pacote (
+                estabelecimento_id, nome, descricao, servico_id, quantidade_sessoes, preco, validade_dias, ativo
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+            RETURNING id
+            """,
+            (estabelecimento_id, nome.strip(), descricao.strip(), servico_id, int(quantidade_sessoes), float(preco), int(validade_dias)),
+        ).fetchone()
+        return row["id"]
+
+
+def obter_pacote(pacote_id):
+    """Retorna dados de um pacote específico."""
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT p.*, s.nome AS servico_nome
+            FROM pacote p
+            LEFT JOIN servico s ON s.id = p.servico_id
+            WHERE p.id = %s
+            """,
+            (pacote_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def editar_pacote(pacote_id, nome, descricao, servico_id, quantidade_sessoes, preco, validade_dias, ativo=True):
+    """Atualiza os dados de um pacote de serviços."""
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE pacote
+            SET nome = %s,
+                descricao = %s,
+                servico_id = %s,
+                quantidade_sessoes = %s,
+                preco = %s,
+                validade_dias = %s,
+                ativo = %s
+            WHERE id = %s
+            """,
+            (nome.strip(), descricao.strip(), servico_id, int(quantidade_sessoes), float(preco), int(validade_dias), bool(ativo), pacote_id),
+        )
+        return True
+
+
+def alternar_status_pacote(pacote_id):
+    """Ativa ou desativa um pacote."""
+    with db_session() as conn:
+        row = conn.execute("SELECT ativo FROM pacote WHERE id = %s", (pacote_id,)).fetchone()
+        if not row:
+            return False
+        novo_status = not row["ativo"]
+        conn.execute("UPDATE pacote SET ativo = %s WHERE id = %s", (novo_status, pacote_id))
+        return novo_status
+
+
+def vender_pacote_para_cliente(estabelecimento_id, cliente_id, pacote_id, valor_pago=None, pago=True, observacoes=""):
+    """Registra a aquisição de um pacote por um cliente."""
+    from datetime import date, timedelta
+    pacote = obter_pacote(pacote_id)
+    if not pacote:
+        return False, "Pacote não encontrado."
+
+    validade_dias = pacote.get("validade_dias") or 60
+    data_exp = date.today() + timedelta(days=validade_dias)
+    preco = float(valor_pago if valor_pago is not None else pacote["preco"])
+
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            INSERT INTO cliente_pacote (
+                estabelecimento_id, cliente_id, pacote_id, quantidade_total, quantidade_utilizada,
+                status, valor_pago, pago, data_expiracao, observacoes
+            ) VALUES (%s, %s, %s, %s, 0, 'ativo', %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (estabelecimento_id, cliente_id, pacote_id, pacote["quantidade_sessoes"], preco, bool(pago), data_exp, observacoes.strip()),
+        ).fetchone()
+        return True, row["id"]
+
+
+def listar_pacotes_do_cliente(cliente_id):
+    """Lista todos os pacotes adquiridos por um cliente com saldo e validade."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT cp.*, p.nome AS pacote_nome, s.nome AS servico_nome,
+                   (cp.quantidade_total - cp.quantidade_utilizada) AS sessoes_restantes
+            FROM cliente_pacote cp
+            JOIN pacote p ON p.id = cp.pacote_id
+            LEFT JOIN servico s ON s.id = p.servico_id
+            WHERE cp.cliente_id = %s
+            ORDER BY cp.status ASC, cp.data_compra DESC
+            """,
+            (cliente_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def listar_todos_pacotes_clientes(estabelecimento_id=1, status=None):
+    """Lista todos os pacotes de clientes para a visão geral administrativa."""
+    with db_session() as conn:
+        filtro_status = "AND cp.status = %s" if status else ""
+        params = [estabelecimento_id]
+        if status:
+            params.append(status)
+
+        query = f"""
+            SELECT cp.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                   p.nome AS pacote_nome, s.nome AS servico_nome,
+                   (cp.quantidade_total - cp.quantidade_utilizada) AS sessoes_restantes
+            FROM cliente_pacote cp
+            JOIN cliente c ON c.id = cp.cliente_id
+            JOIN pacote p ON p.id = cp.pacote_id
+            LEFT JOIN servico s ON s.id = p.servico_id
+            WHERE (cp.estabelecimento_id = %s OR cp.estabelecimento_id IS NULL)
+            {filtro_status}
+            ORDER BY cp.data_compra DESC
+        """
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+
+def abater_sessao_pacote_cliente(cliente_pacote_id, agendamento_id=None, observacao=""):
+    """Consome 1 sessão do saldo de um pacote ativo do cliente."""
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id, quantidade_total, quantidade_utilizada, status FROM cliente_pacote WHERE id = %s",
+            (cliente_pacote_id,),
+        ).fetchone()
+        if not row:
+            return False, "Pacote do cliente não encontrado."
+
+        if row["status"] != "ativo":
+            return False, f"Pacote não está ativo (status: {row['status']})."
+
+        nova_utilizada = row["quantidade_utilizada"] + 1
+        if nova_utilizada > row["quantidade_total"]:
+            return False, "Todas as sessões deste pacote já foram utilizadas."
+
+        novo_status = "esgotado" if nova_utilizada >= row["quantidade_total"] else "ativo"
+
+        conn.execute(
+            "UPDATE cliente_pacote SET quantidade_utilizada = %s, status = %s WHERE id = %s",
+            (nova_utilizada, novo_status, cliente_pacote_id),
+        )
+
+        obs = observacao.strip() or f"Sessão {nova_utilizada} de {row['quantidade_total']} utilizada"
+        conn.execute(
+            """
+            INSERT INTO cliente_pacote_uso (cliente_pacote_id, agendamento_id, observacao)
+            VALUES (%s, %s, %s)
+            """,
+            (cliente_pacote_id, agendamento_id, obs),
+        )
+
+        restantes = row["quantidade_total"] - nova_utilizada
+        return True, f"Sessão abatida com sucesso! Restam {restantes} sessões."
+
+
+# ==============================================================================
+# CONTROLE DE FIADOS (CONTAS A RECEBER)
+# ==============================================================================
+
+def criar_lancamento_fiado(estabelecimento_id, cliente_id, valor, descricao, data_vencimento=None, agendamento_id=None):
+    """Cria um débito pendente para um cliente."""
+    from datetime import date
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            INSERT INTO fiado_lancamento (
+                estabelecimento_id, cliente_id, agendamento_id, descricao, valor, valor_pago,
+                status, data_lancamento, data_vencimento
+            ) VALUES (%s, %s, %s, %s, %s, 0.00, 'pendente', CURRENT_DATE, %s)
+            RETURNING id
+            """,
+            (estabelecimento_id, cliente_id, agendamento_id, descricao.strip(), float(valor), data_vencimento or None),
+        ).fetchone()
+        return row["id"]
+
+
+def listar_fiados(estabelecimento_id=1, status=None, cliente_id=None):
+    """Lista todos os lançamentos de fiado com detalhes do cliente."""
+    with db_session() as conn:
+        filtros = ["(f.estabelecimento_id = %s OR f.estabelecimento_id IS NULL)"]
+        params = [estabelecimento_id]
+
+        if status:
+            filtros.append("f.status = %s")
+            params.append(status)
+        if cliente_id:
+            filtros.append("f.cliente_id = %s")
+            params.append(cliente_id)
+
+        where_clause = " AND ".join(filtros)
+        query = f"""
+            SELECT f.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                   (f.valor - f.valor_pago) AS saldo_devedor
+            FROM fiado_lancamento f
+            JOIN cliente c ON c.id = f.cliente_id
+            WHERE {where_clause}
+            ORDER BY f.status ASC, f.data_lancamento DESC
+        """
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+
+def obter_fiado(fiado_id):
+    """Retorna detalhes de um lançamento de fiado."""
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT f.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
+                   (f.valor - f.valor_pago) AS saldo_devedor
+            FROM fiado_lancamento f
+            JOIN cliente c ON c.id = f.cliente_id
+            WHERE f.id = %s
+            """,
+            (fiado_id,),
+        ).fetchone()
+        if not row:
+            return None
+        fiado = dict(row)
+
+        pagamentos = conn.execute(
+            "SELECT * FROM fiado_pagamento WHERE fiado_id = %s ORDER BY data_pagamento DESC",
+            (fiado_id,),
+        ).fetchall()
+        fiado["pagamentos"] = [dict(p) for p in pagamentos]
+        return fiado
+
+
+def registrar_pagamento_fiado(fiado_id, valor_pago, forma_pagamento="pix", observacao=""):
+    """Registra pagamento total ou parcial de um fiado pendente."""
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT id, valor, valor_pago, status FROM fiado_lancamento WHERE id = %s",
+            (fiado_id,),
+        ).fetchone()
+        if not row:
+            return False, "Lançamento de fiado não encontrado."
+
+        val_pagamento = float(valor_pago)
+        if val_pagamento <= 0:
+            return False, "Valor de pagamento deve ser maior que zero."
+
+        novo_valor_pago = float(row["valor_pago"]) + val_pagamento
+        total_devido = float(row["valor"])
+
+        novo_status = "liquidado" if novo_valor_pago >= (total_devido - 0.01) else "pago_parcial"
+
+        conn.execute(
+            "UPDATE fiado_lancamento SET valor_pago = %s, status = %s WHERE id = %s",
+            (novo_valor_pago, novo_status, fiado_id),
+        )
+
+        conn.execute(
+            """
+            INSERT INTO fiado_pagamento (fiado_id, valor_pago, forma_pagamento, observacao)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (fiado_id, val_pagamento, forma_pagamento.strip().lower(), observacao.strip()),
+        )
+
+        restante = max(0.0, total_devido - novo_valor_pago)
+        msg = "Fiado totalmente quitado!" if novo_status == "liquidado" else f"Pagamento registrado! Saldo restante: R$ {restante:.2f}".replace(".", ",")
+        return True, msg
+
+
+def obter_resumo_fiados(estabelecimento_id=1):
+    """Retorna totais consolidados de fiados para cards do dashboard."""
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT 
+                COALESCE(SUM(valor - valor_pago) FILTER (WHERE status <> 'liquidado'), 0.0) AS total_a_receber,
+                COALESCE(SUM(valor_pago), 0.0) AS total_recebido,
+                COUNT(DISTINCT cliente_id) FILTER (WHERE status <> 'liquidado') AS clientes_com_pendencia,
+                COUNT(*) FILTER (WHERE status <> 'liquidado') AS total_lancamentos_pendentes
+            FROM fiado_lancamento
+            WHERE (estabelecimento_id = %s OR estabelecimento_id IS NULL)
+            """,
+            (estabelecimento_id,),
+        ).fetchone()
+        return dict(row) if row else {
+            "total_a_receber": 0.0,
+            "total_recebido": 0.0,
+            "clientes_com_pendencia": 0,
+            "total_lancamentos_pendentes": 0,
+        }
+
+
+def obter_saldo_devedor_cliente(cliente_id):
+    """Retorna o valor total devedor atual de um cliente específico."""
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT COALESCE(SUM(valor - valor_pago), 0.0) AS saldo_devedor
+            FROM fiado_lancamento
+            WHERE cliente_id = %s AND status <> 'liquidado'
+            """,
+            (cliente_id,),
+        ).fetchone()
+        return float(row["saldo_devedor"]) if row else 0.0
 

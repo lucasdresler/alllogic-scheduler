@@ -322,3 +322,161 @@ def notificar_cancelamento_whatsapp(agendamento_id, url_base=None):
 
     thread = threading.Thread(target=_worker, daemon=True)
     thread.start()
+
+
+def formatar_mensagem_lembrete_24h(agendamento, config, url_base):
+    """
+    Formata lembrete ativo de 24 horas antes com links de ação rápida:
+    - 1-clique para confirmar presença
+    - link para reagendar ou cancelar
+    """
+    nome_estabelecimento = config.get("nome_estabelecimento") or "Salão"
+    cliente_nome = agendamento.get("cliente_nome", "Cliente")
+    data_fmt = _formatar_data_br(agendamento.get("data", ""))
+    hora = agendamento.get("hora", "")
+    servicos = agendamento.get("servico_nome", "Serviço")
+    profissional = agendamento.get("profissional_nome", "Profissional")
+    endereco = config.get("endereco_estabelecimento") or config.get("endereco") or ""
+
+    token = agendamento.get("token_acesso", "")
+    url_base_limpa = (url_base or "https://agenda.alllogiconline.com.br").rstrip("/")
+    url_confirmar = f"{url_base_limpa}/reserva/{token}?confirmar=1" if token else url_base_limpa
+    url_reserva = f"{url_base_limpa}/reserva/{token}" if token else url_base_limpa
+
+    linhas = [
+        "⏰ *Lembrete: Seu horário é amanhã!*",
+        f"💈 *{nome_estabelecimento}*",
+        "",
+        f"Olá, *{cliente_nome}*!",
+        "Passando para lembrar do seu atendimento confirmado para amanhã:",
+        "",
+        f"✂️ *Serviço:* {servicos}",
+        f"👤 *Profissional:* {profissional}",
+        f"📅 *Data:* {data_fmt} às *{hora}*",
+    ]
+
+    if endereco:
+        linhas.append(f"📍 *Endereço:* {endereco}")
+
+    linhas.extend([
+        "",
+        "Por favor, confirme sua presença clicando no botão abaixo:",
+        f"✅ *1-Clique para Confirmar Presença:*",
+        url_confirmar,
+        "",
+        "Caso precise reagendar ou cancelar, use o link da sua reserva:",
+        f"🔄 *Reagendar ou Cancelar:*",
+        url_reserva,
+    ])
+
+    return "\n".join(linhas)
+
+
+def formatar_mensagem_lembrete_2h(agendamento, config, url_base):
+    """
+    Formata lembrete ativo de 2 horas antes com aviso de pontualidade e link da reserva.
+    """
+    nome_estabelecimento = config.get("nome_estabelecimento") or "Salão"
+    cliente_nome = agendamento.get("cliente_nome", "Cliente")
+    hora = agendamento.get("hora", "")
+    servicos = agendamento.get("servico_nome", "Serviço")
+    profissional = agendamento.get("profissional_nome", "Profissional")
+    endereco = config.get("endereco_estabelecimento") or config.get("endereco") or ""
+
+    token = agendamento.get("token_acesso", "")
+    url_base_limpa = (url_base or "https://agenda.alllogiconline.com.br").rstrip("/")
+    url_reserva = f"{url_base_limpa}/reserva/{token}" if token else url_base_limpa
+
+    linhas = [
+        "🔔 *Seu horário é daqui a pouco (em 2 horas)!*",
+        f"💈 *{nome_estabelecimento}*",
+        "",
+        f"Olá, *{cliente_nome}*! Tudo pronto para o seu atendimento hoje às *{hora}*:",
+        "",
+        f"✂️ *Serviço:* {servicos}",
+        f"👤 *Profissional:* {profissional}",
+        f"⏰ *Horário:* {hora}",
+    ]
+
+    if endereco:
+        linhas.append(f"📍 *Endereço:* {endereco}")
+
+    linhas.extend([
+        "",
+        "Te esperamos pontualmente! Para traçar rota ou ver sua reserva:",
+        f"👉 {url_reserva}",
+    ])
+
+    return "\n".join(linhas)
+
+
+def disparar_lembrete_agendamento(agendamento_id, tipo="24h", url_base=None):
+    """
+    Envia lembrete ativo para o agendamento especificado e registra no banco.
+    Retorna (True, None) ou (False, erro).
+    """
+    try:
+        import models
+        from database import db_session, obter_todas_configuracoes
+
+        agendamento = models.obter_agendamento_completo(agendamento_id)
+        if not agendamento or agendamento.get("status") != "agendado":
+            return False, "Agendamento não encontrado ou não está ativo."
+
+        telefone = agendamento.get("cliente_telefone")
+        if not telefone:
+            return False, "Agendamento sem telefone de cliente cadastrado."
+
+        with db_session() as conn:
+            config = obter_todas_configuracoes(conn)
+
+        base_url = url_base or os.environ.get("APP_URL_BASE", "https://agenda.alllogiconline.com.br")
+
+        if tipo == "24h":
+            msg = formatar_mensagem_lembrete_24h(agendamento, config, base_url)
+        else:
+            msg = formatar_mensagem_lembrete_2h(agendamento, config, base_url)
+
+        enviado, erro = enviar_mensagem_evolution_api(telefone, msg)
+        if enviado:
+            models.marcar_lembrete_enviado(agendamento_id, tipo=tipo)
+            return True, None
+        return False, erro
+    except Exception as e:
+        logger.error(f"Erro ao disparar lembrete {tipo} para agendamento {agendamento_id}: {e}")
+        return False, str(e)
+
+
+def processar_e_enviar_lembretes_whatsapp(url_base=None, estabelecimento_id=None):
+    """
+    Processa todos os agendamentos elegíveis para lembrete de 24h e 2h.
+    Retorna resumo com quantidades processadas e enviadas.
+    """
+    import models
+
+    pendentes = models.buscar_agendamentos_para_lembretes(estabelecimento_id=estabelecimento_id)
+    enviados_24h = 0
+    enviados_2h = 0
+    erros = []
+
+    for ag_id in pendentes.get("lembretes_24h", []):
+        ok, err = disparar_lembrete_agendamento(ag_id, tipo="24h", url_base=url_base)
+        if ok:
+            enviados_24h += 1
+        elif err:
+            erros.append(f"Agendamento #{ag_id} (24h): {err}")
+
+    for ag_id in pendentes.get("lembretes_2h", []):
+        ok, err = disparar_lembrete_agendamento(ag_id, tipo="2h", url_base=url_base)
+        if ok:
+            enviados_2h += 1
+        elif err:
+            erros.append(f"Agendamento #{ag_id} (2h): {err}")
+
+    return {
+        "sucesso": True,
+        "enviados_24h": enviados_24h,
+        "enviados_2h": enviados_2h,
+        "total_enviados": enviados_24h + enviados_2h,
+        "erros": erros,
+    }

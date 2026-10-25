@@ -1,0 +1,210 @@
+{% extends "base_admin.html" %}
+
+{% block titulo_pagina %}Pacotes de Serviços{% endblock %}
+{% block subtitulo_topbar %}Venda de pacotes de sessões e créditos para clientes{% endblock %}
+
+{% block conteudo_admin %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--navy-900); margin: 0 0 4px 0;">Controle de Pacotes</h2>
+        <span style="font-size: 0.88rem; color: var(--text-muted);">Crie planos de sessões recorrentes (ex: 4 cortes no mês, 10 sessões de massagem)</span>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn-secundario" onclick="document.getElementById('modal-vender-pacote').style.display='flex';" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            <span>Vender Pacote para Cliente</span>
+        </button>
+        <a href="{{ url_for('admin_pacote_novo') }}" class="btn-primario" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 600;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Criar Novo Pacote</span>
+        </a>
+    </div>
+</div>
+
+{% if sucesso %}
+<div class="mensagem-sucesso" style="margin-bottom: 20px;">{{ sucesso }}</div>
+{% endif %}
+{% if erro %}
+<div class="mensagem-erro" style="margin-bottom: 20px;">{{ erro }}</div>
+{% endif %}
+
+<!-- Cards de Pacotes Disponíveis -->
+<div class="card" style="margin-bottom: 28px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900); margin: 0;">Pacotes Cadastrados</h3>
+        <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 500;">{{ pacotes|length }} pacote(s) cadastrado(s)</span>
+    </div>
+
+    {% if pacotes %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+        {% for p in pacotes %}
+        <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; position: relative;">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <strong style="font-size: 1.05rem; color: var(--navy-900);">{{ p.nome }}</strong>
+                    {% if p.ativo %}
+                    <span style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;">Ativo</span>
+                    {% else %}
+                    <span style="background: rgba(156, 163, 175, 0.15); color: #6B7280; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;">Inativo</span>
+                    {% endif %}
+                </div>
+
+                {% if p.descricao %}
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0 0 10px 0; line-height: 1.4;">{{ p.descricao }}</p>
+                {% endif %}
+
+                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--text-body);">
+                    <div>✂️ <strong>Serviço:</strong> {{ p.servico_nome or 'Geral' }}</div>
+                    <div>🎟️ <strong>Sessões:</strong> {{ p.quantidade_sessoes }} atendimentos</div>
+                    <div>📅 <strong>Validade:</strong> {{ p.validade_dias }} dias</div>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--navy-900);">
+                    R$ {{ "%.2f"|format(p.preco)|replace(".", ",") }}
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <a href="{{ url_for('admin_pacote_editar', pacote_id=p.id) }}" class="btn-acao btn-acao-editar" style="text-decoration: none;" title="Editar Pacote">Editar</a>
+                    <form method="POST" action="{{ url_for('admin_pacote_toggle', pacote_id=p.id) }}" style="margin: 0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-acao" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); cursor: pointer;" title="{% if p.ativo %}Desativar{% else %}Ativar{% endif %}">
+                            {% if p.ativo %}Desativar{% else %}Ativar{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="vazio" style="text-align: center; padding: 30px 0;">Nenhum pacote cadastrado ainda. Clique em "Criar Novo Pacote" para começar.</p>
+    {% endif %}
+</div>
+
+<!-- Tabela de Pacotes Ativos de Clientes -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900); margin: 0;">Pacotes Ativos de Clientes</h3>
+        <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 500;">{{ pacotes_clientes|length }} registro(s)</span>
+    </div>
+
+    {% if pacotes_clientes %}
+    <div style="overflow-x: auto;">
+        <table class="tabela-agendamentos">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Telefone</th>
+                    <th>Pacote</th>
+                    <th>Serviço</th>
+                    <th>Sessões Restantes</th>
+                    <th>Expiração</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cp in pacotes_clientes %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('admin_cliente_detalhes', cliente_id=cp.cliente_id) }}" style="color: var(--navy-900); font-weight: 600; text-decoration: none;">
+                            {{ cp.cliente_nome }}
+                        </a>
+                    </td>
+                    <td>{{ cp.cliente_telefone }}</td>
+                    <td><strong>{{ cp.pacote_nome }}</strong></td>
+                    <td>{{ cp.servico_nome }}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="flex: 1; min-width: 60px; height: 8px; background: #E2E8F0; border-radius: 999px; overflow: hidden;">
+                                {% set pct = ((cp.quantidade_utilizada / cp.quantidade_total) * 100)|int %}
+                                <div style="height: 100%; width: {{ pct }}%; background: {% if cp.sessoes_restantes > 0 %}#10B981{% else %}#94A3B8{% endif %}; border-radius: 999px;"></div>
+                            </div>
+                            <span style="font-weight: 700; font-size: 0.85rem; color: var(--navy-900);">
+                                {{ cp.sessoes_restantes }} / {{ cp.quantidade_total }}
+                            </span>
+                        </div>
+                    </td>
+                    <td style="font-size: 0.85rem;">{{ cp.data_expiracao.strftime('%d/%m/%Y') if cp.data_expiracao else '—' }}</td>
+                    <td>
+                        {% if cp.status == 'ativo' and cp.sessoes_restantes > 0 %}
+                        <span style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">Ativo</span>
+                        {% elif cp.status == 'esgotado' or cp.sessoes_restantes == 0 %}
+                        <span style="background: rgba(156, 163, 175, 0.15); color: #6B7280; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">Esgotado</span>
+                        {% else %}
+                        <span style="background: rgba(239, 68, 68, 0.12); color: #DC2626; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">Expirado</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if cp.status == 'ativo' and cp.sessoes_restantes > 0 %}
+                        <form method="POST" action="{{ url_for('admin_pacote_abater_sessao', cliente_pacote_id=cp.id) }}" onsubmit="return confirm('Deseja abater 1 sessão do pacote de {{ cp.cliente_nome }}?');" style="margin: 0; display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-acao btn-acao-concluir" title="Abater 1 sessão utilizada no atendimento">
+                                -1 Sessão
+                            </button>
+                        </form>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="vazio" style="text-align: center; padding: 24px 0;">Nenhum pacote vendido para clientes até o momento.</p>
+    {% endif %}
+</div>
+
+<!-- Modal Vender Pacote para Cliente -->
+<div id="modal-vender-pacote" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: var(--bg-surface); border-radius: var(--radius-lg); padding: 24px; max-width: 480px; width: 100%; box-shadow: var(--shadow-modal);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+            <h3 style="margin: 0; font-size: 1.2rem; color: var(--navy-900); font-weight: 700;">Vender Pacote para Cliente</h3>
+            <button type="button" onclick="document.getElementById('modal-vender-pacote').style.display='none';" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted);">✕</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin_pacote_vender') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-body);">Selecione o Cliente</label>
+                <select name="cliente_id" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-surface);">
+                    <option value="">Selecione um cliente...</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}">{{ c.nome }} ({{ c.telefone }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-body);">Selecione o Pacote</label>
+                <select name="pacote_id" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-surface);">
+                    <option value="">Selecione um pacote...</option>
+                    {% for p in pacotes %}
+                        {% if p.ativo %}
+                        <option value="{{ p.id }}">{{ p.nome }} — {{ p.quantidade_sessoes }} sessões (R$ {{ "%.2f"|format(p.preco)|replace(".", ",") }})</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-body);">Valor Cobrado (R$)</label>
+                <input type="number" step="0.01" name="valor_pago" placeholder="Deixe em branco para usar o preço padrão" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-surface);">
+            </div>
+
+            <div style="margin-bottom: 18px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-body);">Observações (opcional)</label>
+                <input type="text" name="observacoes" placeholder="Ex: Pago via Pix, promoção de aniversário" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-surface);">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn-secundario" onclick="document.getElementById('modal-vender-pacote').style.display='none';">Cancelar</button>
+                <button type="submit" class="btn-primario">Confirmar Venda</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

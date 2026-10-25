@@ -1,0 +1,254 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "fiados" %}
+
+{% block titulo %}Controle de Fiados & Contas a Receber — {{ nome_estabelecimento }}{% endblock %}
+{% block titulo_pagina %}Controle de Fiados{% endblock %}
+{% block subtitulo_topbar %}Gestão de pendências, contas a receber e baixas de clientes{% endblock %}
+
+{% block conteudo_admin %}
+<!-- Cabeçalho e Ações -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div>
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--navy-900); margin: 0 0 4px 0;">Contas a Receber (Fiados)</h2>
+        <span style="font-size: 0.88rem; color: var(--text-muted);">Acompanhe clientes que ficaram de pagar depois, receba pagamentos parciais ou integrais</span>
+    </div>
+    <div>
+        <button type="button" class="btn-primario" onclick="abrirModalNovoFiado()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Novo Lançamento de Fiado</span>
+        </button>
+    </div>
+</div>
+
+{% if sucesso %}
+<div class="mensagem-sucesso" style="margin-bottom: 20px;">{{ sucesso }}</div>
+{% endif %}
+{% if erro %}
+<div class="mensagem-erro" style="margin-bottom: 20px;">{{ erro }}</div>
+{% endif %}
+
+<!-- Cards de Resumo Financeiro -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px;">
+    <div class="card" style="padding: 18px; border-left: 4px solid #EF4444; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Total a Receber</span>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #DC2626; margin-top: 6px;">
+            R$ {{ '%.2f'|format(resumo.total_a_receber or 0) }}
+        </div>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Em aberto ou parcial</span>
+    </div>
+
+    <div class="card" style="padding: 18px; border-left: 4px solid #10B981; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Total Liquidado</span>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #059669; margin-top: 6px;">
+            R$ {{ '%.2f'|format(resumo.total_recebido or 0) }}
+        </div>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Baixados com sucesso</span>
+    </div>
+
+    <div class="card" style="padding: 18px; border-left: 4px solid #F59E0B; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Contas em Aberto</span>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--navy-900); margin-top: 6px;">
+            {{ resumo.total_lancamentos_pendentes or 0 }}
+        </div>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">{{ resumo.clientes_com_pendencia or 0 }} cliente(s) com débitos</span>
+    </div>
+</div>
+
+<!-- Filtros de Status -->
+<div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+    <a href="{{ url_for('admin_fiados') }}" class="btn-secundario {% if not status_filtro %}btn-ativo{% endif %}" style="font-size: 0.82rem; padding: 6px 14px; text-decoration: none; border-radius: 999px; {% if not status_filtro %}background: var(--navy-900); color: white; border-color: var(--navy-900);{% endif %}">
+        Todos
+    </a>
+    <a href="{{ url_for('admin_fiados', status='pendente') }}" class="btn-secundario" style="font-size: 0.82rem; padding: 6px 14px; text-decoration: none; border-radius: 999px; {% if status_filtro == 'pendente' %}background: #DC2626; color: white; border-color: #DC2626;{% endif %}">
+        Em Aberto
+    </a>
+    <a href="{{ url_for('admin_fiados', status='pago_parcial') }}" class="btn-secundario" style="font-size: 0.82rem; padding: 6px 14px; text-decoration: none; border-radius: 999px; {% if status_filtro == 'pago_parcial' %}background: #D97706; color: white; border-color: #D97706;{% endif %}">
+        Parcialmente Pagos
+    </a>
+    <a href="{{ url_for('admin_fiados', status='liquidado') }}" class="btn-secundario" style="font-size: 0.82rem; padding: 6px 14px; text-decoration: none; border-radius: 999px; {% if status_filtro == 'liquidado' %}background: #059669; color: white; border-color: #059669;{% endif %}">
+        Liquidados
+    </a>
+</div>
+
+<!-- Tabela de Lançamentos -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--navy-900); margin: 0;">Lançamentos de Fiados</h3>
+        <span style="font-size: 0.82rem; color: var(--text-muted);">{{ fiados|length }} registro(s)</span>
+    </div>
+
+    {% if fiados %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+                <tr style="background: var(--bg-surface-subtle); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">
+                    <th style="padding: 12px 18px;">Data</th>
+                    <th style="padding: 12px 18px;">Cliente</th>
+                    <th style="padding: 12px 18px;">Descrição</th>
+                    <th style="padding: 12px 18px;">Valor Total</th>
+                    <th style="padding: 12px 18px;">Valor Pago</th>
+                    <th style="padding: 12px 18px;">Saldo Devedor</th>
+                    <th style="padding: 12px 18px;">Vencimento</th>
+                    <th style="padding: 12px 18px;">Status</th>
+                    <th style="padding: 12px 18px; text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in fiados %}
+                {% set saldo = (f.valor or 0) - (f.valor_pago or 0) %}
+                <tr style="border-bottom: 1px solid var(--border-subtle);">
+                    <td style="padding: 14px 18px; color: var(--text-muted); font-size: 0.82rem; white-space: nowrap;">
+                        {{ f.data_lancamento.strftime('%d/%m/%Y') if f.data_lancamento else '-' }}
+                    </td>
+                    <td style="padding: 14px 18px; font-weight: 600; color: var(--navy-900);">
+                        <a href="{{ url_for('admin_cliente_detalhes', cliente_id=f.cliente_id) }}" style="color: inherit; text-decoration: none;">
+                            {{ f.cliente_nome or 'Cliente #' ~ f.cliente_id }}
+                        </a>
+                        <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: normal;">{{ f.cliente_telefone or '' }}</div>
+                    </td>
+                    <td style="padding: 14px 18px; max-width: 220px; line-height: 1.4;">
+                        {{ f.descricao }}
+                    </td>
+                    <td style="padding: 14px 18px; font-weight: 600; white-space: nowrap;">
+                        R$ {{ '%.2f'|format(f.valor) }}
+                    </td>
+                    <td style="padding: 14px 18px; color: #059669; font-weight: 600; white-space: nowrap;">
+                        R$ {{ '%.2f'|format(f.valor_pago or 0) }}
+                    </td>
+                    <td style="padding: 14px 18px; font-weight: 700; white-space: nowrap; {% if saldo > 0 %}color: #DC2626;{% else %}color: #059669;{% endif %}">
+                        R$ {{ '%.2f'|format(saldo) }}
+                    </td>
+                    <td style="padding: 14px 18px; font-size: 0.82rem; white-space: nowrap; color: var(--text-muted);">
+                        {{ f.data_vencimento.strftime('%d/%m/%Y') if f.data_vencimento else 'À combinar' }}
+                    </td>
+                    <td style="padding: 14px 18px; white-space: nowrap;">
+                        {% if f.status == 'liquidado' %}
+                        <span style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;">Liquidado</span>
+                        {% elif f.status == 'pago_parcial' %}
+                        <span style="background: rgba(245, 158, 11, 0.12); color: #D97706; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;">Pago Parcial</span>
+                        {% else %}
+                        <span style="background: rgba(239, 68, 68, 0.12); color: #DC2626; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;">Em Aberto</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 18px; text-align: right; white-space: nowrap;">
+                        {% if f.status != 'liquidado' and saldo > 0 %}
+                        <button type="button" class="btn-primario btn-compacto" onclick="abrirModalBaixa('{{ f.id }}', '{{ f.cliente_nome }}', '{{ '%.2f'|format(saldo) }}')" style="font-size: 0.78rem; padding: 5px 12px; background: #059669; border-color: #059669;">
+                            💰 Dar Baixa
+                        </button>
+                        {% else %}
+                        <span style="font-size: 0.78rem; color: var(--text-muted); font-style: italic;">Quitado</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 48px 20px; text-align: center; color: var(--text-muted);">
+        <p style="font-size: 1.05rem; margin-bottom: 8px;">Nenhum lançamento de fiado encontrado.</p>
+        <p style="font-size: 0.85rem;">Utilize o botão "Novo Lançamento de Fiado" para registrar valores a receber.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Novo Lançamento de Fiado -->
+<div id="modal-novo-fiado" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: white; border-radius: var(--radius-lg); width: 100%; max-width: 520px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--navy-900); margin: 0;">Novo Lançamento de Fiado</h3>
+            <button type="button" onclick="fecharModalNovoFiado()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <form action="{{ url_for('admin_fiado_novo') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label for="cliente_id" style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; display: block;">Cliente Devedor *</label>
+            <select name="cliente_id" id="cliente_id" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px; background: white; font-size: 0.95rem;">
+                <option value="">Selecione o cliente...</option>
+                {% for c in clientes %}
+                <option value="{{ c.id }}">{{ c.nome }} ({{ c.telefone or 'Sem fone' }})</option>
+                {% endfor %}
+            </select>
+
+            <label for="descricao" style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; display: block;">Descrição do Serviço / Produto *</label>
+            <input type="text" name="descricao" id="descricao" placeholder="Ex: Corte + Barba (pagará sexta-feira), Pomada modeladora" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px;">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div>
+                    <label for="valor" style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; display: block;">Valor (R$) *</label>
+                    <input type="number" step="0.01" min="0.01" name="valor" id="valor" placeholder="0.00" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px;">
+                </div>
+                <div>
+                    <label for="data_vencimento" style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; display: block;">Data de Vencimento</label>
+                    <input type="date" name="data_vencimento" id="data_vencimento" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px;">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+                <button type="button" class="btn-secundario" onclick="fecharModalNovoFiado()">Cancelar</button>
+                <button type="submit" class="btn-primario">Salvar Fiado</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Baixa / Pagamento de Fiado -->
+<div id="modal-baixa-fiado" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: white; border-radius: var(--radius-lg); width: 100%; max-width: 480px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--navy-900); margin: 0;">Receber Pagamento</h3>
+            <button type="button" onclick="fecharModalBaixa()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <form id="form-baixa" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div style="background: var(--bg-surface-subtle); padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 0.88rem;">
+                <div>Cliente: <strong id="baixa-cliente-nome">-</strong></div>
+                <div style="margin-top: 4px;">Saldo Devedor Atual: <strong id="baixa-saldo-atual" style="color: #DC2626;">R$ 0,00</strong></div>
+            </div>
+
+            <label for="baixa_valor" style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; display: block;">Valor Pago Agora (R$) *</label>
+            <input type="number" step="0.01" min="0.01" name="valor_pago" id="baixa_valor" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px; font-size: 1.1rem; font-weight: 700;">
+
+            <label for="forma_pagamento" style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; display: block;">Forma de Pagamento *</label>
+            <select name="forma_pagamento" id="forma_pagamento" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px; background: white;">
+                <option value="Pix">Pix</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão de Débito">Cartão de Débito</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Transferência">Transferência Bancária</option>
+            </select>
+
+            <label for="observacao" style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; display: block;">Observação (Opcional)</label>
+            <input type="text" name="observacao" id="observacao" placeholder="Ex: Pago via chave Pix celular" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px;">
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+                <button type="button" class="btn-secundario" onclick="fecharModalBaixa()">Cancelar</button>
+                <button type="submit" class="btn-primario" style="background: #059669; border-color: #059669;">Confirmar Pagamento</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function abrirModalNovoFiado() {
+    document.getElementById('modal-novo-fiado').style.display = 'flex';
+}
+function fecharModalNovoFiado() {
+    document.getElementById('modal-novo-fiado').style.display = 'none';
+}
+function abrirModalBaixa(fiadoId, clienteNome, saldoAtual) {
+    document.getElementById('form-baixa').action = '/admin/fiados/' + fiadoId + '/pagar';
+    document.getElementById('baixa-cliente-nome').textContent = clienteNome;
+    document.getElementById('baixa-saldo-atual').textContent = 'R$ ' + saldoAtual;
+    document.getElementById('baixa_valor').value = saldoAtual.replace(',', '.');
+    document.getElementById('modal-baixa-fiado').style.display = 'flex';
+}
+function fecharModalBaixa() {
+    document.getElementById('modal-baixa-fiado').style.display = 'none';
+}
+</script>
+{% endblock %}

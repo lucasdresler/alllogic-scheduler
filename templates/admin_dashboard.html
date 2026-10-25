@@ -38,6 +38,13 @@
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                <form method="POST" action="{{ url_for('admin_disparar_lembretes') }}" style="margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-secundario" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; background: rgba(16, 185, 129, 0.1); color: #047857; border-color: rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;" title="Processar e enviar lembretes 24h e 2h via WhatsApp">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.155.57 4.175 1.564 5.922l-1.564 5.906 6.082-1.595c1.706.924 3.659 1.467 5.748 1.467 6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z"/></svg>
+                        <span>Disparar Lembretes</span>
+                    </button>
+                </form>
                 <button type="button" id="btn-copiar-link-agenda" class="btn-secundario" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;" onclick="copiarLinkAgenda()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     <span id="btn-copiar-texto">Copiar Link</span>
@@ -214,6 +221,16 @@
                                 <span class="badge-status badge-falta">Não compareceu</span>
                                 {% else %}
                                 <span class="badge-status badge-agendado">Agendado</span>
+                                    {% if ag.confirmado_pelo_cliente %}
+                                    <span style="display: block; font-size: 0.72rem; color: #059669; font-weight: 700; margin-top: 3px;">
+                                        ✓ Confirmado
+                                    </span>
+                                    {% endif %}
+                                    {% if ag.lembrete_24h_enviado_em or ag.lembrete_2h_enviado_em %}
+                                    <span style="display: block; font-size: 0.68rem; color: #6B7280; margin-top: 2px;" title="Lembrete automático enviado">
+                                        📲 Lembrete OK
+                                    </span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td class="col-acoes">
@@ -340,6 +357,16 @@
                                 <span class="badge-status badge-falta">Não compareceu</span>
                                 {% else %}
                                 <span class="badge-status badge-agendado">Agendado</span>
+                                    {% if ag.confirmado_pelo_cliente %}
+                                    <span style="display: block; font-size: 0.72rem; color: #059669; font-weight: 700; margin-top: 3px;">
+                                        ✓ Confirmado
+                                    </span>
+                                    {% endif %}
+                                    {% if ag.lembrete_24h_enviado_em or ag.lembrete_2h_enviado_em %}
+                                    <span style="display: block; font-size: 0.68rem; color: #6B7280; margin-top: 2px;" title="Lembrete automático enviado">
+                                        📲 Lembrete OK
+                                    </span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td class="col-preco">R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>
@@ -451,6 +478,16 @@
                                     <span class="badge-status badge-falta">Não compareceu</span>
                                     {% else %}
                                     <span class="badge-status badge-agendado">Agendado</span>
+                                        {% if ag.confirmado_pelo_cliente %}
+                                        <span style="display: block; font-size: 0.72rem; color: #059669; font-weight: 700; margin-top: 3px;">
+                                            ✓ Confirmado
+                                        </span>
+                                        {% endif %}
+                                        {% if ag.lembrete_24h_enviado_em or ag.lembrete_2h_enviado_em %}
+                                        <span style="display: block; font-size: 0.68rem; color: #6B7280; margin-top: 2px;" title="Lembrete automático enviado">
+                                            📲 Lembrete OK
+                                        </span>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                                 <td class="col-preco">R$ {{ "%.2f"|format(ag.servico_preco)|replace(".", ",") }}</td>

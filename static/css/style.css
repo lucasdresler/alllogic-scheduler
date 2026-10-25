@@ -2979,3 +2979,395 @@ table.tabela-agendamentos .col-acoes {
     }
 }
 
+/* ==========================================================================
+   VITRINE & LINK DA BIO MODERNO (Estilo Instagram / Booksy Pro)
+   ========================================================================== */
+.vitrine-hero-cover {
+    width: 100%;
+    height: 180px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #334155 100%);
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: -48px;
+    box-shadow: var(--shadow-sm);
+}
+
+.vitrine-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(15,23,42,0.65) 100%);
+}
+
+.vitrine-hero-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #F8FAFC;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 2;
+}
+
+.vitrine-hero-badge .ponto-verde {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10B981;
+    display: inline-block;
+    box-shadow: 0 0 6px #10B981;
+}
+
+.vitrine-profile-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 20px 20px 24px;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 3;
+}
+
+.vitrine-avatar-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: -52px;
+    margin-bottom: 14px;
+}
+
+.vitrine-avatar-img {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 4px solid #FFFFFF;
+    background: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.vitrine-avatar-fallback {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 4px solid #FFFFFF;
+    background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 100%);
+    color: var(--champagne-dourado);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.vitrine-acoes-topo {
+    display: flex;
+    gap: 8px;
+}
+
+.vitrine-btn-icone {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--navy-900);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.vitrine-btn-icone:hover {
+    background: var(--champagne-dourado);
+    color: var(--navy-950);
+    transform: translateY(-2px);
+}
+
+.vitrine-info-bloco {
+    text-align: left;
+}
+
+.vitrine-nome-titulo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy-900);
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selo-verificado-svg {
+    width: 18px;
+    height: 18px;
+    color: #0284C7;
+    flex-shrink: 0;
+}
+
+.vitrine-bio-texto {
+    font-size: 0.92rem;
+    color: var(--text-body);
+    line-height: 1.5;
+    margin: 0 0 16px 0;
+}
+
+.vitrine-chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.vitrine-chip {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-body);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.vitrine-chip:hover {
+    border-color: var(--navy-700);
+    background: #FFFFFF;
+}
+
+.vitrine-chip.chip-whatsapp {
+    background: rgba(37, 211, 102, 0.1);
+    border-color: rgba(37, 211, 102, 0.35);
+    color: #065F46;
+    font-weight: 600;
+}
+
+.vitrine-chip.chip-whatsapp:hover {
+    background: #25D366;
+    color: #FFFFFF;
+}
+
+/* Vitrine de Serviços Ricos */
+.opcao-btn-servico {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px 18px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border-subtle);
+    background: var(--bg-surface);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--shadow-sm);
+    gap: 14px;
+    position: relative;
+}
+
+.opcao-btn-servico:hover {
+    border-color: var(--navy-600);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+}
+
+.opcao-btn-servico.selecionado {
+    border-color: #10B981;
+    background: rgba(16, 185, 129, 0.04);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.servico-card-conteudo {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.servico-icone-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.servico-texto-box {
+    flex: 1;
+    min-width: 0;
+}
+
+.servico-nome-destaque {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--navy-900);
+    margin-bottom: 3px;
+    display: block;
+}
+
+.servico-desc-texto {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.servico-duracao-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    background: var(--bg-surface-subtle);
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    font-weight: 500;
+}
+
+.servico-preco-coluna {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.servico-preco-valor {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy-900);
+}
+
+.servico-checkbox-visual {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border-subtle);
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.opcao-btn-servico.selecionado .servico-checkbox-visual {
+    background: #10B981;
+    border-color: #10B981;
+    color: #FFFFFF;
+}
+
+/* Seção de Equipe de Profissionais na Vitrine */
+.secao-equipe-vitrine {
+    margin-top: 26px;
+    margin-bottom: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.equipe-titulo-bloco {
+    margin-bottom: 14px;
+}
+
+.equipe-titulo {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--navy-900);
+    margin: 0 0 2px 0;
+}
+
+.equipe-subtitulo {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.equipe-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.card-profissional-vitrine {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.card-profissional-vitrine:hover {
+    background: #FFFFFF;
+    border-color: var(--navy-600);
+    transform: translateY(-2px);
+}
+
+.profissional-avatar-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--navy-900);
+    color: var(--champagne-dourado);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.15rem;
+    border: 2px solid #FFFFFF;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.profissional-nome-vitrine {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--navy-900);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.profissional-cargo-vitrine {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+

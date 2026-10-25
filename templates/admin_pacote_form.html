@@ -1,0 +1,67 @@
+{% extends "base_admin.html" %}
+
+{% set pagina_ativa = "pacotes" %}
+
+{% block titulo %}{{ titulo }} — {{ nome_estabelecimento }}{% endblock %}
+
+{% block titulo_pagina %}{{ titulo }}{% endblock %}
+
+{% block conteudo_admin %}
+<div class="card" style="max-width: 680px;">
+    <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div>
+            <span class="subtitulo-admin" style="font-size: 0.875rem; color: var(--cor-mutada);">Defina as regras, sessões e valor do pacote</span>
+        </div>
+        <a href="{{ url_for('admin_pacotes') }}" class="btn-secundario btn-compacto">← Voltar para pacotes</a>
+    </div>
+
+    {% if erro %}
+    <div class="mensagem-erro">{{ erro }}</div>
+    {% endif %}
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="nome">Nome do Pacote *</label>
+        <input type="text" id="nome" name="nome" placeholder="Ex: Pacote 4 Cortes Masculinos, Combo 10 Massagens" value="{{ pacote.nome if pacote else '' }}" required>
+
+        <label for="descricao">Descrição ou Regras</label>
+        <textarea id="descricao" name="descricao" rows="3" placeholder="Ex: Válido para cortes de segunda a quinta. Não cumulativo com outras promoções.">{{ pacote.descricao if pacote else '' }}</textarea>
+
+        <label for="servico_id">Serviço Vinculado *</label>
+        <select id="servico_id" name="servico_id" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 14px; background: white; font-size: 0.95rem;">
+            <option value="">Selecione o serviço associado...</option>
+            {% for s in servicos %}
+            <option value="{{ s.id }}" {% if pacote and pacote.servico_id == s.id %}selected{% endif %}>
+                {{ s.nome }} (R$ {{ '%.2f'|format(s.preco) }})
+            </option>
+            {% endfor %}
+        </select>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <label for="quantidade_sessoes">Quantidade de Sessões *</label>
+                <input type="number" id="quantidade_sessoes" name="quantidade_sessoes" min="1" max="100" value="{{ pacote.quantidade_sessoes if pacote else 4 }}" required>
+            </div>
+            <div>
+                <label for="preco">Preço Total do Pacote (R$) *</label>
+                <input type="number" id="preco" name="preco" step="0.01" min="0.01" value="{{ pacote.preco if pacote else '' }}" placeholder="Ex: 150.00" required>
+            </div>
+        </div>
+
+        <label for="validade_dias">Validade do Pacote após a compra (em dias)</label>
+        <input type="number" id="validade_dias" name="validade_dias" min="1" max="365" value="{{ pacote.validade_dias if pacote else 60 }}" required>
+        <small style="display: block; margin-top: -8px; margin-bottom: 16px; color: var(--text-muted); font-size: 0.8rem;">Recomendado: 30 a 90 dias.</small>
+
+        <label class="checkbox-row" style="margin-top: 12px; margin-bottom: 24px;">
+            <input type="checkbox" name="ativo" {% if not pacote or pacote.ativo %}checked{% endif %}>
+            <span>Pacote ativo e disponível para venda</span>
+        </label>
+
+        <div class="botoes-acoes">
+            <button type="submit" class="btn-primario">Salvar Pacote</button>
+            <a href="{{ url_for('admin_pacotes') }}" class="btn-secundario">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

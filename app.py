@@ -235,6 +235,9 @@ def _carregar_config_template(estabelecimento_id=None):
         "estabelecimento_slug": slug,
         "url_publica_agendamento": url_publica_agendamento,
         "eh_demo": eh_demo,
+        "bio": (est.get("bio") if est else "") or config.get("bio") or "Especialistas em atendimento de excelência. Agende seu horário online em poucos segundos.",
+        "foto_capa": (est.get("foto_capa") if est else "") or config.get("foto_capa") or "",
+        "instagram": (est.get("instagram") if est else "") or config.get("instagram") or "",
     }
 
 
@@ -845,14 +848,23 @@ def public_ver_reserva(token):
             **config_template,
         )
 
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    # Confirmação rápida de presença se o cliente clicou no link do WhatsApp com ?confirmar=1
+    if request.args.get("confirmar") == "1":
+        ok, msg = models.confirmar_presenca_por_cliente(token)
+        if ok:
+            sucesso = "Presença confirmada com sucesso! Te esperamos no horário marcado."
+            agendamento = models.obter_agendamento_por_token(token)
+        else:
+            erro = msg
+
     url_base_zap = _obter_url_base_whatsapp()
     from whatsapp_service import formatar_mensagem_cliente, gerar_link_wa_me, formatar_telefone_br
     texto_zap = formatar_mensagem_cliente(agendamento, config_template, url_base_zap)
     link_whatsapp = gerar_link_wa_me(agendamento.get("cliente_telefone"), texto_zap)
     telefone_formatado = formatar_telefone_br(config_template.get("telefone_estabelecimento", ""))
-
-    sucesso = request.args.get("sucesso")
-    erro = request.args.get("erro")
 
     return render_template(
         "reserva.html",
@@ -863,6 +875,18 @@ def public_ver_reserva(token):
         erro=erro,
         **config_template,
     )
+
+
+@app.route("/reserva/<token>/confirmar", methods=["GET", "POST"])
+def public_confirmar_reserva(token):
+    agendamento = models.obter_agendamento_por_token(token)
+    if not agendamento:
+        return redirect(url_for("index"))
+
+    ok, msg = models.confirmar_presenca_por_cliente(token)
+    if not ok:
+        return redirect(url_for("public_ver_reserva", token=token, erro=msg))
+    return redirect(url_for("public_ver_reserva", token=token, sucesso="Presença confirmada com sucesso! Te esperamos no horário marcado."))
 
 
 @app.route("/reserva/<token>/cancelar", methods=["POST"])
@@ -883,6 +907,41 @@ def public_cancelar_reserva(token):
         app.logger.warning(f"Erro ao disparar cancelamento WhatsApp: {e}")
 
     return redirect(url_for("public_ver_reserva", token=token, sucesso="Seu agendamento foi cancelado com sucesso."))
+
+
+@app.route("/cron/lembretes", methods=["GET", "POST"])
+def cron_lembretes():
+    """
+    Endpoint periódico para processamento de lembretes ativos (24h e 2h antes) via WhatsApp.
+    Permite acionamento via cron local ou com token secreto.
+    """
+    cron_token = request.args.get("token") or request.headers.get("X-Cron-Token")
+    expected_token = os.environ.get("CRON_SECRET", "alllogic-cron-lembretes-2026")
+    is_local = request.remote_addr in ("127.0.0.1", "::1", "localhost")
+
+    if not is_local and cron_token != expected_token:
+        return jsonify({"erro": "Não autorizado"}), 403
+
+    from whatsapp_service import processar_e_enviar_lembretes_whatsapp
+    url_base = request.host_url.rstrip("/")
+    resultado = processar_e_enviar_lembretes_whatsapp(url_base=url_base)
+    return jsonify(resultado)
+
+
+@app.route("/admin/disparar-lembretes", methods=["POST"])
+@login_requerido
+def admin_disparar_lembretes():
+    """Permite ao administrador forçar a verificação e envio de lembretes ativos de hoje."""
+    from whatsapp_service import processar_e_enviar_lembretes_whatsapp
+    url_base = request.host_url.rstrip("/")
+    estab_id = session.get("estabelecimento_id") or 1
+    resultado = processar_e_enviar_lembretes_whatsapp(url_base=url_base, estabelecimento_id=estab_id)
+    total = resultado.get("total_enviados", 0)
+    if total > 0:
+        flash(f"Lembretes enviados com sucesso: {total} mensagens disparadas no WhatsApp.", "sucesso")
+    else:
+        flash("Nenhum agendamento pendente de lembrete para a janela de 24h ou 2h neste momento.", "info")
+    return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/experimente")
@@ -1755,6 +1814,9 @@ def admin_cliente_detalhes(cliente_id):
         return redirect(url_for("admin_clientes", erro="Cliente não encontrado."))
 
     historico = models.obter_historico_cliente(cliente_id)
+    pacotes_cliente = models.listar_pacotes_do_cliente(cliente_id, estabelecimento_id=estab_id)
+    fiados_cliente = models.listar_fiados(cliente_id=cliente_id, estabelecimento_id=estab_id)
+    saldo_devedor = models.obter_saldo_devedor_cliente(cliente_id)
     sucesso = request.args.get("sucesso")
     erro = request.args.get("erro")
 
@@ -1762,6 +1824,9 @@ def admin_cliente_detalhes(cliente_id):
         "admin_cliente_detalhe.html",
         cliente=cliente,
         historico=historico,
+        pacotes_cliente=pacotes_cliente,
+        fiados_cliente=fiados_cliente,
+        saldo_devedor=saldo_devedor,
         sucesso=sucesso,
         erro=erro,
         **_carregar_config_template(estab_id),
@@ -1794,6 +1859,253 @@ def admin_cliente_editar(cliente_id):
         erro=erro,
         **_carregar_config_template(estab_id),
     )
+
+
+# ==============================================================================
+# GESTÃO DE PACOTES DE SERVIÇOS
+# ==============================================================================
+
+@app.route("/admin/pacotes")
+@login_requerido
+def admin_pacotes():
+    estab_id = session.get("estabelecimento_id") or 1
+    pacotes = models.listar_pacotes(estabelecimento_id=estab_id, apenas_ativos=False)
+    pacotes_ativos_apenas = [p for p in pacotes if p["ativo"]]
+    pacotes_vendidos = models.listar_todos_pacotes_clientes(estabelecimento_id=estab_id)
+    clientes = models.listar_clientes(estabelecimento_id=estab_id)
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    return render_template(
+        "admin_pacotes.html",
+        pacotes=pacotes,
+        pacotes_disponiveis=pacotes_ativos_apenas,
+        pacotes_vendidos=pacotes_vendidos,
+        clientes=clientes,
+        sucesso=sucesso,
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/pacotes/novo", methods=["GET", "POST"])
+@login_requerido
+def admin_pacote_novo():
+    estab_id = session.get("estabelecimento_id") or 1
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        descricao = request.form.get("descricao", "").strip()
+        servico_id = request.form.get("servico_id")
+        quantidade_sessoes = request.form.get("quantidade_sessoes", 4)
+        preco = request.form.get("preco", 0.0)
+        validade_dias = request.form.get("validade_dias", 60)
+        ativo = "ativo" in request.form
+
+        try:
+            pacote_id = models.criar_pacote(
+                estabelecimento_id=estab_id,
+                nome=nome,
+                descricao=descricao,
+                servico_id=int(servico_id) if servico_id else None,
+                quantidade_sessoes=int(quantidade_sessoes),
+                preco=float(preco),
+                validade_dias=int(validade_dias),
+                ativo=ativo,
+            )
+            return redirect(url_for("admin_pacotes", sucesso="Pacote criado com sucesso!"))
+        except Exception as e:
+            logger.exception("Erro ao criar pacote")
+            erro = f"Erro ao criar pacote: {e}"
+
+    servicos = models.listar_servicos(estabelecimento_id=estab_id)
+    return render_template(
+        "admin_pacote_form.html",
+        titulo="Novo Pacote de Serviços",
+        pacote=None,
+        servicos=servicos,
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/pacotes/<int:pacote_id>/editar", methods=["GET", "POST"])
+@login_requerido
+def admin_pacote_editar(pacote_id):
+    estab_id = session.get("estabelecimento_id") or 1
+    pacote = models.obter_pacote(pacote_id)
+    if not pacote:
+        return redirect(url_for("admin_pacotes", erro="Pacote não encontrado."))
+
+    erro = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        descricao = request.form.get("descricao", "").strip()
+        servico_id = request.form.get("servico_id")
+        quantidade_sessoes = request.form.get("quantidade_sessoes", 4)
+        preco = request.form.get("preco", 0.0)
+        validade_dias = request.form.get("validade_dias", 60)
+        ativo = "ativo" in request.form
+
+        try:
+            models.editar_pacote(
+                pacote_id=pacote_id,
+                nome=nome,
+                descricao=descricao,
+                servico_id=int(servico_id) if servico_id else None,
+                quantidade_sessoes=int(quantidade_sessoes),
+                preco=float(preco),
+                validade_dias=int(validade_dias),
+                ativo=ativo,
+            )
+            return redirect(url_for("admin_pacotes", sucesso="Pacote atualizado com sucesso!"))
+        except Exception as e:
+            logger.exception("Erro ao editar pacote")
+            erro = f"Erro ao salvar alterações: {e}"
+
+    servicos = models.listar_servicos(estabelecimento_id=estab_id)
+    return render_template(
+        "admin_pacote_form.html",
+        titulo=f"Editar {pacote['nome']}",
+        pacote=pacote,
+        servicos=servicos,
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/pacotes/<int:pacote_id>/toggle", methods=["POST"])
+@login_requerido
+def admin_pacote_toggle(pacote_id):
+    estab_id = session.get("estabelecimento_id") or 1
+    novo_status = models.alternar_status_pacote(pacote_id, estabelecimento_id=estab_id)
+    status_str = "ativado" if novo_status else "desativado"
+    return redirect(url_for("admin_pacotes", sucesso=f"Pacote {status_str} com sucesso!"))
+
+
+@app.route("/admin/pacotes/vender", methods=["POST"])
+@login_requerido
+def admin_pacote_vender():
+    estab_id = session.get("estabelecimento_id") or 1
+    cliente_id = request.form.get("cliente_id")
+    pacote_id = request.form.get("pacote_id")
+    valor_pago = request.form.get("valor_pago")
+    pago = "pago" in request.form
+    observacoes = request.form.get("observacoes", "").strip()
+
+    if not cliente_id or not pacote_id:
+        return redirect(url_for("admin_pacotes", erro="Cliente e pacote são obrigatórios."))
+
+    try:
+        val = float(valor_pago) if valor_pago else None
+        models.vender_pacote_para_cliente(
+            estabelecimento_id=estab_id,
+            cliente_id=int(cliente_id),
+            pacote_id=int(pacote_id),
+            valor_pago=val,
+            pago=pago,
+            observacoes=observacoes,
+        )
+        return redirect(url_for("admin_pacotes", sucesso="Pacote vendido e vinculado ao cliente com sucesso!"))
+    except Exception as e:
+        logger.exception("Erro ao vender pacote para cliente")
+        return redirect(url_for("admin_pacotes", erro=f"Erro ao vincular pacote: {e}"))
+
+
+@app.route("/admin/pacotes/cliente/<int:cliente_pacote_id>/abater", methods=["POST"])
+@login_requerido
+def admin_pacote_abater_sessao(cliente_pacote_id):
+    redirect_to = request.form.get("redirect_to")
+    ok, msg = models.abater_sessao_pacote_cliente(cliente_pacote_id)
+    if redirect_to == "cliente":
+        with db_session() as conn:
+            row = conn.execute("SELECT cliente_id FROM cliente_pacote WHERE id = %s", (cliente_pacote_id,)).fetchone()
+            if row:
+                if ok:
+                    return redirect(url_for("admin_cliente_detalhes", cliente_id=row["cliente_id"], sucesso=msg))
+                return redirect(url_for("admin_cliente_detalhes", cliente_id=row["cliente_id"], erro=msg))
+
+    if ok:
+        return redirect(url_for("admin_pacotes", sucesso=msg))
+    return redirect(url_for("admin_pacotes", erro=msg))
+
+
+# ==============================================================================
+# GESTÃO DE FIADOS & CONTAS A RECEBER
+# ==============================================================================
+
+@app.route("/admin/fiados")
+@login_requerido
+def admin_fiados():
+    estab_id = session.get("estabelecimento_id") or 1
+    status_filtro = request.args.get("status", "").strip() or None
+    fiados = models.listar_fiados(estabelecimento_id=estab_id, status=status_filtro)
+    resumo = models.obter_resumo_fiados(estabelecimento_id=estab_id)
+    clientes = models.listar_clientes(estabelecimento_id=estab_id)
+    sucesso = request.args.get("sucesso")
+    erro = request.args.get("erro")
+
+    return render_template(
+        "admin_fiados.html",
+        fiados=fiados,
+        resumo=resumo,
+        clientes=clientes,
+        status_filtro=status_filtro,
+        sucesso=sucesso,
+        erro=erro,
+        **_carregar_config_template(estab_id),
+    )
+
+
+@app.route("/admin/fiados/novo", methods=["POST"])
+@login_requerido
+def admin_fiado_novo():
+    estab_id = session.get("estabelecimento_id") or 1
+    cliente_id = request.form.get("cliente_id")
+    descricao = request.form.get("descricao", "").strip()
+    valor = request.form.get("valor")
+    data_vencimento = request.form.get("data_vencimento", "").strip() or None
+
+    if not cliente_id or not descricao or not valor:
+        return redirect(url_for("admin_fiados", erro="Cliente, descrição e valor são obrigatórios."))
+
+    try:
+        models.criar_lancamento_fiado(
+            estabelecimento_id=estab_id,
+            cliente_id=int(cliente_id),
+            valor=float(valor),
+            descricao=descricao,
+            data_vencimento=data_vencimento,
+        )
+        return redirect(url_for("admin_fiados", sucesso="Lançamento de fiado registrado com sucesso!"))
+    except Exception as e:
+        logger.exception("Erro ao registrar fiado")
+        return redirect(url_for("admin_fiados", erro=f"Erro ao registrar: {e}"))
+
+
+@app.route("/admin/fiados/<int:fiado_id>/pagar", methods=["POST"])
+@login_requerido
+def admin_fiado_pagar(fiado_id):
+    valor_pago = request.form.get("valor_pago")
+    forma_pagamento = request.form.get("forma_pagamento", "Pix")
+    observacao = request.form.get("observacao", "").strip()
+
+    if not valor_pago:
+        return redirect(url_for("admin_fiados", erro="Informe o valor do pagamento."))
+
+    try:
+        ok, msg = models.registrar_pagamento_fiado(
+            fiado_id=fiado_id,
+            valor_pago=float(valor_pago),
+            forma_pagamento=forma_pagamento,
+            observacao=observacao,
+        )
+        if ok:
+            return redirect(url_for("admin_fiados", sucesso=msg))
+        return redirect(url_for("admin_fiados", erro=msg))
+    except Exception as e:
+        logger.exception("Erro ao processar pagamento de fiado")
+        return redirect(url_for("admin_fiados", erro=f"Erro no pagamento: {e}"))
 
 
 @app.route("/admin/configuracoes", methods=["GET", "POST"])

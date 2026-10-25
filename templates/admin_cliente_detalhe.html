@@ -104,6 +104,118 @@
         </div>
     </div>
 
+    <!-- Seção de Pacotes & Fiados do Cliente -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
+        <!-- Card Pacotes de Sessões -->
+        <div class="card" style="margin: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900); margin: 0;">
+                    🎟️ Pacotes de Serviços
+                </h2>
+                <a href="{{ url_for('admin_pacotes') }}" class="btn-secundario btn-compacto" style="font-size: 0.78rem;">Ver todos</a>
+            </div>
+
+            {% if pacotes_cliente %}
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for pc in pacotes_cliente %}
+                {% set sessoes_restantes = pc.quantidade_total - pc.quantidade_utilizada %}
+                {% set perc = ((pc.quantidade_utilizada / pc.quantidade_total) * 100)|round|int if pc.quantidade_total else 100 %}
+                <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <strong style="color: var(--navy-900); font-size: 0.95rem;">{{ pc.pacote_nome }}</strong>
+                        {% if pc.status == 'ativo' %}
+                        <span style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 999px;">Ativo</span>
+                        {% elif pc.status == 'esgotado' %}
+                        <span style="background: rgba(156, 163, 175, 0.15); color: #6B7280; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 999px;">Esgotado</span>
+                        {% else %}
+                        <span style="background: rgba(239, 68, 68, 0.12); color: #DC2626; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 999px;">Expirado</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px;">
+                        <span>Serviço: <strong>{{ pc.servico_nome or 'Geral' }}</strong></span> &bull; 
+                        <span>Resta: <strong style="color: {% if sessoes_restantes > 0 %}#059669{% else %}#6B7280{% endif %};">{{ sessoes_restantes }} de {{ pc.quantidade_total }}</strong></span>
+                    </div>
+
+                    <!-- Barra de Progresso -->
+                    <div style="background: #e2e8f0; height: 7px; border-radius: 999px; overflow: hidden; margin-bottom: 10px;">
+                        <div style="background: var(--navy-700); width: {{ perc }}%; height: 100%;"></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.76rem; color: var(--text-muted);">
+                            {% if pc.data_expiracao %}Vence em {{ pc.data_expiracao.strftime('%d/%m/%Y') }}{% else %}Sem vencimento{% endif %}
+                        </span>
+                        {% if pc.status == 'ativo' and sessoes_restantes > 0 %}
+                        <form action="{{ url_for('admin_pacote_abater_sessao', cliente_pacote_id=pc.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Confirmar utilização de 1 sessão deste pacote?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="redirect_to" value="cliente">
+                            <button type="submit" class="btn-primario btn-compacto" style="font-size: 0.76rem; padding: 4px 10px; background: #059669; border-color: #059669;">
+                                ✂️ Abater 1 Sessão
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Nenhum pacote contratado por este cliente.</p>
+            {% endif %}
+        </div>
+
+        <!-- Card Fiados & Contas a Receber -->
+        <div class="card" style="margin: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900); margin: 0;">
+                    💳 Contas a Receber (Fiados)
+                </h2>
+                <a href="{{ url_for('admin_fiados') }}" class="btn-secundario btn-compacto" style="font-size: 0.78rem;">Ver todos</a>
+            </div>
+
+            <!-- Resumo Saldo Devedor -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 8px; margin-bottom: 14px; {% if saldo_devedor > 0 %}background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2);{% endif %}">
+                <div>
+                    <span style="font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Saldo Devedor Atual</span>
+                    <div style="font-size: 1.35rem; font-weight: 800; {% if saldo_devedor > 0 %}color: #DC2626;{% else %}color: #059669;{% endif %}">
+                        R$ {{ '%.2f'|format(saldo_devedor or 0) }}
+                    </div>
+                </div>
+                {% if saldo_devedor > 0 %}
+                <span style="font-size: 0.75rem; background: #DC2626; color: white; padding: 3px 8px; border-radius: 999px; font-weight: 700;">Em Débito</span>
+                {% else %}
+                <span style="font-size: 0.75rem; background: #059669; color: white; padding: 3px 8px; border-radius: 999px; font-weight: 700;">Em Dia</span>
+                {% endif %}
+            </div>
+
+            {% if fiados_cliente %}
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                {% for f in fiados_cliente %}
+                {% set saldo_item = (f.valor or 0) - (f.valor_pago or 0) %}
+                <div style="padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; background: white;">
+                    <div>
+                        <strong style="color: var(--navy-900); display: block;">{{ f.descricao }}</strong>
+                        <span style="font-size: 0.76rem; color: var(--text-muted);">
+                            Data: {{ f.data_lancamento.strftime('%d/%m/%Y') if f.data_lancamento else '-' }} &bull; Total: R$ {{ '%.2f'|format(f.valor) }}
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.9rem; font-weight: 700; display: block; {% if saldo_item > 0 %}color: #DC2626;{% else %}color: #059669;{% endif %}">
+                            R$ {{ '%.2f'|format(saldo_item) }}
+                        </span>
+                        <span style="font-size: 0.72rem; color: var(--text-muted);">
+                            {% if f.status == 'liquidado' %}Quitado{% else %}Pendente{% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Nenhuma pendência ou lançamento de fiado para este cliente.</p>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Tabela de Histórico de Agendamentos -->
     <div class="card">
         <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--navy-900); margin-bottom: 16px;">
