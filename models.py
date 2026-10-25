@@ -2813,8 +2813,9 @@ def registrar_venda_produtos(estabelecimento_id, itens, cliente_id=None, profiss
         return True, venda_id
 
 
-def listar_vendas_produtos(estabelecimento_id=1, limite=50):
+def listar_vendas_produtos(estabelecimento_id=1, limite=50, limit=None):
     """Lista o histórico recente de vendas de produtos no PDV."""
+    limite_efetivo = limit if limit is not None else limite
     with db_session() as conn:
         rows = conn.execute(
             """
@@ -2832,7 +2833,7 @@ def listar_vendas_produtos(estabelecimento_id=1, limite=50):
             ORDER BY pv.data_venda DESC
             LIMIT %s
             """,
-            (estabelecimento_id, limite),
+            (estabelecimento_id, limite_efetivo),
         ).fetchall()
         return [dict(r) for r in rows]
 
