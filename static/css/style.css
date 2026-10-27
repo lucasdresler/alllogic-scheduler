@@ -1771,14 +1771,73 @@ table.tabela-agendamentos .col-acoes {
     border-bottom: 1px solid var(--border-subtle);
     padding: 14px 28px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    flex-direction: column;
+    gap: 0;
     position: sticky;
     top: 0;
     z-index: 90;
     box-shadow: var(--shadow-sm);
 }
+
+.topbar-row-principal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 16px;
+}
+
+.seletor-demo-admin {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.demo-label {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.btn-demo-item {
+    text-decoration: none;
+    padding: 0.22rem 0.5rem;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    white-space: nowrap;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-shrink: 0;
+}
+
+.btn-demo-item:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #1e293b;
+}
+
+.btn-demo-item.ativo {
+    color: #ffffff !important;
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    font-weight: 600;
+}
+
+.topbar-row-demos-mobile {
+    display: none;
+}
+
 
 .topbar-left {
     display: flex;
@@ -2181,7 +2240,15 @@ table.tabela-agendamentos .col-acoes {
 /* Responsividade Mobile para Dashboard, Abas e Controles (<= 768px) */
 @media (max-width: 768px) {
     .admin-topbar {
-        padding: 10px 14px;
+        padding: 10px 14px 8px;
+        gap: 6px;
+    }
+
+    .topbar-row-principal {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
         gap: 10px;
     }
 
@@ -2230,6 +2297,35 @@ table.tabela-agendamentos .col-acoes {
         align-items: center;
         gap: 8px;
         flex-shrink: 0;
+    }
+
+    .seletor-demo-desktop {
+        display: none !important;
+    }
+
+    .topbar-row-demos-mobile {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding-top: 6px;
+        border-top: 1px solid var(--border-subtle);
+        overflow: hidden;
+    }
+
+    .demos-scroll-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        width: 100%;
+        padding-bottom: 2px;
+    }
+
+    .demos-scroll-wrapper::-webkit-scrollbar {
+        display: none;
     }
 
     .badge-plano-ativo {
