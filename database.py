@@ -438,7 +438,10 @@ def init_db():
             ALTER TABLE estabelecimento
             ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '',
             ADD COLUMN IF NOT EXISTS foto_capa TEXT DEFAULT '',
-            ADD COLUMN IF NOT EXISTS instagram TEXT DEFAULT ''
+            ADD COLUMN IF NOT EXISTS instagram TEXT DEFAULT '',
+            ADD COLUMN IF NOT EXISTS cor_primaria TEXT DEFAULT '#14213D',
+            ADD COLUMN IF NOT EXISTS cor_secundaria TEXT DEFAULT '#E5C78B',
+            ADD COLUMN IF NOT EXISTS cor_fundo TEXT DEFAULT '#F6F1E8'
         """)
 
         conn.execute("""
@@ -1219,6 +1222,9 @@ def obter_configuracoes_estabelecimento(conn, estabelecimento_id=1):
             "chave_pix_estabelecimento": est.get("chave_pix_estabelecimento") or "",
             "tipo_chave_pix": est.get("tipo_chave_pix") or "cpf_cnpj",
             "asaas_wallet_id": est.get("asaas_wallet_id") or "",
+            "cor_primaria": configs_globais.get("cor_primaria") or est.get("cor_primaria") or "#14213D",
+            "cor_secundaria": configs_globais.get("cor_secundaria") or est.get("cor_secundaria") or "#E5C78B",
+            "cor_fundo": configs_globais.get("cor_fundo") or est.get("cor_fundo") or "#F6F1E8",
         }
 
     # Para estabelecimentos específicos (ID > 1)
@@ -1262,6 +1268,9 @@ def obter_configuracoes_estabelecimento(conn, estabelecimento_id=1):
         "chave_pix_estabelecimento": est.get("chave_pix_estabelecimento") or "",
         "tipo_chave_pix": est.get("tipo_chave_pix") or "cpf_cnpj",
         "asaas_wallet_id": est.get("asaas_wallet_id") or "",
+        "cor_primaria": est.get("cor_primaria") or "#14213D",
+        "cor_secundaria": est.get("cor_secundaria") or "#E5C78B",
+        "cor_fundo": est.get("cor_fundo") or "#F6F1E8",
     }
 
 
@@ -1273,7 +1282,7 @@ def atualizar_configuracoes_estabelecimento(conn, estabelecimento_id, dados):
         "endereco_estabelecimento", "logotipo", "horario_abertura", "horario_fechamento",
         "intervalo_slot_minutos", "dias_funcionamento", "dias_antecedencia_agendamento", "nome_publico",
         "pagamento_online_ativo", "pagamento_tipo", "pagamento_sinal_valor", "taxa_intermediacao_fixa",
-        "chave_pix_estabelecimento", "tipo_chave_pix", "asaas_wallet_id"
+        "chave_pix_estabelecimento", "tipo_chave_pix", "asaas_wallet_id", "cor_primaria", "cor_secundaria", "cor_fundo"
     ]
     updates = []
     valores = []

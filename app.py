@@ -241,6 +241,9 @@ def _carregar_config_template(estabelecimento_id=None):
         "bio": (est.get("bio") if est else "") or config.get("bio") or "Especialistas em atendimento de excelência. Agende seu horário online em poucos segundos.",
         "foto_capa": (est.get("foto_capa") if est else "") or config.get("foto_capa") or "",
         "instagram": (est.get("instagram") if est else "") or config.get("instagram") or "",
+        "cor_primaria": config.get("cor_primaria") or (est.get("cor_primaria") if est else "") or "#14213D",
+        "cor_secundaria": config.get("cor_secundaria") or (est.get("cor_secundaria") if est else "") or "#E5C78B",
+        "cor_fundo": config.get("cor_fundo") or (est.get("cor_fundo") if est else "") or "#F6F1E8",
     }
 
 
@@ -2552,6 +2555,9 @@ def admin_estabelecimento():
         "telefone": telefone_padrao,
         "whatsapp": whatsapp_padrao,
         "email_comercial": email_padrao,
+        "cor_primaria": (estab_row.get("cor_primaria") if estab_row else "") or configuracoes.get("cor_primaria") or "#14213D",
+        "cor_secundaria": (estab_row.get("cor_secundaria") if estab_row else "") or configuracoes.get("cor_secundaria") or "#E5C78B",
+        "cor_fundo": (estab_row.get("cor_fundo") if estab_row else "") or configuracoes.get("cor_fundo") or "#F6F1E8",
     }
 
     if request.method == "POST":
@@ -2572,6 +2578,20 @@ def admin_estabelecimento():
         telefone = request.form.get("telefone", "").strip()
         whatsapp = request.form.get("whatsapp", "").strip()
         email_comercial = request.form.get("email_comercial", "").strip()
+
+        cor_primaria_raw = request.form.get("cor_primaria", "").strip()
+        cor_secundaria_raw = request.form.get("cor_secundaria", "").strip()
+        cor_fundo_raw = request.form.get("cor_fundo", "").strip()
+
+        def _sanitizar_hex(valor, padrao):
+            val = (valor or "").strip()
+            if re.match(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", val):
+                return val.upper()
+            return padrao
+
+        cor_primaria = _sanitizar_hex(cor_primaria_raw, "#14213D")
+        cor_secundaria = _sanitizar_hex(cor_secundaria_raw, "#E5C78B")
+        cor_fundo = _sanitizar_hex(cor_fundo_raw, "#F6F1E8")
 
         remover_logo_acao = request.form.get("remover_logo") == "1" or request.form.get("acao") == "remover_logo"
         logo_a_salvar = configuracoes.get("logotipo", "")
@@ -2615,6 +2635,9 @@ def admin_estabelecimento():
                 "telefone_estabelecimento": telefone,
                 "whatsapp": whatsapp,
                 "email_comercial": email_comercial,
+                "cor_primaria": cor_primaria,
+                "cor_secundaria": cor_secundaria,
+                "cor_fundo": cor_fundo,
             }
 
             partes_end = []
@@ -2646,7 +2669,8 @@ def admin_estabelecimento():
                         conn.execute(
                             """
                             UPDATE estabelecimento
-                            SET nome = %s, nome_responsavel = %s, cnpj_cpf = %s, telefone = %s, email = %s
+                            SET nome = %s, nome_responsavel = %s, cnpj_cpf = %s, telefone = %s, email = %s,
+                                cor_primaria = %s, cor_secundaria = %s, cor_fundo = %s
                             WHERE id = %s
                             """,
                             (
@@ -2655,6 +2679,9 @@ def admin_estabelecimento():
                                 cpf_cnpj,
                                 telefone,
                                 email_comercial or admin_row["email"] or "",
+                                cor_primaria,
+                                cor_secundaria,
+                                cor_fundo,
                                 admin_row["estabelecimento_id"],
                             ),
                         )
@@ -2683,6 +2710,9 @@ def admin_estabelecimento():
                 "telefone": telefone,
                 "whatsapp": whatsapp,
                 "email_comercial": email_comercial,
+                "cor_primaria": cor_primaria,
+                "cor_secundaria": cor_secundaria,
+                "cor_fundo": cor_fundo,
             }
 
     return render_template(

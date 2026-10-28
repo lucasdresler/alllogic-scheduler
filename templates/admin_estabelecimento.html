@@ -39,6 +39,121 @@
             </div>
 
             <div class="grupo-campos">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px;">
+                    <h2 class="subtitulo-grupo" style="margin: 0;">Paleta de Cores & Personalização</h2>
+                    <button type="button" id="btn-restaurar-paleta" class="btn-secundario btn-compacto" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; padding: 6px 12px;" title="Restaurar cores padrão do sistema">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        <span>Restaurar Padrão</span>
+                    </button>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--cor-mutada, #596579); margin-top: 2px; margin-bottom: 16px; line-height: 1.45;">
+                    Personalize a identidade da sua marca. As cores escolhidas são aplicadas automaticamente tanto no <strong>painel administrativo</strong> quanto na <strong>página pública de agendamento</strong> dos seus clientes.
+                </p>
+
+                <!-- Temas Prontos Recomendados -->
+                <label style="font-size: 0.88rem; font-weight: 600; color: var(--navy-profundo); margin-bottom: 6px; display: block;">
+                    Temas Recomendados
+                </label>
+                <div class="paletas-presets-grid" id="paletas-presets-grid"></div>
+
+                <!-- Seleção Manual de Cores -->
+                <label style="font-size: 0.88rem; font-weight: 600; color: var(--navy-profundo); margin-top: 14px; margin-bottom: 6px; display: block;">
+                    Ajuste Fino de Cores
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;">
+                    <div class="campo-cor-card">
+                        <label for="cor_primaria">Cor Primária (Principal)</label>
+                        <small style="font-size: 0.74rem; color: var(--cor-mutada, #596579); display: block; margin-bottom: 8px;">
+                            Barra lateral, botões principais e títulos
+                        </small>
+                        <div class="color-input-flex">
+                            <input type="color" id="cor_primaria_picker" class="color-picker-input" value="{{ dados.get('cor_primaria', '#14213D') }}" title="Clique para escolher a cor primária">
+                            <input type="text" id="cor_primaria" name="cor_primaria" class="color-text-input" value="{{ dados.get('cor_primaria', '#14213D') }}" maxlength="7" pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" required>
+                        </div>
+                    </div>
+
+                    <div class="campo-cor-card">
+                        <label for="cor_secundaria">Cor Secundária (Destaque)</label>
+                        <small style="font-size: 0.74rem; color: var(--cor-mutada, #596579); display: block; margin-bottom: 8px;">
+                            Badges, preços, destaques e acentos
+                        </small>
+                        <div class="color-input-flex">
+                            <input type="color" id="cor_secundaria_picker" class="color-picker-input" value="{{ dados.get('cor_secundaria', '#E5C78B') }}" title="Clique para escolher a cor secundária">
+                            <input type="text" id="cor_secundaria" name="cor_secundaria" class="color-text-input" value="{{ dados.get('cor_secundaria', '#E5C78B') }}" maxlength="7" pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" required>
+                        </div>
+                    </div>
+
+                    <div class="campo-cor-card">
+                        <label for="cor_fundo">Cor de Fundo da Aplicação</label>
+                        <small style="font-size: 0.74rem; color: var(--cor-mutada, #596579); display: block; margin-bottom: 8px;">
+                            Fundo suave do painel e agendamento
+                        </small>
+                        <div class="color-input-flex">
+                            <input type="color" id="cor_fundo_picker" class="color-picker-input" value="{{ dados.get('cor_fundo', '#F6F1E8') }}" title="Clique para escolher a cor de fundo">
+                            <input type="text" id="cor_fundo" name="cor_fundo" class="color-text-input" value="{{ dados.get('cor_fundo', '#F6F1E8') }}" maxlength="7" pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pré-visualização em Tempo Real -->
+                <div style="margin-top: 20px; padding: 18px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--bg-surface);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-size: 0.88rem; font-weight: 700; color: var(--navy-profundo); display: flex; align-items: center; gap: 8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            Demonstração em Tempo Real
+                        </span>
+                        <span style="font-size: 0.75rem; color: var(--cor-mutada, #596579);">Atualiza instantaneamente</span>
+                    </div>
+
+                    <div class="preview-dupla-grid">
+                        <!-- Preview do Painel Administrativo -->
+                        <div class="mini-preview-container" id="preview-container-painel">
+                            <div class="mini-preview-header">
+                                <span>Painel Administrativo</span>
+                                <span style="font-size: 0.7rem; font-weight: 600; opacity: 0.75;">Menu & Botões</span>
+                            </div>
+                            <div class="mini-preview-body" id="preview-painel-fundo" style="background-color: {{ dados.get('cor_fundo', '#F6F1E8') }};">
+                                <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; background: #FFFFFF; border: 1px solid var(--border-subtle);">
+                                    <div id="preview-mini-avatar" style="width: 26px; height: 26px; border-radius: 50%; background-color: {{ dados.get('cor_primaria', '#14213D') }}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700;">A</div>
+                                    <span id="preview-mini-title" style="font-size: 0.82rem; font-weight: 700; color: {{ dados.get('cor_primaria', '#14213D') }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ dados.get('nome_estabelecimento', 'Minha Empresa') }}</span>
+                                </div>
+                                <div id="preview-mini-nav-item" style="padding: 8px 12px; border-radius: 8px; background-color: {{ dados.get('cor_secundaria', '#E5C78B') }}22; border-left: 3px solid {{ dados.get('cor_secundaria', '#E5C78B') }}; display: flex; align-items: center; justify-content: space-between;">
+                                    <span id="preview-mini-nav-text" style="font-size: 0.78rem; font-weight: 600; color: {{ dados.get('cor_primaria', '#14213D') }};">Agenda & Atendimentos</span>
+                                    <span id="preview-mini-badge" style="font-size: 0.68rem; padding: 2px 7px; border-radius: 10px; background-color: {{ dados.get('cor_secundaria', '#E5C78B') }}; color: {{ dados.get('cor_primaria', '#14213D') }}; font-weight: 700;">Ativo</span>
+                                </div>
+                                <button type="button" id="preview-mini-btn" style="width: 100%; padding: 9px; border-radius: 8px; background-color: {{ dados.get('cor_primaria', '#14213D') }}; color: #FFFFFF; border: none; font-size: 0.78rem; font-weight: 600; cursor: default;">
+                                    Botão de Ação do Painel
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Preview da Página de Agendamento -->
+                        <div class="mini-preview-container" id="preview-container-agendamento">
+                            <div class="mini-preview-header">
+                                <span>Página de Agendamento</span>
+                                <span style="font-size: 0.7rem; font-weight: 600; opacity: 0.75;">Vitrine do Cliente</span>
+                            </div>
+                            <div class="mini-preview-body" id="preview-agendamento-fundo" style="background-color: {{ dados.get('cor_fundo', '#F6F1E8') }};">
+                                <div id="preview-mini-hero" style="height: 52px; border-radius: 8px; background: linear-gradient(135deg, {{ dados.get('cor_primaria', '#14213D') }} 0%, #1e293b 100%); position: relative; padding: 6px 10px; display: flex; align-items: center; justify-content: flex-end;">
+                                    <span style="font-size: 0.65rem; font-weight: 600; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.22); color: #FFFFFF;">Horários Abertos</span>
+                                </div>
+                                <div style="background: #FFFFFF; border-radius: 8px; padding: 10px; border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <div id="preview-mini-servico-nome" style="font-size: 0.8rem; font-weight: 600; color: {{ dados.get('cor_primaria', '#14213D') }};">Corte & Barba Completo</div>
+                                        <div style="font-size: 0.68rem; color: #64748b;">45 min</div>
+                                    </div>
+                                    <span id="preview-mini-preco" style="font-size: 0.84rem; font-weight: 700; color: {{ dados.get('cor_secundaria', '#E5C78B') }};">R$ 60,00</span>
+                                </div>
+                                <button type="button" id="preview-mini-confirmar-btn" style="width: 100%; padding: 9px; border-radius: 8px; background-color: {{ dados.get('cor_primaria', '#14213D') }}; color: #FFFFFF; border: none; font-size: 0.78rem; font-weight: 600; cursor: default;">
+                                    Agendar Agora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grupo-campos">
                 <h2 class="subtitulo-grupo">Identificação</h2>
 
                 <label for="nome_estabelecimento">Nome do estabelecimento *</label>
@@ -110,4 +225,224 @@
             </div>
         </form>
     </div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(function() {
+    const PRESETS = [
+        {
+            id: 'classico',
+            nome: 'Agillex Clássico',
+            desc: 'Azul-marinho estrutural, champagne dourado e fundo marfim.',
+            primaria: '#14213D',
+            secundaria: '#E5C78B',
+            fundo: '#F6F1E8'
+        },
+        {
+            id: 'elegance',
+            nome: 'Elegance Gold',
+            desc: 'Preto nobre acetinado, ouro real e fundo platina ultra limpo.',
+            primaria: '#0F172A',
+            secundaria: '#D4AF37',
+            fundo: '#F8FAFC'
+        },
+        {
+            id: 'barbearia',
+            nome: 'Barbearia & Couro',
+            desc: 'Café espresso, couro, caramelo artesanal e bege suave.',
+            primaria: '#362013',
+            secundaria: '#D97706',
+            fundo: '#FAF5EE'
+        },
+        {
+            id: 'studio',
+            nome: 'Studio & Estética',
+            desc: 'Vinho nobre bordeaux com rosé gold delicado e blush suave.',
+            primaria: '#4C0519',
+            secundaria: '#FB7185',
+            fundo: '#FFF1F2'
+        },
+        {
+            id: 'esmeralda',
+            nome: 'Esmeralda & Saúde',
+            desc: 'Verde esmeralda sereno com menta revigorante para clínicas.',
+            primaria: '#064E3B',
+            secundaria: '#10B981',
+            fundo: '#F0FDF4'
+        },
+        {
+            id: 'royal',
+            nome: 'Royal Blue',
+            desc: 'Azul royal vibrante com celeste moderno e alta energia.',
+            primaria: '#1E3A8A',
+            secundaria: '#38BDF8',
+            fundo: '#F0F9FF'
+        },
+        {
+            id: 'imperial',
+            nome: 'Roxo Imperial',
+            desc: 'Púrpura nobre com ouro âmbar sofisticado para marcas premium.',
+            primaria: '#4C1D95',
+            secundaria: '#F59E0B',
+            fundo: '#FAF5FF'
+        }
+    ];
+
+    const inputPrimaria = document.getElementById('cor_primaria');
+    const pickerPrimaria = document.getElementById('cor_primaria_picker');
+    const inputSecundaria = document.getElementById('cor_secundaria');
+    const pickerSecundaria = document.getElementById('cor_secundaria_picker');
+    const inputFundo = document.getElementById('cor_fundo');
+    const pickerFundo = document.getElementById('cor_fundo_picker');
+    const presetsGrid = document.getElementById('paletas-presets-grid');
+    const btnRestaurar = document.getElementById('btn-restaurar-paleta');
+
+    // Elementos do preview
+    const previewPainelFundo = document.getElementById('preview-painel-fundo');
+    const previewMiniAvatar = document.getElementById('preview-mini-avatar');
+    const previewMiniTitle = document.getElementById('preview-mini-title');
+    const previewMiniNavItem = document.getElementById('preview-mini-nav-item');
+    const previewMiniNavText = document.getElementById('preview-mini-nav-text');
+    const previewMiniBadge = document.getElementById('preview-mini-badge');
+    const previewMiniBtn = document.getElementById('preview-mini-btn');
+
+    const previewAgendamentoFundo = document.getElementById('preview-agendamento-fundo');
+    const previewMiniHero = document.getElementById('preview-mini-hero');
+    const previewMiniServicoNome = document.getElementById('preview-mini-servico-nome');
+    const previewMiniPreco = document.getElementById('preview-mini-preco');
+    const previewMiniConfirmarBtn = document.getElementById('preview-mini-confirmar-btn');
+
+    function normalizarHex(cor) {
+        if (!cor) return '';
+        let c = cor.trim().toUpperCase();
+        if (!c.startsWith('#')) c = '#' + c;
+        return c;
+    }
+
+    function atualizarPreview(primaria, secundaria, fundo) {
+        const prim = normalizarHex(primaria) || '#14213D';
+        const sec = normalizarHex(secundaria) || '#E5C78B';
+        const fund = normalizarHex(fundo) || '#F6F1E8';
+
+        // Painel
+        if (previewPainelFundo) previewPainelFundo.style.backgroundColor = fund;
+        if (previewMiniAvatar) previewMiniAvatar.style.backgroundColor = prim;
+        if (previewMiniTitle) previewMiniTitle.style.color = prim;
+        if (previewMiniNavItem) {
+            previewMiniNavItem.style.backgroundColor = sec + '22';
+            previewMiniNavItem.style.borderLeftColor = sec;
+        }
+        if (previewMiniNavText) previewMiniNavText.style.color = prim;
+        if (previewMiniBadge) {
+            previewMiniBadge.style.backgroundColor = sec;
+            previewMiniBadge.style.color = prim;
+        }
+        if (previewMiniBtn) previewMiniBtn.style.backgroundColor = prim;
+
+        // Agendamento
+        if (previewAgendamentoFundo) previewAgendamentoFundo.style.backgroundColor = fund;
+        if (previewMiniHero) {
+            previewMiniHero.style.background = 'linear-gradient(135deg, ' + prim + ' 0%, #1e293b 100%)';
+        }
+        if (previewMiniServicoNome) previewMiniServicoNome.style.color = prim;
+        if (previewMiniPreco) previewMiniPreco.style.color = sec;
+        if (previewMiniConfirmarBtn) previewMiniConfirmarBtn.style.backgroundColor = prim;
+
+        // Atualiza a seleção visual dos cartões de preset
+        document.querySelectorAll('.paleta-preset-card').forEach(card => {
+            const cardPrim = normalizarHex(card.dataset.primaria);
+            const cardSec = normalizarHex(card.dataset.secundaria);
+            const cardFund = normalizarHex(card.dataset.fundo);
+            if (cardPrim === prim && cardSec === sec && cardFund === fund) {
+                card.classList.add('ativo');
+            } else {
+                card.classList.remove('ativo');
+            }
+        });
+    }
+
+    function aplicarCores(primaria, secundaria, fundo) {
+        const prim = normalizarHex(primaria);
+        const sec = normalizarHex(secundaria);
+        const fund = normalizarHex(fundo);
+
+        if (inputPrimaria) inputPrimaria.value = prim;
+        if (pickerPrimaria) pickerPrimaria.value = prim;
+
+        if (inputSecundaria) inputSecundaria.value = sec;
+        if (pickerSecundaria) pickerSecundaria.value = sec;
+
+        if (inputFundo) inputFundo.value = fund;
+        if (pickerFundo) pickerFundo.value = fund;
+
+        atualizarPreview(prim, sec, fund);
+    }
+
+    // Renderizar presets
+    if (presetsGrid) {
+        presetsGrid.innerHTML = '';
+        PRESETS.forEach(preset => {
+            const card = document.createElement('div');
+            card.className = 'paleta-preset-card';
+            card.dataset.primaria = preset.primaria;
+            card.dataset.secundaria = preset.secundaria;
+            card.dataset.fundo = preset.fundo;
+            card.innerHTML = `
+                <div class="preset-amostras-row">
+                    <span class="amostra-bolinha" style="background-color: ${preset.primaria};" title="Cor Primária: ${preset.primaria}"></span>
+                    <span class="amostra-bolinha" style="background-color: ${preset.secundaria};" title="Cor de Destaque: ${preset.secundaria}"></span>
+                    <span class="amostra-bolinha" style="background-color: ${preset.fundo};" title="Cor de Fundo: ${preset.fundo}"></span>
+                </div>
+                <div>
+                    <h4 class="preset-card-titulo">${preset.nome}</h4>
+                    <p class="preset-card-desc">${preset.desc}</p>
+                </div>
+            `;
+            card.addEventListener('click', () => {
+                aplicarCores(preset.primaria, preset.secundaria, preset.fundo);
+            });
+            presetsGrid.appendChild(card);
+        });
+    }
+
+    // Sincronização Pickers <-> Inputs
+    function vincularPar(picker, input, tipo) {
+        if (!picker || !input) return;
+
+        picker.addEventListener('input', () => {
+            input.value = picker.value.toUpperCase();
+            atualizarPreview(inputPrimaria.value, inputSecundaria.value, inputFundo.value);
+        });
+
+        input.addEventListener('input', () => {
+            let val = input.value.trim().toUpperCase();
+            if (val && !val.startsWith('#')) {
+                val = '#' + val;
+            }
+            if (/^#(?:[0-9A-F]{3}|[0-9A-F]{6})$/i.test(val)) {
+                if (val.length === 7) {
+                    picker.value = val;
+                }
+                atualizarPreview(inputPrimaria.value, inputSecundaria.value, inputFundo.value);
+            }
+        });
+    }
+
+    vincularPar(pickerPrimaria, inputPrimaria, 'primaria');
+    vincularPar(pickerSecundaria, inputSecundaria, 'secundaria');
+    vincularPar(pickerFundo, inputFundo, 'fundo');
+
+    // Botão restaurar padrão
+    if (btnRestaurar) {
+        btnRestaurar.addEventListener('click', () => {
+            const padrao = PRESETS[0];
+            aplicarCores(padrao.primaria, padrao.secundaria, padrao.fundo);
+        });
+    }
+
+    // Inicialização inicial
+    atualizarPreview(inputPrimaria.value, inputSecundaria.value, inputFundo.value);
+})();
+</script>
 {% endblock %}

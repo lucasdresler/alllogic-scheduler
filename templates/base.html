@@ -6,12 +6,42 @@
     <title>{% block titulo %}{{ nome_estabelecimento|default('AllLogic Scheduler') }}{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <meta name="theme-color" content="#14213D">
+    <meta name="theme-color" content="{{ cor_primaria|default('#14213D') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-192.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% if cor_primaria or cor_secundaria or cor_fundo %}
+    <style id="custom-palette-style">
+        :root {
+            {% if cor_primaria %}
+            --navy-profundo: {{ cor_primaria }};
+            --navy-950: {{ cor_primaria }};
+            --navy-900: {{ cor_primaria }};
+            --navy-800: {{ cor_primaria }};
+            --navy-700: {{ cor_primaria }};
+            --border-focus: {{ cor_primaria }};
+            --text-on-champagne: {{ cor_primaria }};
+            --dourado-escuro: {{ cor_primaria }};
+            {% endif %}
+            {% if cor_secundaria %}
+            --champagne-dourado: {{ cor_secundaria }};
+            --gold-accent: {{ cor_secundaria }};
+            --gold-light: {{ cor_secundaria }};
+            --gold-hover: {{ cor_secundaria }};
+            --gold-subtle: {{ cor_secundaria }}1A;
+            --border-accent: {{ cor_secundaria }};
+            --dourado: {{ cor_secundaria }};
+            {% endif %}
+            {% if cor_fundo %}
+            --fundo-marfim: {{ cor_fundo }};
+            --bg-app: {{ cor_fundo }};
+            --bg-principal: {{ cor_fundo }};
+            {% endif %}
+        }
+    </style>
+    {% endif %}
     {% block head_extra %}{% endblock %}
 </head>
 <body>
