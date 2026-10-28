@@ -963,105 +963,15 @@ def admin_disparar_lembretes():
 
 
 @app.route("/experimente")
+@csrf.exempt
 def experimente():
-    return redirect(url_for("agillex"), code=302)
+    return redirect("https://alllogiconline.com.br/agillex-agenda/", code=301)
 
 
 @app.route("/agillex", methods=["GET", "POST"])
-@limiter.limit("5 per minute", methods=["POST"])
+@csrf.exempt
 def agillex():
-    erro = None
-    valores = {}
-    config = _carregar_config_template()
-
-    # Leitura e sanitização do plano selecionado via query string ou padrão
-    plano_selecionado = request.args.get("plano", "intermediario").strip().lower()
-    if plano_selecionado not in PLANOS_CONFIG:
-        plano_selecionado = "intermediario"
-    valores["plano"] = plano_selecionado
-
-    if request.method == "POST":
-        nome_responsavel = request.form.get("nome_responsavel", "").strip()
-        nome_estabelecimento = request.form.get("nome_estabelecimento", "").strip()
-        cnpj_cpf = request.form.get("cnpj_cpf", "").strip()
-        telefone = request.form.get("telefone", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        senha = request.form.get("senha", "")
-        confirmar_senha = request.form.get("confirmar_senha", "")
-        termos = request.form.get("termos") == "1"
-        plano = request.form.get("plano", plano_selecionado).strip().lower()
-        if plano not in PLANOS_CONFIG:
-            plano = "intermediario"
-
-        valores = {
-            "nome_responsavel": nome_responsavel,
-            "nome_estabelecimento": nome_estabelecimento,
-            "cnpj_cpf": cnpj_cpf,
-            "telefone": telefone,
-            "email": email,
-            "termos": termos,
-            "plano": plano,
-        }
-
-        digitos_doc = re.sub(r"\D", "", cnpj_cpf)
-        digitos_tel = re.sub(r"\D", "", telefone)
-
-        if not (nome_responsavel and nome_estabelecimento and cnpj_cpf and telefone and email and senha and confirmar_senha):
-            erro = "Por favor, preencha todos os campos obrigatórios."
-        elif not termos:
-            erro = "Você precisa concordar com os termos de uso para ativar o período de teste de 14 dias."
-        elif not _validar_email(email):
-            erro = "Por favor, informe um endereço de e-mail válido."
-        elif len(digitos_doc) not in (11, 14):
-            erro = "O documento informado deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos) válido."
-        elif len(digitos_tel) < 10:
-            erro = "O telefone informado deve conter DDD e pelo menos 10 dígitos numéricos."
-        elif len(senha) < 8:
-            erro = "A senha deve ter no mínimo 8 caracteres."
-        elif senha != confirmar_senha:
-            erro = "A confirmação de senha não confere com a senha informada."
-        else:
-            with db_session() as conn:
-                admin_existente = conn.execute(
-                    "SELECT id FROM admin WHERE LOWER(usuario) = %s OR (email IS NOT NULL AND LOWER(email) = %s)",
-                    (email, email),
-                ).fetchone()
-                estab_email = obter_estabelecimento_por_email(conn, email)
-                if admin_existente or estab_email:
-                    erro = "Este endereço de e-mail já está cadastrado. Se já possui uma conta, faça login no painel."
-                else:
-                    estab_doc = obter_estabelecimento_por_cnpj_cpf(conn, cnpj_cpf)
-                    if estab_doc and estab_doc["status"] == "ativo":
-                        erro = "Já existe uma avaliação de 14 dias ativa para este CNPJ/CPF."
-                    else:
-                        from werkzeug.security import generate_password_hash
-                        senha_hash = generate_password_hash(senha)
-                        novo_estab = criar_estabelecimento_com_admin(
-                            conn,
-                            nome_estabelecimento=nome_estabelecimento,
-                            nome_responsavel=nome_responsavel,
-                            cnpj_cpf=cnpj_cpf,
-                            email=email,
-                            telefone=telefone,
-                            usuario=email,
-                            senha_hash=senha_hash,
-                            plano=plano,
-                        )
-                        session["admin_logado"] = True
-                        session["admin_usuario"] = email
-                        session["estabelecimento_id"] = novo_estab["estabelecimento_id"]
-                        session["estabelecimento_plano"] = novo_estab["plano"]
-
-                        return redirect(url_for("admin_estabelecimento", boas_vindas="1"))
-
-    return render_template(
-        "agillex.html",
-        erro=erro,
-        valores=valores,
-        planos_config=PLANOS_CONFIG,
-        plano_selecionado=valores.get("plano", "intermediario"),
-        **config,
-    )
+    return redirect("https://alllogiconline.com.br/agillex-agenda/", code=301)
 
 
 @app.route("/admin/trial-expirado")
