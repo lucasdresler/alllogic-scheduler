@@ -47,7 +47,7 @@ O **AllLogic Scheduler** é o sistema de agendamento online da **Família Agille
 3. **Portão Obrigatório de Aprovação:** Apresentar ao fundador um resumo estruturado com as mudanças efetuadas, arquivos alterados, diffs relevantes e evidências dos testes. Formular explicitamente:
    > *"Testes locais validados com sucesso. Autoriza o commit e a publicação em produção?"*
    Pausar a execução e aguardar a resposta do fundador. Fica terminantemente proibido executar `git commit`, `git push` ou comandos remotos sem autorização expressa.
-4. Após autorização expressa do fundador:
+4. **Execução Contínua Pós-Autorização:** Uma vez concedida a autorização pelo fundador, a execução prossegue de forma contínua e autônoma até a entrega completa das etapas aprovadas, sem pausas para confirmações intermediárias:
    - Criar commit semântico e enviar ao GitHub (`git push origin main`).
    - Conectar à VPS e executar backup da aplicação e das imagens anteriores.
    - Atualizar a aplicação na VPS via `git pull origin main`.
