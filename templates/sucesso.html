@@ -156,7 +156,7 @@
         {% endif %}
         {% if telefone_estabelecimento %}
         <p class="rodape-telefone">
-            <a href="tel:{{ telefone_limpo }}" class="link-telefone">{{ telefone_estabelecimento }}</a>
+            <a href="https://wa.me/{{ whatsapp_estabelecimento or ('55' ~ telefone_limpo) }}" class="link-telefone" target="_blank" rel="noopener noreferrer">{{ telefone_estabelecimento }}</a>
         </p>
         {% endif %}
         <p class="rodape-admin-link">
@@ -166,7 +166,7 @@
             <div class="rodape-comercial-chamada">
                 <span class="rodape-comercial-marca">Agillex Agenda</span>
                 <span class="rodape-comercial-sep">·</span>
-                <a href="https://agillex.com.br" class="link-experimente" target="_blank" rel="noopener noreferrer">Experimente grátis por 14 dias</a>
+                <a href="https://hub.agillex.com.br/checkout?modulo=agenda&trial=true" class="link-experimente" target="_blank" rel="noopener noreferrer">Experimente grátis por 14 dias</a>
             </div>
             <div class="rodape-institucional-contato">
                 <a href="https://agillex.com.br/privacidade" class="link-institucional" target="_blank" rel="noopener noreferrer">Privacidade</a>
@@ -175,7 +175,7 @@
                 <span class="rodape-comercial-sep">·</span>
                 <a href="mailto:contato@agillex.com.br" class="link-institucional">contato@agillex.com.br</a>
                 <span class="rodape-comercial-sep">·</span>
-                <a href="tel:11966381915" class="link-institucional">(11) 96638-1915</a>
+                <a href="https://wa.me/5511966381915" class="link-institucional" target="_blank" rel="noopener noreferrer">(11) 96638-1915</a>
             </div>
             <p class="rodape-copy">&copy; 2026 Agillex. Todos os direitos reservados.</p>
         </div>

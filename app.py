@@ -207,6 +207,9 @@ def _carregar_config_template(estabelecimento_id=None):
 
     telefone = config.get("telefone_estabelecimento", "")
     telefone_limpo = re.sub(r"[^\d+]", "", telefone) if telefone else ""
+    whatsapp_estabelecimento = re.sub(r"\D", "", telefone) if telefone else ""
+    if whatsapp_estabelecimento and not whatsapp_estabelecimento.startswith("55") and len(whatsapp_estabelecimento) in (10, 11):
+        whatsapp_estabelecimento = f"55{whatsapp_estabelecimento}"
 
     url_base = _obter_url_base_whatsapp()
     slug = (est.get("slug") if est else "") or ""
@@ -229,6 +232,7 @@ def _carregar_config_template(estabelecimento_id=None):
         "nome_estabelecimento": config.get("nome_estabelecimento", "AllLogic Scheduler"),
         "telefone_estabelecimento": telefone,
         "telefone_limpo": telefone_limpo,
+        "whatsapp_estabelecimento": whatsapp_estabelecimento,
         "endereco_estabelecimento": config.get("endereco_estabelecimento", ""),
         "nome_publico": config.get("nome_publico", "AllLogic Scheduler"),
         "logotipo": logotipo,
