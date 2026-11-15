@@ -205,8 +205,16 @@ def _carregar_config_template(estabelecimento_id=None):
         if not os.path.isfile(caminho_disco):
             logotipo = ""
 
-    telefone = config.get("telefone_estabelecimento", "")
+    telefone = config.get("telefone_estabelecimento", "") or config.get("telefone", "") or (est.get("telefone") if est else "")
     telefone_limpo = re.sub(r"[^\d+]", "", telefone) if telefone else ""
+    tel_digits = re.sub(r"\D", "", telefone) if telefone else ""
+    if len(tel_digits) == 11 and not telefone.startswith("("):
+        telefone_formatado = f"({tel_digits[:2]}) {tel_digits[2:7]}-{tel_digits[7:]}"
+    elif len(tel_digits) == 10 and not telefone.startswith("("):
+        telefone_formatado = f"({tel_digits[:2]}) {tel_digits[2:6]}-{tel_digits[6:]}"
+    else:
+        telefone_formatado = telefone
+
     whatsapp_estabelecimento = re.sub(r"\D", "", telefone) if telefone else ""
     if whatsapp_estabelecimento and not whatsapp_estabelecimento.startswith("55") and len(whatsapp_estabelecimento) in (10, 11):
         whatsapp_estabelecimento = f"55{whatsapp_estabelecimento}"
@@ -230,10 +238,12 @@ def _carregar_config_template(estabelecimento_id=None):
 
     return {
         "nome_estabelecimento": config.get("nome_estabelecimento", "AllLogic Scheduler"),
-        "telefone_estabelecimento": telefone,
+        "telefone_estabelecimento": telefone_formatado,
+        "telefone": telefone_formatado,
         "telefone_limpo": telefone_limpo,
         "whatsapp_estabelecimento": whatsapp_estabelecimento,
-        "endereco_estabelecimento": config.get("endereco_estabelecimento", ""),
+        "endereco_estabelecimento": config.get("endereco_estabelecimento", "") or (est.get("endereco_estabelecimento") if est else ""),
+        "email_comercial": config.get("email_comercial", "") or (est.get("email_comercial") if est else "") or (est.get("email") if est else ""),
         "nome_publico": config.get("nome_publico", "AllLogic Scheduler"),
         "logotipo": logotipo,
         "dias_antecedencia": int(config.get("dias_antecedencia_agendamento", 14)),

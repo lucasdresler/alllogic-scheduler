@@ -1230,8 +1230,22 @@ def obter_configuracoes_estabelecimento(conn, estabelecimento_id=1):
     # Para estabelecimentos específicos (ID > 1)
     nome_estab = est.get("nome") or "AllLogic Scheduler"
     nome_pub = est.get("nome_publico") or est.get("nome_fantasia") or nome_estab
-    telefone = est.get("telefone", "")
+    telefone = est.get("telefone", "") or est.get("whatsapp", "")
     endereco = est.get("endereco_estabelecimento", "")
+    if not endereco and (est.get("logradouro") or est.get("cidade")):
+        partes = []
+        if est.get("logradouro"):
+            partes.append(f"{est['logradouro']}, {est['numero']}" if est.get("numero") else est["logradouro"])
+        if est.get("complemento"):
+            partes.append(est["complemento"])
+        if est.get("bairro"):
+            partes.append(est["bairro"])
+        if est.get("cidade") or est.get("estado"):
+            partes.append(f"{est['cidade']} - {est['estado']}" if (est.get("cidade") and est.get("estado")) else (est.get("cidade") or est.get("estado") or ""))
+        if est.get("cep"):
+            partes.append(f"CEP {est['cep']}")
+        if partes:
+            endereco = " - ".join(partes)
     logotipo = est.get("logotipo", "")
 
     return {
