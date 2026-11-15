@@ -1429,57 +1429,6 @@ def sincronizar_estabelecimento_do_hub(conn, slug):
 
         if est_row:
             estab_id = est_row["id"]
-            # Criar profissional padrão caso não exista
-            prof = conn.execute(
-                "SELECT id FROM profissional WHERE estabelecimento_id = %s LIMIT 1",
-                (estab_id,)
-            ).fetchone()
-            if not prof:
-                prof = conn.execute(
-                    """
-                    INSERT INTO profissional (nome, ativo, estabelecimento_id)
-                    VALUES (%s, TRUE, %s)
-                    RETURNING id;
-                    """,
-                    (f"Atendimento {nome}", estab_id)
-                ).fetchone()
-
-            # Criar serviço padrão caso não exista
-            srv = conn.execute(
-                "SELECT id FROM servico WHERE estabelecimento_id = %s LIMIT 1",
-                (estab_id,)
-            ).fetchone()
-            if not srv:
-                srv = conn.execute(
-                    """
-                    INSERT INTO servico (nome, descricao, preco, duracao_minutos, ativo, estabelecimento_id)
-                    VALUES ('Atendimento / Consulta', 'Agendamento de horário e atendimento presencial ou online.', 0.00, 30, TRUE, %s)
-                    RETURNING id;
-                    """,
-                    (estab_id,)
-                ).fetchone()
-
-            # Vincular profissional ao serviço
-            if prof and srv:
-                conn.execute(
-                    """
-                    INSERT INTO profissional_servico (profissional_id, servico_id)
-                    VALUES (%s, %s)
-                    ON CONFLICT DO NOTHING;
-                    """,
-                    (prof["id"], srv["id"])
-                )
-
-                # Criar disponibilidade padrão (segunda a sábado das 09h às 19h)
-                for dia in range(1, 7):
-                    conn.execute(
-                        """
-                        INSERT INTO profissional_disponibilidade (profissional_id, dia_semana, horario_entrada, horario_saida, ativo)
-                        VALUES (%s, %s, '09:00', '19:00', TRUE)
-                        ON CONFLICT DO NOTHING;
-                        """,
-                        (prof["id"], dia)
-                    )
 
             # Criar ou atualizar admin da agenda com a senha ou login
             if email:
