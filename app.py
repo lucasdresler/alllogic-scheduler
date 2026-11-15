@@ -968,13 +968,13 @@ def admin_disparar_lembretes():
 @app.route("/experimente")
 @csrf.exempt
 def experimente():
-    return redirect("https://alllogiconline.com.br/agillex-agenda/", code=301)
+    return redirect("https://agillex.com.br", code=301)
 
 
 @app.route("/agillex", methods=["GET", "POST"])
 @csrf.exempt
 def agillex():
-    return redirect("https://alllogiconline.com.br/agillex-agenda/", code=301)
+    return redirect("https://agillex.com.br", code=301)
 
 
 @app.route("/admin/trial-expirado")
@@ -1018,7 +1018,7 @@ def admin_upgrade():
             novo_plano = request.form.get("novo_plano", "").strip().lower()
             if novo_plano in PLANOS_CONFIG:
                 checkout_url = (
-                    f"https://hub.alllogiconline.com.br/checkout?modulo=agenda&plano=agenda_{novo_plano}"
+                    f"https://hub.agillex.com.br/checkout?modulo=agenda&plano=agenda_{novo_plano}"
                     f"&email={urllib.parse.quote(estab.get('email') or '')}"
                     f"&nome={urllib.parse.quote(estab.get('nome_responsavel') or estab.get('nome') or '')}"
                 )
