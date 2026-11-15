@@ -291,13 +291,13 @@ def _obter_url_base_whatsapp():
     try:
         host = request.host if request else ""
         if not host or "127.0.0.1" in host or "localhost" in host:
-            return "https://agenda.alllogiconline.com.br"
+            return "https://agenda.agillex.com.br"
         scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-        if "alllogiconline.com.br" in host or request.headers.get("X-Forwarded-Ssl") == "on" or request.headers.get("X-Forwarded-ssl") == "on":
+        if "agillex.com.br" in host or "alllogiconline.com.br" in host or request.headers.get("X-Forwarded-Ssl") == "on" or request.headers.get("X-Forwarded-ssl") == "on":
             scheme = "https"
         return f"{scheme}://{host}".rstrip("/")
     except Exception:
-        return "https://agenda.alllogiconline.com.br"
+        return "https://agenda.agillex.com.br"
 
 
 def _obter_total_profissionais_ativos(conn, estab_id):

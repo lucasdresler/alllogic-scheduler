@@ -130,7 +130,7 @@ def formatar_mensagem_cliente(agendamento, config, url_base):
     preco_fmt = f"{preco:.2f}".replace(".", ",")
 
     token = agendamento.get("token_acesso", "")
-    url_base_limpa = (url_base or "https://agenda.alllogiconline.com.br").rstrip("/")
+    url_base_limpa = (url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")).rstrip("/")
     url_reserva = f"{url_base_limpa}/reserva/{token}" if token else url_base_limpa
 
     linhas = [
@@ -174,7 +174,7 @@ def formatar_mensagem_admin(agendamento, config, url_base):
     preco = agendamento.get("servico_preco", 0.0)
     preco_fmt = f"{preco:.2f}".replace(".", ",")
 
-    url_base_limpa = (url_base or "https://agenda.alllogiconline.com.br").rstrip("/")
+    url_base_limpa = (url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")).rstrip("/")
     url_admin = f"{url_base_limpa}/admin"
 
     linhas = [
@@ -216,7 +216,7 @@ def formatar_mensagem_cancelamento_admin(agendamento, config, url_base):
     data_fmt = _formatar_data_br(agendamento.get("data", ""))
     hora = agendamento.get("hora", "")
     servicos = agendamento.get("servico_nome", "Serviço")
-    url_base_limpa = (url_base or "https://agenda.alllogiconline.com.br").rstrip("/")
+    url_base_limpa = (url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")).rstrip("/")
 
     return (
         f"⚠️ *Agendamento Cancelado — {nome_estabelecimento}*\n\n"
@@ -256,7 +256,7 @@ def notificar_novo_agendamento_whatsapp(agendamento_id, url_base=None):
             with db_session() as conn:
                 config = obter_todas_configuracoes(conn)
 
-            base_url = url_base or os.environ.get("APP_URL_BASE", "https://agenda.alllogiconline.com.br")
+            base_url = url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")
 
             # 1. Enviar mensagem para o Cliente
             telefone_cliente = agendamento.get("cliente_telefone")
@@ -298,7 +298,7 @@ def notificar_cancelamento_whatsapp(agendamento_id, url_base=None):
             with db_session() as conn:
                 config = obter_todas_configuracoes(conn)
 
-            base_url = url_base or os.environ.get("APP_URL_BASE", "https://agenda.alllogiconline.com.br")
+            base_url = url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")
 
             # Mensagem cliente
             telefone_cliente = agendamento.get("cliente_telefone")
@@ -339,7 +339,7 @@ def formatar_mensagem_lembrete_24h(agendamento, config, url_base):
     endereco = config.get("endereco_estabelecimento") or config.get("endereco") or ""
 
     token = agendamento.get("token_acesso", "")
-    url_base_limpa = (url_base or "https://agenda.alllogiconline.com.br").rstrip("/")
+    url_base_limpa = (url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")).rstrip("/")
     url_confirmar = f"{url_base_limpa}/reserva/{token}?confirmar=1" if token else url_base_limpa
     url_reserva = f"{url_base_limpa}/reserva/{token}" if token else url_base_limpa
 
@@ -384,7 +384,7 @@ def formatar_mensagem_lembrete_2h(agendamento, config, url_base):
     endereco = config.get("endereco_estabelecimento") or config.get("endereco") or ""
 
     token = agendamento.get("token_acesso", "")
-    url_base_limpa = (url_base or "https://agenda.alllogiconline.com.br").rstrip("/")
+    url_base_limpa = (url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")).rstrip("/")
     url_reserva = f"{url_base_limpa}/reserva/{token}" if token else url_base_limpa
 
     linhas = [
@@ -430,7 +430,7 @@ def disparar_lembrete_agendamento(agendamento_id, tipo="24h", url_base=None):
         with db_session() as conn:
             config = obter_todas_configuracoes(conn)
 
-        base_url = url_base or os.environ.get("APP_URL_BASE", "https://agenda.alllogiconline.com.br")
+        base_url = url_base or os.environ.get("APP_URL_BASE", "https://agenda.agillex.com.br")
 
         if tipo == "24h":
             msg = formatar_mensagem_lembrete_24h(agendamento, config, base_url)

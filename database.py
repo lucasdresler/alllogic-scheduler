@@ -1350,9 +1350,166 @@ def obter_estabelecimento_por_slug(conn, slug):
         row = conn.execute("SELECT * FROM estabelecimento WHERE slug IN ('salao-premium', 'default') OR id = 1").fetchone()
         if row:
             return row
-    return conn.execute(
+    res = conn.execute(
         "SELECT * FROM estabelecimento WHERE slug = %s", (s,)
     ).fetchone()
+    if res:
+        return res
+
+    # Auto-provisionamento a partir do Agillex Hub (matriz_db) se a organização existir
+    return sincronizar_estabelecimento_do_hub(conn, s)
+
+
+def sincronizar_estabelecimento_do_hub(conn, slug):
+    """
+    Sincroniza automaticamente uma organização cadastrada no Agillex Hub (matriz_db)
+    para a tabela de estabelecimentos do Agillex Agenda caso ainda não exista.
+    """
+    if not slug:
+        return None
+    s = slug.strip().lower()
+    matriz_conn = None
+    try:
+        host = os.environ.get("POSTGRES_HOST", "matriz-postgres")
+        port = os.environ.get("POSTGRES_PORT", "5432")
+        user = os.environ.get("POSTGRES_USER", "matriz_admin")
+        password = os.environ.get("POSTGRES_PASSWORD", "MatrizSecurePass2026!")
+
+        matriz_conn = psycopg.connect(
+            host=host,
+            port=port,
+            dbname="matriz_db",
+            user=user,
+            password=password,
+            row_factory=dict_row,
+        )
+
+        org = matriz_conn.execute(
+            """
+            SELECT o.id, o.name, o.slug, o.whatsapp_phone, o.plan, u.email, u.password_hash
+            FROM public.organizations o
+            LEFT JOIN public.organization_members om ON om.organization_id = o.id
+            LEFT JOIN auth.users u ON u.id = om.user_id
+            WHERE LOWER(o.slug) = %s
+            LIMIT 1
+            """,
+            (s,)
+        ).fetchone()
+
+        if not org:
+            return None
+
+        # Insere estabelecimento no alllogic_scheduler
+        now = datetime.now(timezone.utc)
+        trial_fim = now + timedelta(days=14)
+        nome = org.get("name") or "Minha Empresa"
+        email = org.get("email") or f"contato@{s}.com.br"
+        tel = org.get("whatsapp_phone") or "11999999999"
+
+        est_row = conn.execute(
+            """
+            INSERT INTO estabelecimento (
+                slug, nome, nome_responsavel, email, telefone,
+                trial_inicio, trial_fim, status, plano, nome_publico,
+                horario_abertura, horario_fechamento, intervalo_slot_minutos,
+                dias_funcionamento, dias_antecedencia_agendamento
+            ) VALUES (
+                %s, %s, %s, %s, %s,
+                %s, %s, 'ativo', 'intermediario', %s,
+                '09:00', '19:00', 30,
+                '1,2,3,4,5,6', 14
+            )
+            ON CONFLICT (slug) DO UPDATE SET
+                nome = EXCLUDED.nome,
+                telefone = EXCLUDED.telefone
+            RETURNING *;
+            """,
+            (s, nome, nome, email, tel, now, trial_fim, nome)
+        ).fetchone()
+
+        if est_row:
+            estab_id = est_row["id"]
+            # Criar profissional padrão caso não exista
+            prof = conn.execute(
+                "SELECT id FROM profissional WHERE estabelecimento_id = %s LIMIT 1",
+                (estab_id,)
+            ).fetchone()
+            if not prof:
+                prof = conn.execute(
+                    """
+                    INSERT INTO profissional (nome, ativo, estabelecimento_id)
+                    VALUES (%s, TRUE, %s)
+                    RETURNING id;
+                    """,
+                    (f"Atendimento {nome}", estab_id)
+                ).fetchone()
+
+            # Criar serviço padrão caso não exista
+            srv = conn.execute(
+                "SELECT id FROM servico WHERE estabelecimento_id = %s LIMIT 1",
+                (estab_id,)
+            ).fetchone()
+            if not srv:
+                srv = conn.execute(
+                    """
+                    INSERT INTO servico (nome, descricao, preco, duracao_minutos, ativo, estabelecimento_id)
+                    VALUES ('Atendimento / Consulta', 'Agendamento de horário e atendimento presencial ou online.', 0.00, 30, TRUE, %s)
+                    RETURNING id;
+                    """,
+                    (estab_id,)
+                ).fetchone()
+
+            # Vincular profissional ao serviço
+            if prof and srv:
+                conn.execute(
+                    """
+                    INSERT INTO profissional_servico (profissional_id, servico_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    (prof["id"], srv["id"])
+                )
+
+                # Criar disponibilidade padrão (segunda a sábado das 09h às 19h)
+                for dia in range(1, 7):
+                    conn.execute(
+                        """
+                        INSERT INTO profissional_disponibilidade (profissional_id, dia_semana, horario_entrada, horario_saida, ativo)
+                        VALUES (%s, %s, '09:00', '19:00', TRUE)
+                        ON CONFLICT DO NOTHING;
+                        """,
+                        (prof["id"], dia)
+                    )
+
+            # Criar ou atualizar admin da agenda com a senha ou login
+            if email:
+                admin_user = conn.execute(
+                    "SELECT id FROM admin WHERE estabelecimento_id = %s OR usuario = %s",
+                    (estab_id, email)
+                ).fetchone()
+                if not admin_user:
+                    from werkzeug.security import generate_password_hash
+                    default_hash = generate_password_hash("Agillex2026@")
+                    conn.execute(
+                        """
+                        INSERT INTO admin (usuario, senha_hash, email, nome_responsavel, estabelecimento_id)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT DO NOTHING;
+                        """,
+                        (email, default_hash, email, nome, estab_id)
+                    )
+
+            return est_row
+
+    except Exception as e:
+        print(f"[sincronizar_estabelecimento_do_hub] Aviso ao buscar {s} no Hub: {e}")
+        return None
+    finally:
+        if matriz_conn:
+            try:
+                matriz_conn.close()
+            except Exception:
+                pass
 
 
 def verificar_status_trial(conn, estabelecimento_id):

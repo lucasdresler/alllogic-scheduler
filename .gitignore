@@ -30,3 +30,4 @@ Thumbs.db
 # Uploads
 static/uploads/*
 !static/uploads/.gitkeep
+*.zip
