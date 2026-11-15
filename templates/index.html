@@ -50,7 +50,7 @@
                 {% if telefone %}
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <span style="font-size: 0.95rem;">📞</span>
-                    <span><strong>Telefone:</strong> <a href="tel:{{ telefone_limpo }}" style="color: inherit; text-decoration: none;">{{ telefone }}</a></span>
+                    <span><strong>Telefone:</strong> <a href="https://wa.me/{{ whatsapp_estabelecimento or telefone_limpo }}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;" title="Conversar no WhatsApp">{{ telefone }}</a></span>
                 </div>
                 {% endif %}
 
@@ -481,14 +481,6 @@
     </div>
 
     <footer class="rodape-publico">
-        {% if endereco_estabelecimento %}
-        <p class="rodape-endereco">{{ endereco_estabelecimento }}</p>
-        {% endif %}
-        {% if telefone_estabelecimento %}
-        <p class="rodape-telefone">
-            <a href="https://wa.me/{{ whatsapp_estabelecimento or ('55' ~ telefone_limpo) }}" class="link-telefone" target="_blank" rel="noopener noreferrer">{{ telefone_estabelecimento }}</a>
-        </p>
-        {% endif %}
         <p class="rodape-admin-link">
             <a href="https://hub.agillex.com.br" class="link-painel-admin" target="_blank" rel="noopener noreferrer">Painel Administrativo {{ nome_estabelecimento }}</a>
         </p>
