@@ -81,13 +81,6 @@
                     <span style="color: var(--text-muted);">(+500 atendimentos)</span>
                 </div>
 
-                {% if endereco_estabelecimento %}
-                <a href="https://www.google.com/maps/search/?api=1&query={{ endereco_estabelecimento|urlencode }}" target="_blank" rel="noopener noreferrer" class="vitrine-chip" title="Ver localização no mapa">
-                    <span>📍</span>
-                    <span>{{ endereco_estabelecimento }}</span>
-                </a>
-                {% endif %}
-
                 {% if telefone_limpo %}
                 <a href="https://api.whatsapp.com/send?phone={{ telefone_limpo }}&text=Ol%C3%A1!+Gostaria+de+informa%C3%A7%C3%B5es+sobre+o+atendimento." target="_blank" rel="noopener noreferrer" class="vitrine-chip chip-whatsapp">
                     <span>💬</span>
