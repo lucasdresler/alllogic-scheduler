@@ -35,15 +35,22 @@
             </ul>
         </div>
 
-        <a href="https://hub.agillex.com.br/checkout?modulo=agenda&plano=intermediario&email={{ info_trial.get('estabelecimento_email', '') }}"
+        <a href="https://hub.agillex.com.br/plans?expired=true&email={{ info_trial.get('estabelecimento_email', '') }}"
            class="btn-primario"
            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; font-size: 1rem; text-decoration: none; border-radius: 8px; font-weight: 700; margin-bottom: 12px; background: #0f172a; color: #ffffff;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                 <line x1="1" y1="10" x2="23" y2="10"></line>
             </svg>
-            <span>Ativar Assinatura Online Agora</span>
+            <span>Conhecer e Assinar Produtos da Família Agillex</span>
         </a>
+
+        <div style="margin-bottom: 16px;">
+            <a href="https://hub.agillex.com.br/checkout?modulo=agenda&plano=intermediario&email={{ info_trial.get('estabelecimento_email', '') }}"
+               style="font-size: 0.9rem; color: #1e40af; font-weight: 600; text-decoration: underline;">
+                Ou assinar diretamente apenas o Agillex Agenda (R$ 49,90/mês)
+            </a>
+        </div>
 
         <div style="margin-top: 16px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
             <a href="https://wa.me/5511966381915?text=Ol%C3%A1!%20Tenho%20d%C3%BAvidas%20sobre%20a%20assinatura%20do%20Agillex%20Agenda."
