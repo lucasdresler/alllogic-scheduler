@@ -819,6 +819,13 @@ def agendamento_sucesso(agendamento_id):
         return redirect(url_for("index"))
 
     estab_id = agendamento.get("estabelecimento_id") or 1
+    with db_session() as conn:
+        estabelecimento = obter_estabelecimento_por_id(conn, estab_id)
+
+    url_retorno = url_for("index")
+    if estabelecimento and estabelecimento.get("slug") and estabelecimento.get("slug") not in ("default", ""):
+        url_retorno = f"/{estabelecimento['slug']}"
+
     try:
         config_template = _carregar_config_template(estab_id)
     except TypeError:
@@ -833,6 +840,8 @@ def agendamento_sucesso(agendamento_id):
     return render_template(
         "sucesso.html",
         agendamento=agendamento,
+        estabelecimento=estabelecimento,
+        url_retorno=url_retorno,
         link_whatsapp=link_whatsapp,
         url_reserva=f"{url_base_local}/reserva/{agendamento.get('token_acesso')}" if agendamento.get("token_acesso") else "",
         **config_template,
@@ -883,6 +892,14 @@ def public_ver_reserva(token):
             **config_template,
         )
 
+    estab_id = agendamento.get("estabelecimento_id") or 1
+    with db_session() as conn:
+        estabelecimento = obter_estabelecimento_por_id(conn, estab_id)
+
+    url_retorno = url_for("index")
+    if estabelecimento and estabelecimento.get("slug") and estabelecimento.get("slug") not in ("default", ""):
+        url_retorno = f"/{estabelecimento['slug']}"
+
     sucesso = request.args.get("sucesso")
     erro = request.args.get("erro")
 
@@ -904,6 +921,8 @@ def public_ver_reserva(token):
     return render_template(
         "reserva.html",
         agendamento=agendamento,
+        estabelecimento=estabelecimento,
+        url_retorno=url_retorno,
         link_whatsapp=link_whatsapp,
         telefone_formatado=telefone_formatado,
         sucesso=sucesso,

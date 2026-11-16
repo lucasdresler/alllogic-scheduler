@@ -113,7 +113,7 @@
             <p class="mensagem-redirecionamento" style="color: var(--texto-secundario); font-size: 0.85rem; margin-bottom: 8px;">
                 Você será direcionado ao início em alguns segundos. (<span id="contagem-regressiva">25</span>s)
             </p>
-            <a href="{{ url_for('index') }}" style="font-size: 0.85rem; color: var(--navy-800); text-decoration: underline; cursor: pointer;">
+            <a href="{{ url_retorno|default(url_for('index')) }}" style="font-size: 0.85rem; color: var(--navy-800); text-decoration: underline; cursor: pointer;">
                 Ir para o início agora
             </a>
         </div>
@@ -208,7 +208,7 @@
             }
             if (segundosRestantes <= 0) {
                 clearInterval(intervalo);
-                window.location.href = "{{ url_for('index') }}";
+                window.location.href = "{{ url_retorno|default(url_for('index')) }}";
             }
         }, 1000);
     }

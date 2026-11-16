@@ -5,7 +5,7 @@
 {% block conteudo %}
 <div class="container" style="max-width: 580px; margin: 0 auto; padding: 20px 16px;">
     <header class="topo" style="text-align: center; margin-bottom: 24px;">
-        <a href="{{ url_for('index') }}" style="text-decoration: none; color: inherit; display: inline-block;">
+        <a href="{{ url_retorno|default(url_for('index')) }}" style="text-decoration: none; color: inherit; display: inline-block;">
             {% if logotipo %}
             <div class="logo-topo" style="margin-bottom: 12px;">
                 <img src="{{ url_for('static', filename=logotipo) }}" alt="{{ nome_estabelecimento }}" style="max-height: 70px; width: auto;">
@@ -135,12 +135,12 @@
                 </button>
             </form>
             <div style="text-align: center; margin-top: 8px;">
-                <a href="{{ url_for('index') }}" style="color: var(--navy-800); font-size: 0.9rem; text-decoration: underline; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <a href="{{ url_retorno|default(url_for('index')) }}" style="color: var(--navy-800); font-size: 0.9rem; text-decoration: underline; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
                     ← Ir para a Página Inicial / Novo Agendamento
                 </a>
             </div>
             {% else %}
-            <a href="{{ url_for('index') }}" class="btn-primario" style="text-align: center; text-decoration: none;">
+            <a href="{{ url_retorno|default(url_for('index')) }}" class="btn-primario" style="text-align: center; text-decoration: none;">
                 Fazer Novo Agendamento
             </a>
             {% endif %}
@@ -149,7 +149,7 @@
     {% else %}
     <div class="card" style="background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-subtle); padding: 24px; text-align: center;">
         <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 16px;">Não foi possível localizar os dados desta reserva.</p>
-        <a href="{{ url_for('index') }}" class="btn-primario" style="display: inline-block; text-decoration: none;">
+        <a href="{{ url_retorno|default(url_for('index')) }}" class="btn-primario" style="display: inline-block; text-decoration: none;">
             Ir para a Página Inicial / Novo Agendamento
         </a>
     </div>
